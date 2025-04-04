@@ -4,7 +4,7 @@
       "name": "Currents",
       "description": "Currents MCP server",
       "command": "npx",
-      "args": ["-y", "@currents/mcp"],
+      "args": ["-y", "@currents/mcp@0.1.1"],
       "env": {
         "CURRENTS_API_KEY": ""
       }
