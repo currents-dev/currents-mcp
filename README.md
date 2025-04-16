@@ -35,11 +35,10 @@ Get a Currents API key by following the [instructions here](https://docs.current
       "command": "npx",
       "args": [
         "-y",
-        "./build/index.js" // This will change to currents-mcp when we publish the package
+        "@currents/mcp"
       ],
-      "env": { // This is the current way for setting env variables (see [google maps](https://github.com/modelcontextprotocol/servers/tree/main/src/google-maps#npx) example. See [slack](https://github.com/modelcontextprotocol/servers/tree/main/src/slack#npx) example)
-        "CURRENTS_API_KEY": "your-api-key",
-        "CURRENTS_API_URL": "https://api-staging.currents.dev/v1" // will disappear by default using production url
+      "env": {
+        "CURRENTS_API_KEY": "your-api-key"
       }
     }
   }
@@ -57,11 +56,10 @@ Add the following to your `claude_desktop_config.json`:
       "command": "npx",
       "args": [
         "-y",
-        "./build/index.js" // This will change to currents-mcp when we publish the package
+        "@currents/mcp" // This will change to currents-mcp when we publish the package
       ],
-      "env": { // This is the current way for setting env variables (see [google maps](https://github.com/modelcontextprotocol/servers/tree/main/src/google-maps#npx) example. See [slack](https://github.com/modelcontextprotocol/servers/tree/main/src/slack#npx) example)
-        "CURRENTS_API_KEY": "your-api-key",
-        "CURRENTS_API_URL": "https://api-staging.currents.dev/v1" // will disappear by default using production url
+      "env": {
+        "CURRENTS_API_KEY": "your-api-key"
       }
     }
   }
