@@ -18,9 +18,9 @@ This is a MCP server that allows you to use Currents API.
 
 ## Setup
 
-### Api Key
+### API Key
 
-Get a Currents API key by following the [instructions here](https://docs.currents.dev/resources/api/api-keys)
+Get a Currents API key by following the [instructions here](https://docs.currents.dev/resources/api/api-keys).
 
 ### Usage with Cursor Editor
 
@@ -56,7 +56,7 @@ Add the following to your `claude_desktop_config.json`:
       "command": "npx",
       "args": [
         "-y",
-        "@currents/mcp" // This will change to currents-mcp when we publish the package
+        "@currents/mcp"
       ],
       "env": {
         "CURRENTS_API_KEY": "your-api-key"
