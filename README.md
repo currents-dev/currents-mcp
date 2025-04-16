@@ -14,7 +14,7 @@ This is a MCP server that allows you to use Currents API.
 
 3. `get-spec-file-attempts-and-errors`
 
-- Get the instance information by its ID about attempts and errors
+- Get the instance information about attempts and errors by its ID 
 
 ## Setup
 
