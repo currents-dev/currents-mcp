@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/currents-dev-currents-mcp-badge.png)](https://mseep.ai/app/currents-dev-currents-mcp)
+
 # Currents MCP Server
 [![smithery badge](https://smithery.ai/badge/@currents-dev/currents-mcp)](https://smithery.ai/server/@currents-dev/currents-mcp)
 
