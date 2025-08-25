@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/currents-dev-currents-mcp-badge.png)](https://mseep.ai/app/currents-dev-currents-mcp)
+
 # Currents MCP Server
 
 This is a MCP server that allows you to provide test results context to your AI agents by connecting them to Currents. Useful for asking AI to fix or optimize tests failing in CI.
