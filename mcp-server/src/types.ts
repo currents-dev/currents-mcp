@@ -1,4 +1,17 @@
-import { makeCurrentsRequest } from "./lib/request.js";
+export interface PaginatedResponse<T> {
+  status: string;
+  has_more: boolean;
+  data: T[];
+}
+
+export interface ProjectListResponse {
+  projectId: string;
+  name: string;
+  createdAt: Date;
+  inactivityTimeoutSeconds: number;
+  cursor: string;
+  failFast: boolean;
+}
 
 export interface RunResponse {
   status: string;
