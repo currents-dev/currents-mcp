@@ -4,7 +4,9 @@ import { InstanceData } from "../../types.js";
 import { logger } from "../../lib/logger.js";
 
 const zodSchema = z.object({
-  projectId: z.string(),
+  projectId: z
+    .string()
+    .describe("The project ID to fetch the test signature from."),
   spec: z.string().describe("The spec name the test belongs to."),
   title: z.string().describe("The test name."),
 });
@@ -52,7 +54,7 @@ const handler = async ({
   };
 };
 
-export const findTestSignatureTool = {
+export const getTestSignatureTool = {
   schema: zodSchema.shape,
   handler,
 };

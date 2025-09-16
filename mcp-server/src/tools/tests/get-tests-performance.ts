@@ -4,7 +4,9 @@ import { InstanceData } from "../../types.js";
 import { logger } from "../../lib/logger.js";
 
 const zodSchema = z.object({
-  projectId: z.string(),
+  projectId: z
+    .string()
+    .describe("The project ID to fetch test performance metrics from."),
   from: z
     .string()
     .describe(
@@ -34,25 +36,50 @@ const zodSchema = z.object({
     .describe(
       "The test name to filter by. If not provided, a paginated response of all tests will be returned."
     ),
-  order: z.enum([
-    "duration",
-    "executions",
-    "failures",
-    "flakiness",
-    "passes",
-    "title",
-    "durationXSamples",
-    "failRateXSamples",
-    "failureRateDelta",
-    "flakinessRateDelta",
-    "flakinessXSamples",
-  ]),
-  orderDirection: z.enum(["asc", "desc"]).default("desc"),
-  limit: z.number().optional().default(50),
-  page: z.number().optional().default(0),
-  tags: z.array(z.string()).optional().default([]),
-  branches: z.array(z.string()).optional().default([]),
-  authors: z.array(z.string()).optional().default([]),
+  order: z
+    .enum([
+      "duration",
+      "executions",
+      "failures",
+      "flakiness",
+      "passes",
+      "title",
+      "durationXSamples",
+      "failRateXSamples",
+      "failureRateDelta",
+      "flakinessRateDelta",
+      "flakinessXSamples",
+    ])
+    .describe("The field to order the results by."),
+  orderDirection: z
+    .enum(["asc", "desc"])
+    .default("desc")
+    .describe("The direction to sort the results in."),
+  limit: z
+    .number()
+    .optional()
+    .default(50)
+    .describe("The maximum number of results to return per page."),
+  page: z
+    .number()
+    .optional()
+    .default(0)
+    .describe("The page number to fetch (0-based)."),
+  tags: z
+    .array(z.string())
+    .optional()
+    .default([])
+    .describe("Filter results by test tags."),
+  branches: z
+    .array(z.string())
+    .optional()
+    .default([])
+    .describe("Filter results by git branches."),
+  authors: z
+    .array(z.string())
+    .optional()
+    .default([])
+    .describe("Filter results by git authors."),
 });
 
 const handler = async ({

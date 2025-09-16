@@ -3,7 +3,7 @@ import { fetchApi } from "../../lib/request.js";
 import { RunResponse } from "../../types.js";
 
 const zodSchema = z.object({
-  runId: z.string(),
+  runId: z.string().describe("The run ID to fetch details for."),
 });
 
 const handler = async ({ runId }: z.infer<typeof zodSchema>) => {

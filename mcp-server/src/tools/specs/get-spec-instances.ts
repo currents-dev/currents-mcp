@@ -2,7 +2,9 @@ import { z } from "zod";
 import { fetchApi } from "../../lib/request.js";
 
 const zodSchema = z.object({
-  instanceId: z.string(),
+  instanceId: z
+    .string()
+    .describe("The instance ID to fetch debugging data from."),
 });
 
 const handler = async ({ instanceId }: z.infer<typeof zodSchema>) => {

@@ -5,10 +5,25 @@ import { logger } from "../../lib/logger.js";
 
 const zodSchema = z.object({
   signature: z.string().describe("The test signature."),
-  tags: z.array(z.string()).optional().default([]),
-  branches: z.array(z.string()).optional().default([]),
-  authors: z.array(z.string()).optional().default([]),
-  status: z.enum(["failed", "passed", "skipped", "pending"]).optional(),
+  tags: z
+    .array(z.string())
+    .optional()
+    .default([])
+    .describe("Filter results by test tags."),
+  branches: z
+    .array(z.string())
+    .optional()
+    .default([])
+    .describe("Filter results by git branches."),
+  authors: z
+    .array(z.string())
+    .optional()
+    .default([])
+    .describe("Filter results by git authors."),
+  status: z
+    .enum(["failed", "passed", "skipped", "pending"])
+    .optional()
+    .describe("Filter results by test execution status."),
 });
 
 const handler = async ({

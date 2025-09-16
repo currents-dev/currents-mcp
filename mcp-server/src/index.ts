@@ -3,13 +3,13 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { CURRENTS_API_KEY } from "./lib/env.js";
 import { logger } from "./lib/logger.js";
-import { getTestResultsTool } from "./tools/tests/get-test-results.js";
-import { getRunDetailsTool } from "./tools/runs/runs.js";
-import { getSpecInstancesTool } from "./tools/specs/get-spec-instances.js";
-import { getSpecFilesPerformanceTool } from "./tools/specs/get-spec-files-performance.js";
-import { getTestsPerformanceTool } from "./tools/tests/get-tests-performance.js";
-import { findTestSignatureTool } from "./tools/tests/find-test-signature.js";
 import { getProjectsTool } from "./tools/projects/get-projects.js";
+import { getRunDetailsTool } from "./tools/runs/runs.js";
+import { getSpecFilesPerformanceTool } from "./tools/specs/get-spec-files-performance.js";
+import { getSpecInstancesTool } from "./tools/specs/get-spec-instances.js";
+import { getTestResultsTool } from "./tools/tests/get-test-results.js";
+import { getTestsPerformanceTool } from "./tools/tests/get-tests-performance.js";
+import { getTestSignatureTool } from "./tools/tests/get-tests-signature.js";
 
 if (CURRENTS_API_KEY === "") {
   logger.error("CURRENTS_API_KEY env variable is not set.");
@@ -39,8 +39,8 @@ server.tool(
 );
 
 server.tool(
-  "currents-get-spec-instances",
-  "Retrieves debugging data from the whole test spec file by instanceId.",
+  "currents-get-spec-instance",
+  "Retrieves debugging data from a specific execution of a test spec file by instanceId.",
   getSpecInstancesTool.schema,
   getSpecInstancesTool.handler
 );
@@ -60,15 +60,15 @@ server.tool(
 );
 
 server.tool(
-  "currents-find-test-signature",
+  "currents-get-tests-signatures",
   "Retrieves a test signature by its spec file name and test name. Requires a projectId. If the projectId is not known, first call 'currents-get-projects' and ask the user to select the project.",
-  findTestSignatureTool.schema,
-  findTestSignatureTool.handler
+  getTestSignatureTool.schema,
+  getTestSignatureTool.handler
 );
 
 server.tool(
   "currents-get-test-results",
-  "Retrieves debugging data from test results of a test by its signature. Requires the test signature. If the signature is not known, first call 'currents-find-test-signature'.",
+  "Retrieves debugging data from test results of a test by its signature. Requires the test signature. If the signature is not known, first call 'currents-get-test-signature'.",
   getTestResultsTool.schema,
   getTestResultsTool.handler
 );
