@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { fetchApi } from "../../lib/request.js";
-import { InstanceData } from "../../types.js";
 import { logger } from "../../lib/logger.js";
 
 const zodSchema = z.object({
@@ -115,7 +114,7 @@ const handler = async ({
     `Fetching spec files performance for project ${projectId} with query params: ${queryParams.toString()}`
   );
 
-  const data = await fetchApi<InstanceData>(
+  const data = await fetchApi(
     `/spec-files/${projectId}?${queryParams.toString()}`
   );
 

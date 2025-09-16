@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { fetchApi } from "../../lib/request.js";
-import { InstanceData } from "../../types.js";
 import { logger } from "../../lib/logger.js";
 
 const zodSchema = z.object({
@@ -128,9 +127,7 @@ const handler = async ({
     `Fetching tests performance for project ${projectId} with query params: ${queryParams.toString()}`
   );
 
-  const data = await fetchApi<InstanceData>(
-    `/tests/${projectId}?${queryParams.toString()}`
-  );
+  const data = await fetchApi(`/tests/${projectId}?${queryParams.toString()}`);
 
   if (!data) {
     return {

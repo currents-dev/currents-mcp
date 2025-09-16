@@ -1,8 +1,13 @@
-import { PaginatedResponse } from "../types.js";
 import { CURRENTS_API_KEY, CURRENTS_API_URL } from "./env.js";
 import { logger } from "./logger.js";
 
 const USER_AGENT = "currents-app/1.0";
+
+export interface PaginatedResponse<T> {
+  status: string;
+  has_more: boolean;
+  data: T[];
+}
 
 export async function fetchApi<T>(path: string): Promise<T | null> {
   const headers = {
@@ -27,7 +32,7 @@ export async function fetchApi<T>(path: string): Promise<T | null> {
 
 export async function fetchPaginatedApi<T>(path: string): Promise<T | null> {
   const allData: T[] = [];
-  let has_more: boolean = true;
+  let hasMore: boolean = true;
 
   do {
     const response = await fetchApi<PaginatedResponse<T>>(path);
@@ -35,8 +40,8 @@ export async function fetchPaginatedApi<T>(path: string): Promise<T | null> {
       return null;
     }
     allData.push(...response.data);
-    has_more = response.has_more;
-  } while (has_more);
+    hasMore = response.has_more;
+  } while (hasMore);
 
   return allData as T;
 }

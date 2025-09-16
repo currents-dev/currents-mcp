@@ -1,6 +1,14 @@
 import { z } from "zod";
 import { fetchPaginatedApi } from "../../lib/request.js";
-import { ProjectListResponse } from "../../types.js";
+
+interface ProjectListResponse {
+  projectId: string;
+  name: string;
+  createdAt: Date;
+  inactivityTimeoutSeconds: number;
+  cursor: string;
+  failFast: boolean;
+}
 
 const zodSchema = z.object({});
 

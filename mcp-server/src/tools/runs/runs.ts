@@ -1,15 +1,14 @@
 import { z } from "zod";
 import { fetchApi } from "../../lib/request.js";
-import { RunResponse } from "../../types.js";
 
 const zodSchema = z.object({
   runId: z.string().describe("The run ID to fetch details for."),
 });
 
 const handler = async ({ runId }: z.infer<typeof zodSchema>) => {
-  const runData = await fetchApi<RunResponse>(`/runs/${runId}`);
+  const data = await fetchApi(`/runs/${runId}`);
 
-  if (!runData) {
+  if (!data) {
     return {
       content: [
         {
@@ -24,7 +23,7 @@ const handler = async ({ runId }: z.infer<typeof zodSchema>) => {
     content: [
       {
         type: "text" as const,
-        text: JSON.stringify(runData, null, 2),
+        text: JSON.stringify(data, null, 2),
       },
     ],
   };
