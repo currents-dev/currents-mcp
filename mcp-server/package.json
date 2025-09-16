@@ -4,10 +4,8 @@
   "files": [
     "build"
   ],
-  "bin": {
-    "currents-mcp": "./build/index.js"
-  },
-  "version": "1.0.0",
+  "bin": "./build/index.js",
+  "version": "2.0.0",
   "description": "Currents MCP server",
   "main": "index.js",
   "scripts": {
