@@ -4,3 +4,4 @@ build
 .currents-debug
 test-results
 playwright-report
+.cursor

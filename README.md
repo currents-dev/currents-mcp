@@ -2,22 +2,19 @@
 
 This is a MCP server that allows you to provide test results context to your AI agents by connecting them to Currents. Useful for asking AI to fix or optimize tests failing in CI.
 
-
 [![Install MCP Server](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=currents&config=eyJjb21tYW5kIjoibnB4IC15IEBjdXJyZW50cy9tY3AiLCJlbnYiOnsiQ1VSUkVOVFNfQVBJX0tFWSI6InlvdXItYXBpLWtleSJ9fQ%3D%3D)
 
 ## Tools
 
-1. `get-api-config`
-
-- Get the API key and URL used to make requests to Currents API
-
-2. `get-run`
-
-- Get the run information by its ID
-
-3. `get-spec-file-attempts-and-errors`
-
-- Get the instance information about attempts and errors by its ID 
+| Tool                                  | Description                                                                |
+| ------------------------------------- | -------------------------------------------------------------------------- |
+| `currents-get-projects`               | Retrieves a list of all projects available.                                |
+| `currents-get-run-details`            | Retrieves details of a specific test run.                                  |
+| `currents-get-spec-instances`         | Retrieves debugging data a specific execution of a test spec file.         |
+| `currents-get-spec-files-performance` | Retrieves spec file historical performance metrics for a specific project. |
+| `currents-get-tests-performance`      | Retrieves test historical performance metrics for a specific project.      |
+| `currents-get-tests-signatures`       | Retrieves a test signature by its spec file name and test name.            |
+| `currents-get-test-results`           | Retrieves debugging data from test results of a test by its signature.     |
 
 ## Setup
 
@@ -31,6 +28,7 @@ Get a Currents API key by following the [instructions here](https://docs.current
 2. Add the following to your `mcp.json`.
 
 ### NPX
+
 ```
 {
   "mcpServers": {
@@ -61,6 +59,7 @@ npx -y @smithery/cli install @currents-dev/currents-mcp --client claude
 Add the following to your `claude_desktop_config.json`:
 
 #### NPX
+
 ```
 {
   "mcpServers": {
@@ -78,10 +77,9 @@ Add the following to your `claude_desktop_config.json`:
 }
 ```
 
-
 ### ⚠️ Notice
-By connecting AI tools (e.g., via MCP) to Currents, you are granting them access to your API key, test results and CI metadata. It is your responsibility to vet any AI agents or services you use, and to ensure they handle your data securely.
 
+By connecting AI tools (e.g., via MCP) to Currents, you are granting them access to your API key, test results and CI metadata. It is your responsibility to vet any AI agents or services you use, and to ensure they handle your data securely.
 
 ## How to Contribute
 
@@ -118,6 +116,7 @@ To test with a local MCP client (e.g., Cursor or Claude Desktop), point the clie
 - Env: set `CURRENTS_API_KEY` to a valid key
 
 Example snippet for a client config:
+
 ```json
 {
   "mcpServers": {

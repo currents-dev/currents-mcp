@@ -4,9 +4,9 @@
       "name": "Currents",
       "description": "Currents MCP server",
       "command": "npx",
-      "args": ["-y", "@currents/mcp@0.1.1"],
-      "env": {
-        "CURRENTS_API_KEY": ""
+      "args": ["node", "./mcp-server/build/index.js"],
+      "env": { 
+        "CURRENTS_API_KEY": "" 
       }
     }
   }
