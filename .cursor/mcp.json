@@ -1,12 +1,12 @@
 {
   "mcpServers": {
-    "currents": {
+    "Currents": {
       "name": "Currents",
       "description": "Currents MCP server",
       "command": "npx",
-      "args": ["-y", "@currents/mcp@0.1.1"],
+      "args": ["node", "./mcp-server/build/index.js"],
       "env": {
-        "CURRENTS_API_KEY": ""
+        "CURRENTS_API_KEY": "DjnuEsHc9rsYDGVKvErrSLOCWKVoZmg58u0JCOw11BnpbxJUAJYAmFXo9GXzb4Ay"
       }
     }
   }
