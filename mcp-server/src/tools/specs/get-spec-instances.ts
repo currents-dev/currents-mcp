@@ -8,8 +8,9 @@ const zodSchema = z.object({
 });
 
 const handler = async ({ instanceId }: z.infer<typeof zodSchema>) => {
-  const instanceData = await fetchApi(`/instances/${instanceId}`);
-  if (!instanceData) {
+  const data = await fetchApi(`/instances/${instanceId}`);
+
+  if (!data) {
     return {
       content: [
         {
@@ -19,11 +20,12 @@ const handler = async ({ instanceId }: z.infer<typeof zodSchema>) => {
       ],
     };
   }
+
   return {
     content: [
       {
         type: "text" as const,
-        text: JSON.stringify(instanceData, null, 2),
+        text: JSON.stringify(data, null, 2),
       },
     ],
   };

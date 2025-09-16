@@ -35,7 +35,7 @@ const handler = async ({
       content: [
         {
           type: "text" as const,
-          text: "Failed to retrieve project spec files",
+          text: "Failed to retrieve project test signature",
         },
       ],
     };
