@@ -1,0 +1,31 @@
+name: NPM - Promote beta to latest
+
+on:
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./mcp-server
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20.x"
+          registry-url: "https://registry.npmjs.org"
+
+      - run: npm ci
+      - name: Publish to NPM
+        run: |
+          git config user.name "Currents NPM Bot"
+          git config user.email "npm@currents.dev"
+          npm dist-tag add @currents/mcp@2.0.0 latest
+          npm dist-tag rm @currents/mcp beta
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
