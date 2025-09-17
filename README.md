@@ -48,14 +48,6 @@ Get a Currents API key by following the [instructions here](https://docs.current
 
 ### Usage with Claude Desktop
 
-#### Installing via Smithery
-
-To install Currents Test Results Context Server for Claude Desktop automatically via [Smithery](https://smithery.ai/server/@currents-dev/currents-mcp):
-
-```bash
-npx -y @smithery/cli install @currents-dev/currents-mcp --client claude
-```
-
 Add the following to your `claude_desktop_config.json`:
 
 #### NPX
