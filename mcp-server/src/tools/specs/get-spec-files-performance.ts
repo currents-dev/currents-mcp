@@ -48,6 +48,7 @@ const zodSchema = z.object({
     .describe("The direction to sort the results in."),
   limit: z
     .number()
+    .max(50)
     .optional()
     .default(50)
     .describe("The maximum number of results to return per page."),
