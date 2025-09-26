@@ -14,6 +14,18 @@ const zodSchema = z.object({
     .optional()
     .default([])
     .describe("Filter results by git branches."),
+  limit: z
+    .number()
+    .max(50)
+    .optional()
+    .default(50)
+    .describe("The maximum number of results to return per page."),
+  cursor: z
+    .string()
+    .optional()
+    .describe(
+      "The cursor to fetch the next page of results. Should the id of the last item in the previous page."
+    ),
   authors: z
     .array(z.string())
     .optional()
@@ -31,6 +43,8 @@ const handler = async ({
   branches,
   authors,
   status,
+  cursor,
+  limit,
 }: z.infer<typeof zodSchema>) => {
   const queryParams = new URLSearchParams();
   queryParams.append(
@@ -38,7 +52,11 @@ const handler = async ({
     new Date(new Date().setDate(new Date().getDate() - 365)).toISOString()
   );
   queryParams.append("date_end", new Date().toISOString());
-  queryParams.append("limit", "20");
+  queryParams.append("limit", limit.toString());
+
+  if (cursor) {
+    queryParams.append("starting_after", cursor);
+  }
 
   if (status) {
     queryParams.append("status", status);
