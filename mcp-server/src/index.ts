@@ -4,12 +4,13 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { CURRENTS_API_KEY } from "./lib/env.js";
 import { logger } from "./lib/logger.js";
 import { getProjectsTool } from "./tools/projects/get-projects.js";
-import { getRunDetailsTool } from "./tools/runs/runs.js";
+import { getRunDetailsTool } from "./tools/runs/get-run.js";
 import { getSpecFilesPerformanceTool } from "./tools/specs/get-spec-files-performance.js";
 import { getSpecInstancesTool } from "./tools/specs/get-spec-instances.js";
 import { getTestResultsTool } from "./tools/tests/get-test-results.js";
 import { getTestsPerformanceTool } from "./tools/tests/get-tests-performance.js";
 import { getTestSignatureTool } from "./tools/tests/get-tests-signature.js";
+import { getRunsTool } from "./tools/runs/get-runs.js";
 
 if (CURRENTS_API_KEY === "") {
   logger.error("CURRENTS_API_KEY env variable is not set.");
@@ -29,6 +30,13 @@ server.tool(
   "Retrieves a list of all projects available in the Currents platform. This is a prerequisite for using any other tools that require project-specific information.",
   getProjectsTool.schema,
   getProjectsTool.handler
+);
+
+server.tool(
+  "currents-get-runs",
+  "Retrieves a list of the latest runs for a specific project. Requires a projectId. If the projectId is not known, first call 'currents-get-projects' and ask the user to select the project.",
+  getRunsTool.schema,
+  getRunsTool.handler
 );
 
 server.tool(

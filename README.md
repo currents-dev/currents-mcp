@@ -9,6 +9,7 @@ This is a MCP server that allows you to provide test results context to your AI 
 | Tool                                  | Description                                                                |
 | ------------------------------------- | -------------------------------------------------------------------------- |
 | `currents-get-projects`               | Retrieves a list of all projects available.                                |
+| `currents-get-runs`                   | Retrieves a list the latest runs for a specific project.                   |
 | `currents-get-run-details`            | Retrieves details of a specific test run.                                  |
 | `currents-get-spec-instances`         | Retrieves debugging data a specific execution of a test spec file.         |
 | `currents-get-spec-files-performance` | Retrieves spec file historical performance metrics for a specific project. |
