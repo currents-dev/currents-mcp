@@ -30,7 +30,7 @@ export async function fetchApi<T>(path: string): Promise<T | null> {
   }
 }
 
-export async function fetchPaginatedApi<T>(path: string): Promise<T | null> {
+export async function fetchPaginatedApi<T>(path: string): Promise<T[] | null> {
   const allData: T[] = [];
   let hasMore: boolean = false;
 
@@ -49,5 +49,5 @@ export async function fetchPaginatedApi<T>(path: string): Promise<T | null> {
     hasMore = response.has_more;
   } while (hasMore);
 
-  return allData as T;
+  return allData;
 }
