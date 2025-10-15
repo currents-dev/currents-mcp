@@ -124,6 +124,19 @@ Example snippet for a client config:
 }
 ```
 
+### Test tools locally
+To test the tools locally without any LLM, you can use the following command:
+```bash
+ npm run build
+```
+
+then run the tools script:
+```bash
+ node scripts/call-tools.js
+```
+
+
+
 ### Making Changes
 
 - Create a feature branch:
