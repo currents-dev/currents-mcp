@@ -30,11 +30,19 @@ export async function fetchApi<T>(path: string): Promise<T | null> {
   }
 }
 
-export async function fetchPaginatedApi<T>(path: string): Promise<T[] | null> {
+export async function fetchCursorBasedPaginatedApi<T>(
+  path: string
+): Promise<T[] | null> {
   const allData: T[] = [];
   let hasMore: boolean = false;
+  let iteration: number = 0;
 
   do {
+    if (iteration > 100) {
+      logger.error("Too many iterations, stopping pagination");
+      return allData;
+    }
+
     let fullPath = path;
     if (hasMore && allData.length > 0) {
       fullPath += `?starting_after=${encodeURIComponent(
@@ -47,6 +55,7 @@ export async function fetchPaginatedApi<T>(path: string): Promise<T[] | null> {
     }
     allData.push(...response.data);
     hasMore = response.has_more;
+    iteration++;
   } while (hasMore);
 
   return allData;

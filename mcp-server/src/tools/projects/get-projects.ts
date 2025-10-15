@@ -1,10 +1,10 @@
 import { z } from "zod";
-import { fetchPaginatedApi } from "../../lib/request.js";
+import { fetchCursorBasedPaginatedApi } from "../../lib/request.js";
 
 const zodSchema = z.object({});
 
 const handler = async () => {
-  const data = await fetchPaginatedApi("/projects");
+  const data = await fetchCursorBasedPaginatedApi("/projects");
 
   if (!data) {
     return {

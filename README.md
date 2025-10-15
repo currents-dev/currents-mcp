@@ -1,5 +1,7 @@
 # Currents MCP Server
 
+![Unit Tests](https://github.com/currents-dev/currents-mcp/actions/workflows/test.yml/badge.svg)
+
 This is a MCP server that allows you to provide test results context to your AI agents by connecting them to Currents. Useful for asking AI to fix or optimize tests failing in CI.
 
 [![Install MCP Server](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=currents&config=eyJjb21tYW5kIjoibnB4IC15IEBjdXJyZW50cy9tY3AiLCJlbnYiOnsiQ1VSUkVOVFNfQVBJX0tFWSI6InlvdXItYXBpLWtleSJ9fQ%3D%3D)
@@ -94,7 +96,12 @@ We welcome contributions of all kinds—bug fixes, features, and documentation u
    ```bash
    npm run build
    ```
-4. Run locally (stdio):
+4. Run tests:
+   ```bash
+   npm test
+   ```
+   See [TESTING.md](./mcp-server/TESTING.md) for more details on testing.
+5. Run locally (stdio):
    ```bash
    npm start
    ```
@@ -125,17 +132,18 @@ Example snippet for a client config:
 ```
 
 ### Test tools locally
+
 To test the tools locally without any LLM, you can use the following command:
+
 ```bash
  npm run build
 ```
 
 then run the tools script:
+
 ```bash
  node scripts/call-tools.js
 ```
-
-
 
 ### Making Changes
 
@@ -146,6 +154,11 @@ then run the tools script:
 - Make changes under `mcp-server/src/`, then rebuild and re-run:
   ```bash
   npm run build && npm start
+  ```
+- Write tests for your changes in `*.test.ts` files alongside your code
+- Run tests to ensure everything works:
+  ```bash
+  npm test
   ```
 - Keep changes focused and documented (add comments/types where helpful).
 
