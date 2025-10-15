@@ -32,10 +32,16 @@ export async function fetchApi<T>(path: string): Promise<T | null> {
 
 export async function fetchPaginatedApi<T>(path: string): Promise<T | null> {
   const allData: T[] = [];
-  let hasMore: boolean = true;
+  let hasMore: boolean = false;
 
   do {
-    const response = await fetchApi<PaginatedResponse<T>>(path);
+    let fullPath = path;
+    if (hasMore && allData.length > 0) {
+      fullPath += `?starting_after=${encodeURIComponent(
+        (allData[allData.length - 1] as any).cursor
+      )}`;
+    }
+    const response = await fetchApi<PaginatedResponse<T>>(fullPath);
     if (!response) {
       return null;
     }
