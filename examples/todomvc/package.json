@@ -20,7 +20,7 @@
   },
   "devDependencies": {
     "@currents/playwright": "^1.11.7",
-    "@playwright/test": "^1.40.0",
+    "@playwright/test": "^1.56.1",
     "@types/node": "^18.11.18",
     "browserify": "^16.2.3",
     "node-static": "^0.7.11",
