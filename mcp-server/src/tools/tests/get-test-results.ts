@@ -4,74 +4,96 @@ import { logger } from "../../lib/logger.js";
 
 const zodSchema = z.object({
   signature: z.string().describe("The test signature."),
-  tags: z
-    .array(z.string())
+  date_start: z
+    .string()
     .optional()
-    .default([])
-    .describe("Filter results by test tags."),
-  branches: z
-    .array(z.string())
+    .describe("Start date in ISO 8601 format. Defaults to 365 days ago."),
+  date_end: z
+    .string()
     .optional()
-    .default([])
-    .describe("Filter results by git branches."),
+    .describe("End date in ISO 8601 format. Defaults to now."),
   limit: z
     .number()
-    .max(50)
     .optional()
-    .default(50)
-    .describe("The maximum number of results to return per page."),
-  cursor: z
+    .describe("Maximum number of items to return (default: 10, max: 100)."),
+  starting_after: z
     .string()
     .optional()
     .describe(
-      "The cursor to fetch the next page of results. Should the id of the last item in the previous page."
+      "Cursor for pagination. Returns items after this cursor value."
     ),
-  authors: z
+  ending_before: z
+    .string()
+    .optional()
+    .describe(
+      "Cursor for pagination. Returns items before this cursor value."
+    ),
+  branch: z
     .array(z.string())
     .optional()
-    .default([])
-    .describe("Filter results by git authors."),
-  status: z
-    .enum(["failed", "passed", "skipped", "pending"])
+    .describe("Filter by git branch (can be specified multiple times)."),
+  tag: z
+    .array(z.string())
     .optional()
-    .describe("Filter results by test execution status."),
+    .describe("Filter by run tags (can be specified multiple times)."),
+  git_author: z
+    .array(z.string())
+    .optional()
+    .describe("Filter by git author (can be specified multiple times)."),
+  status: z
+    .array(z.enum(["passed", "failed", "pending", "skipped"]))
+    .optional()
+    .describe("Filter by test status (can be specified multiple times)."),
+  group: z
+    .array(z.string())
+    .optional()
+    .describe("Filter by run group (can be specified multiple times)."),
 });
 
 const handler = async ({
   signature,
-  tags,
-  branches,
-  authors,
+  date_start = new Date(new Date().setDate(new Date().getDate() - 365)).toISOString(),
+  date_end = new Date().toISOString(),
+  limit = 10,
+  starting_after,
+  ending_before,
+  branch,
+  tag,
+  git_author,
   status,
-  cursor,
-  limit,
+  group,
 }: z.infer<typeof zodSchema>) => {
   const queryParams = new URLSearchParams();
-  queryParams.append(
-    "date_start",
-    new Date(new Date().setDate(new Date().getDate() - 365)).toISOString()
-  );
-  queryParams.append("date_end", new Date().toISOString());
+  queryParams.append("date_start", date_start);
+  queryParams.append("date_end", date_end);
   queryParams.append("limit", limit.toString());
 
-  if (cursor) {
-    queryParams.append("starting_after", cursor);
+  if (starting_after) {
+    queryParams.append("starting_after", starting_after);
   }
 
-  if (status) {
-    queryParams.append("status", status);
+  if (ending_before) {
+    queryParams.append("ending_before", ending_before);
   }
 
-  if (tags.length > 0) {
-    queryParams.append("tag", tags.join("&tag[]="));
+  if (branch && branch.length > 0) {
+    branch.forEach((b) => queryParams.append("branch", b));
   }
 
-  if (branches.length > 0) {
-    queryParams.append("branch", branches.join("&branch[]="));
+  if (tag && tag.length > 0) {
+    tag.forEach((t) => queryParams.append("tag", t));
   }
 
-  if (authors.length > 0) {
-    queryParams.append("git_author", authors.join("&git_author[]="));
+  if (git_author && git_author.length > 0) {
+    git_author.forEach((a) => queryParams.append("git_author", a));
+  }
+
+  if (status && status.length > 0) {
+    status.forEach((s) => queryParams.append("status", s));
+  }
+
+  if (group && group.length > 0) {
+    group.forEach((g) => queryParams.append("group", g));
   }
 
   logger.info(

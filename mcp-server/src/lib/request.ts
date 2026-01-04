@@ -12,7 +12,7 @@ export interface PaginatedResponse<T> {
 export async function fetchApi<T>(path: string): Promise<T | null> {
   const headers = {
     "User-Agent": USER_AGENT,
-    Accept: "application/geo+json",
+    Accept: "application/json",
     Authorization: "Bearer " + CURRENTS_API_KEY,
   };
 
@@ -26,6 +26,32 @@ export async function fetchApi<T>(path: string): Promise<T | null> {
     return (await response.json()) as T;
   } catch (error: any) {
     logger.error("Error making Currents request:", error.toString());
+    return null;
+  }
+}
+
+export async function postApi<T, B>(path: string, body: B): Promise<T | null> {
+  const headers = {
+    "User-Agent": USER_AGENT,
+    Accept: "application/json",
+    "Content-Type": "application/json",
+    Authorization: "Bearer " + CURRENTS_API_KEY,
+  };
+
+  try {
+    const response = await fetch(`${CURRENTS_API_URL}${path}`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+    });
+    if (!response.ok) {
+      logger.error(`HTTP error! status: ${response.status}`);
+      logger.error(response);
+      return null;
+    }
+    return (await response.json()) as T;
+  } catch (error: any) {
+    logger.error("Error making Currents POST request:", error.toString());
     return null;
   }
 }
