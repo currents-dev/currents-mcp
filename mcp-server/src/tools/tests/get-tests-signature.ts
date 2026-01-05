@@ -1,41 +1,58 @@
 import { z } from "zod";
-import { fetchApi } from "../../lib/request.js";
+import { postApi } from "../../lib/request.js";
 import { logger } from "../../lib/logger.js";
 
 const zodSchema = z.object({
   projectId: z
     .string()
-    .describe("The project ID to fetch the test signature from."),
-  spec: z.string().describe("The spec name the test belongs to."),
-  title: z.string().describe("The test name."),
+    .describe("The project ID to generate the test signature for."),
+  specFilePath: z
+    .string()
+    .describe("Full path to the spec file."),
+  testTitle: z
+    .union([z.string(), z.array(z.string()).min(1)])
+    .describe("Test title or array of titles (for nested describe blocks)."),
 });
+
+interface SignatureRequest {
+  projectId: string;
+  specFilePath: string;
+  testTitle: string | string[];
+}
+
+interface SignatureResponse {
+  status: string;
+  data: {
+    signature: string;
+  };
+}
 
 const handler = async ({
   projectId,
-  spec,
-  title,
+  specFilePath,
+  testTitle,
 }: z.infer<typeof zodSchema>) => {
-  const queryParams = new URLSearchParams();
-  queryParams.append(
-    "date_start",
-    new Date(new Date().setDate(new Date().getDate() - 365)).toISOString()
-  );
-  queryParams.append("date_end", new Date().toISOString());
-  queryParams.append("spec", spec);
-  queryParams.append("title", title);
-
   logger.info(
-    `Fetching test signature for project ${projectId} with query params: ${queryParams.toString()}`
+    `Generating test signature for project ${projectId}, spec ${specFilePath}, title ${JSON.stringify(testTitle)}`
   );
 
-  const data = await fetchApi(`/tests/${projectId}?${queryParams.toString()}`);
+  const body: SignatureRequest = {
+    projectId,
+    specFilePath,
+    testTitle,
+  };
+
+  const data = await postApi<SignatureResponse, SignatureRequest>(
+    "/signature/test",
+    body
+  );
 
   if (!data) {
     return {
       content: [
         {
           type: "text" as const,
-          text: "Failed to retrieve project test signature",
+          text: "Failed to generate test signature",
         },
       ],
     };

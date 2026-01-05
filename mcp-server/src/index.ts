@@ -19,10 +19,6 @@ if (CURRENTS_API_KEY === "") {
 const server = new McpServer({
   name: "currents",
   version: "1.0.0",
-  capabilities: {
-    resources: {},
-    tools: {},
-  },
 });
 
 server.tool(
@@ -34,7 +30,7 @@ server.tool(
 
 server.tool(
   "currents-get-runs",
-  "Retrieves a list of the latest runs for a specific project. Requires a projectId. If the projectId is not known, first call 'currents-get-projects' and ask the user to select the project.",
+  "Retrieves a list of runs for a specific project with optional filtering. Supports filtering by branch, tags (with AND/OR operators), status (PASSED/FAILED/RUNNING/FAILING), completion state, date range, commit author, and search by ciBuildId or commit message. Requires a projectId. If the projectId is not known, first call 'currents-get-projects' and ask the user to select the project.",
   getRunsTool.schema,
   getRunsTool.handler
 );
@@ -55,28 +51,28 @@ server.tool(
 
 server.tool(
   "currents-get-spec-files-performance",
-  "Retrieves spec files performance metrics for a specific project. Supports ordering by one of: 'flaky', 'failing', 'slowest', or 'mostExecuted'. Requires a projectId. If the projectId is not known, first call 'currents-get-projects' and ask the user to select the project.",
+  "Retrieves spec files performance metrics for a specific project within a date range. Supports ordering by avgDuration, failedExecutions, failureRate, flakeRate, flakyExecutions, fullyReported, overallExecutions, suiteSize, timeoutExecutions, or timeoutRate. Supports filtering by tags, branches, groups, and authors. Requires a projectId. If the projectId is not known, first call 'currents-get-projects' and ask the user to select the project.",
   getSpecFilesPerformanceTool.schema,
   getSpecFilesPerformanceTool.handler
 );
 
 server.tool(
   "currents-get-tests-performance",
-  "Retrieves test performance metrics for a specific project. Supports ordering by one of: 'flaky', 'failing', 'slowest', or 'mostExecuted'. Requires a projectId. If the projectId is not known, first call 'currents-get-projects' and ask the user to select the project.",
+  "Retrieves aggregated test metrics for a specific project within a date range. Supports ordering by failures, passes, flakiness, duration, executions, title, and various delta metrics. Supports filtering by spec name, test title, tags, branches, groups, authors, minimum executions, and test state. Requires a projectId. If the projectId is not known, first call 'currents-get-projects' and ask the user to select the project.",
   getTestsPerformanceTool.schema,
   getTestsPerformanceTool.handler
 );
 
 server.tool(
   "currents-get-tests-signatures",
-  "Retrieves a test signature by its spec file name and test name. Requires a projectId. If the projectId is not known, first call 'currents-get-projects' and ask the user to select the project.",
+  "Generates a unique test signature based on project, spec file path, and test title. The test title can be a string or array of strings (for nested describe blocks). Requires a projectId. If the projectId is not known, first call 'currents-get-projects' and ask the user to select the project.",
   getTestSignatureTool.schema,
   getTestSignatureTool.handler
 );
 
 server.tool(
   "currents-get-test-results",
-  "Retrieves debugging data from test results of a test by its signature. Requires the test signature. If the signature is not known, first call 'currents-get-test-signature'.",
+  "Retrieves historical test execution results for a specific test signature. Supports filtering by date range, branch, tags, git author, test status (passed/failed/pending/skipped), and run group. Requires the test signature. If the signature is not known, first call 'currents-get-test-signature'.",
   getTestResultsTool.schema,
   getTestResultsTool.handler
 );

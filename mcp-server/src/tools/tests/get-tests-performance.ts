@@ -6,122 +6,139 @@ const zodSchema = z.object({
   projectId: z
     .string()
     .describe("The project ID to fetch test performance metrics from."),
-  from: z
-    .string()
-    .describe(
-      "The start of the date range to fetch the metrics from. ISO 8601 date, but without the time part"
-    )
-    .default(
-      // 30 days ago
-      new Date(new Date().setDate(new Date().getDate() - 30))
-        .toISOString()
-        .split("T")[0]
-    ),
-  to: z
-    .string()
-    .describe(
-      "The end of the date range to fetch the metrics from. ISO 8601 date, but without the time part"
-    )
-    .default(new Date().toISOString().split("T")[0]),
-  specNameFilter: z
+  date_start: z
     .string()
     .optional()
     .describe(
-      "The spec name to filter by. If not provided, a paginated response of all spec files will be returned."
+      "The start of the date range to fetch the metrics from. ISO 8601 date format. Defaults to 30 days ago."
     ),
-  testNameFilter: z
+  date_end: z
     .string()
     .optional()
     .describe(
-      "The test name to filter by. If not provided, a paginated response of all tests will be returned."
+      "The end of the date range to fetch the metrics from. ISO 8601 date format. Defaults to now."
+    ),
+  spec: z
+    .string()
+    .optional()
+    .describe(
+      "Filter tests by spec file name (partial match)."
+    ),
+  title: z
+    .string()
+    .optional()
+    .describe(
+      "Filter tests by title (partial match)."
     ),
   order: z
     .enum([
-      "duration",
-      "executions",
       "failures",
-      "flakiness",
       "passes",
+      "flakiness",
+      "flakiness_x_samples",
+      "failrate_x_samples",
+      "duration",
+      "flakiness_rate_delta",
+      "failure_rate_delta",
+      "duration_x_samples",
+      "executions",
       "title",
-      "durationXSamples",
-      "failRateXSamples",
-      "failureRateDelta",
-      "flakinessRateDelta",
-      "flakinessXSamples",
     ])
-    .describe("The field to order the results by."),
-  orderDirection: z
+    .optional()
+    .describe("The field to order the results by. Defaults to 'title'."),
+  dir: z
     .enum(["asc", "desc"])
-    .default("desc")
-    .describe("The direction to sort the results in."),
+    .optional()
+    .describe("The direction to sort the results in. Defaults to 'desc'."),
   limit: z
     .number()
-    .max(50)
     .optional()
-    .default(50)
-    .describe("The maximum number of results to return per page."),
+    .describe("The maximum number of results to return per page (default: 50)."),
   page: z
     .number()
     .optional()
-    .default(0)
-    .describe("The page number to fetch (0-based)."),
+    .describe("The page number to fetch (0-indexed). Defaults to 0."),
   tags: z
     .array(z.string())
     .optional()
-    .default([])
-    .describe("Filter results by test tags."),
+    .describe("Filter results by tags (can be specified multiple times)."),
   branches: z
     .array(z.string())
     .optional()
-    .default([])
-    .describe("Filter results by git branches."),
+    .describe("Filter results by branches (can be specified multiple times)."),
+  groups: z
+    .array(z.string())
+    .optional()
+    .describe("Filter results by groups (can be specified multiple times)."),
   authors: z
     .array(z.string())
     .optional()
-    .default([])
-    .describe("Filter results by git authors."),
+    .describe("Filter results by git authors (can be specified multiple times)."),
+  min_executions: z
+    .number()
+    .optional()
+    .describe("Minimum number of executions to include."),
+  test_state: z
+    .array(z.enum(["passed", "failed", "pending", "skipped"]))
+    .optional()
+    .describe("Filter by test state (can be specified multiple times)."),
 });
 
 const handler = async ({
   projectId,
-  from,
-  to,
-  specNameFilter,
-  testNameFilter,
-  order,
-  orderDirection,
-  limit,
-  page,
+  date_start = new Date(new Date().setDate(new Date().getDate() - 30)).toISOString(),
+  date_end = new Date().toISOString(),
+  spec,
+  title,
+  order = "title",
+  dir = "desc",
+  limit = 50,
+  page = 0,
   tags,
   branches,
+  groups,
   authors,
+  min_executions,
+  test_state,
 }: z.infer<typeof zodSchema>) => {
   const queryParams = new URLSearchParams();
-  queryParams.append("date_start", from);
-  queryParams.append("date_end", to);
+  queryParams.append("date_start", date_start);
+  queryParams.append("date_end", date_end);
   queryParams.append("order", order);
-  queryParams.append("dir", orderDirection);
+  queryParams.append("dir", dir);
   queryParams.append("limit", limit.toString());
   queryParams.append("page", page.toString());
 
-  if (specNameFilter) {
-    queryParams.append("spec", specNameFilter);
+  if (spec) {
+    queryParams.append("spec", spec);
   }
 
-  if (testNameFilter) {
-    queryParams.append("test", testNameFilter);
+  if (title) {
+    queryParams.append("title", title);
   }
 
-  if (tags.length > 0) {
-    queryParams.append("tags", tags.join("&tags[]="));
+  if (tags && tags.length > 0) {
+    tags.forEach((t) => queryParams.append("tags", t));
   }
 
-  if (branches.length > 0) {
-    queryParams.append("branches", branches.join("&branches[]="));
+  if (branches && branches.length > 0) {
+    branches.forEach((b) => queryParams.append("branches", b));
   }
 
-  if (authors.length > 0) {
-    queryParams.append("authors", authors.join("&authors[]="));
+  if (groups && groups.length > 0) {
+    groups.forEach((g) => queryParams.append("groups", g));
+  }
+
+  if (authors && authors.length > 0) {
+    authors.forEach((a) => queryParams.append("authors", a));
+  }
+
+  if (min_executions !== undefined) {
+    queryParams.append("min_executions", min_executions.toString());
+  }
+
+  if (test_state && test_state.length > 0) {
+    test_state.forEach((ts) => queryParams.append("test_state", ts));
   }
 
   logger.info(
