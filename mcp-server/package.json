@@ -23,7 +23,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.18.0",
+    "@modelcontextprotocol/sdk": "^1.25.2",
     "commander": "^12.1.0",
     "pino": "^9.9.5",
     "pino-pretty": "^13.1.1",
