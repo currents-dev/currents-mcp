@@ -15,29 +15,31 @@ describe("getProjectsTool", () => {
       { id: "2", name: "Project 2", cursor: "cursor2" },
     ];
 
-    vi.spyOn(request, "fetchCursorBasedPaginatedApi").mockResolvedValue(
-      mockProjects
-    );
+    const mockResponse = {
+      status: "OK",
+      has_more: false,
+      data: mockProjects,
+    };
 
-    const result = await getProjectsTool.handler();
+    vi.spyOn(request, "fetchApi").mockResolvedValue(mockResponse);
+
+    const result = await getProjectsTool.handler({});
 
     expect(result).toEqual({
       content: [
         {
           type: "text",
-          text: JSON.stringify(mockProjects, null, 2),
+          text: JSON.stringify(mockResponse, null, 2),
         },
       ],
     });
-    expect(request.fetchCursorBasedPaginatedApi).toHaveBeenCalledWith(
-      "/projects"
-    );
+    expect(request.fetchApi).toHaveBeenCalledWith("/projects");
   });
 
   it("should return error message when API request fails", async () => {
-    vi.spyOn(request, "fetchCursorBasedPaginatedApi").mockResolvedValue(null);
+    vi.spyOn(request, "fetchApi").mockResolvedValue(null);
 
-    const result = await getProjectsTool.handler();
+    const result = await getProjectsTool.handler({});
 
     expect(result).toEqual({
       content: [
@@ -52,5 +54,24 @@ describe("getProjectsTool", () => {
   it("should have correct schema structure", () => {
     expect(getProjectsTool.schema).toBeDefined();
     expect(typeof getProjectsTool.schema).toBe("object");
+  });
+
+  it("should support pagination parameters", async () => {
+    const mockResponse = {
+      status: "OK",
+      has_more: true,
+      data: [],
+    };
+
+    vi.spyOn(request, "fetchApi").mockResolvedValue(mockResponse);
+
+    await getProjectsTool.handler({
+      limit: 50,
+      starting_after: "cursor123",
+    });
+
+    expect(request.fetchApi).toHaveBeenCalledWith(
+      "/projects?limit=50&starting_after=cursor123"
+    );
   });
 });

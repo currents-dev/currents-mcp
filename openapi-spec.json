@@ -1,0 +1,3475 @@
+{
+  "openapi": "3.0.2",
+  "info": {
+    "title": "Currents REST API",
+    "description": "\nREST API for Currents - the test analytics and orchestration platform.\n\n---\n\n**Authentication**\n\nAll endpoints require authentication using a Bearer token (API key).\nYou can generate an API key from the Currents dashboard.\n\n```\nAuthorization: Bearer <your-api-key>\n```\n\n---\n\n**Base URL**\n\nAll API endpoints are relative to the base URL:\n- **Production**: `https://api.currents.dev/v1`\n- **Staging**: `https://api-staging.currents.dev/v1`\n\n---\n\n**Available APIs**\n\n- **Actions API** - Manage test actions (rules) for skip, quarantine, and tagging\n- **Projects API** - List and retrieve project information, runs, and insights\n- **Runs API** - Query and manage test runs, including cancellation and reset\n- **Instances API** - Query spec file execution instances\n- **Test Results API** - Query historical test execution results by signature\n- **Tests Explorer API** - Explore and analyze aggregated test metrics\n- **Spec Files API** - Query spec file metrics and statistics\n- **Signature API** - Generate unique test signatures\n\n---\n\n**Pagination**\n\nList endpoints support cursor-based pagination using `starting_after` and `ending_before` parameters.\nThe response includes a `has_more` field indicating if there are more items to fetch.\n\nSome endpoints (Spec Files, Tests Explorer) use page-based pagination with `page` and `limit` parameters.\n\n---\n\n**Additional Resources**\n\n- [API Documentation](https://docs.currents.dev/api)\n- [Currents Dashboard](https://app.currents.dev)\n    ",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Currents Support",
+      "url": "https://currents.dev"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://api.currents.dev/v1",
+      "description": "Production API"
+    },
+    {
+      "url": "https://api-staging.currents.dev/v1",
+      "description": "Staging API"
+    },
+    {
+      "url": "http://localhost:4000/v1",
+      "description": "Local development"
+    }
+  ],
+  "security": [
+    {
+      "BearerAuth": []
+    }
+  ],
+  "paths": {
+    "/actions": {
+      "get": {
+        "summary": "List actions",
+        "description": "Get all actions for a project with optional filtering",
+        "operationId": "listActions",
+        "tags": [
+          "Actions"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectIdQuery"
+          },
+          {
+            "$ref": "#/components/parameters/StatusFilter"
+          },
+          {
+            "$ref": "#/components/parameters/SearchFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionsListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create action",
+        "description": "Create a new action for a project",
+        "operationId": "createAction",
+        "tags": [
+          "Actions"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectIdQuery"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateActionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Action created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/actions/{actionId}": {
+      "get": {
+        "summary": "Get action",
+        "description": "Get a single action by ID. The actionId is globally unique, so projectId is not required.",
+        "operationId": "getAction",
+        "tags": [
+          "Actions"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ActionIdPath"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update action",
+        "description": "Update an existing action. The actionId is globally unique, so projectId is not required.",
+        "operationId": "updateAction",
+        "tags": [
+          "Actions"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ActionIdPath"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateActionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Action updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete action",
+        "description": "Archive an action (soft delete). The actionId is globally unique, so projectId is not required.",
+        "operationId": "deleteAction",
+        "tags": [
+          "Actions"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ActionIdPath"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Action archived successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionDeleteResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/actions/{actionId}/enable": {
+      "put": {
+        "summary": "Enable action",
+        "description": "Enable a disabled action. The actionId is globally unique, so projectId is not required.",
+        "operationId": "enableAction",
+        "tags": [
+          "Actions"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ActionIdPath"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Action enabled successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/actions/{actionId}/disable": {
+      "put": {
+        "summary": "Disable action",
+        "description": "Disable an active action. The actionId is globally unique, so projectId is not required.",
+        "operationId": "disableAction",
+        "tags": [
+          "Actions"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ActionIdPath"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Action disabled successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/projects": {
+      "get": {
+        "summary": "List projects",
+        "description": "Get all projects for your organization with optional pagination",
+        "operationId": "listProjects",
+        "tags": [
+          "Projects"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/LimitQuery"
+          },
+          {
+            "$ref": "#/components/parameters/StartingAfterQuery"
+          },
+          {
+            "$ref": "#/components/parameters/EndingBeforeQuery"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectsListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/projects/{projectId}": {
+      "get": {
+        "summary": "Get project",
+        "description": "Get a single project by ID",
+        "operationId": "getProject",
+        "tags": [
+          "Projects"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectIdPath"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/projects/{projectId}/runs": {
+      "get": {
+        "summary": "List project runs",
+        "description": "Get all runs for a project with optional pagination and filtering. Supports filtering by branch, tags, status, completion state, date range, search text, and author.",
+        "operationId": "listProjectRuns",
+        "tags": [
+          "Projects",
+          "Runs"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectIdPath"
+          },
+          {
+            "$ref": "#/components/parameters/LimitQuery"
+          },
+          {
+            "$ref": "#/components/parameters/StartingAfterQuery"
+          },
+          {
+            "$ref": "#/components/parameters/EndingBeforeQuery"
+          },
+          {
+            "$ref": "#/components/parameters/RunFeedBranchQuery"
+          },
+          {
+            "$ref": "#/components/parameters/RunFeedTagQuery"
+          },
+          {
+            "$ref": "#/components/parameters/RunFeedTagOperatorQuery"
+          },
+          {
+            "$ref": "#/components/parameters/RunFeedSearchQuery"
+          },
+          {
+            "$ref": "#/components/parameters/RunFeedAuthorQuery"
+          },
+          {
+            "$ref": "#/components/parameters/RunFeedStatusQuery"
+          },
+          {
+            "$ref": "#/components/parameters/RunFeedCompletionStateQuery"
+          },
+          {
+            "$ref": "#/components/parameters/RunFeedDateStartQuery"
+          },
+          {
+            "$ref": "#/components/parameters/RunFeedDateEndQuery"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunsListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/projects/{projectId}/insights": {
+      "get": {
+        "summary": "Get project insights",
+        "description": "Get aggregated run and test metrics for a project within a date range",
+        "operationId": "getProjectInsights",
+        "tags": [
+          "Projects"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectIdPath"
+          },
+          {
+            "$ref": "#/components/parameters/DateStartQuery"
+          },
+          {
+            "$ref": "#/components/parameters/DateEndQuery"
+          },
+          {
+            "$ref": "#/components/parameters/ResolutionQuery"
+          },
+          {
+            "$ref": "#/components/parameters/TagsQuery"
+          },
+          {
+            "$ref": "#/components/parameters/BranchesQuery"
+          },
+          {
+            "$ref": "#/components/parameters/GroupsQuery"
+          },
+          {
+            "$ref": "#/components/parameters/AuthorsQuery"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectInsightsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/runs/{runId}": {
+      "get": {
+        "summary": "Get run",
+        "description": "Get a single run by ID with full details",
+        "operationId": "getRun",
+        "tags": [
+          "Runs"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RunIdPath"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete run",
+        "description": "Delete a run and all associated data",
+        "operationId": "deleteRun",
+        "tags": [
+          "Runs"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RunIdPath"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Run deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunDeleteResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/runs/find": {
+      "get": {
+        "summary": "Find run",
+        "description": "Find a run by query parameters. Returns the most recent completed run matching the criteria.",
+        "operationId": "findRun",
+        "tags": [
+          "Runs"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectIdQuery"
+          },
+          {
+            "name": "ciBuildId",
+            "in": "query",
+            "required": false,
+            "description": "The CI build ID. If provided, returns the run with this exact ciBuildId.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "branch",
+            "in": "query",
+            "required": false,
+            "description": "Git branch name. Used when ciBuildId is not provided.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tag",
+            "in": "query",
+            "required": false,
+            "description": "Run tags to filter by (can be specified multiple times)",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "pwLastRun",
+            "in": "query",
+            "required": false,
+            "description": "If true, includes information about failed tests from the last run (Playwright only)",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/runs/{runId}/cancel": {
+      "put": {
+        "summary": "Cancel run",
+        "description": "Cancel a run in progress",
+        "operationId": "cancelRun",
+        "tags": [
+          "Runs"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RunIdPath"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Run cancelled successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunCancellationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/runs/{runId}/reset": {
+      "put": {
+        "summary": "Reset run",
+        "description": "Reset failed spec files in a run to allow re-execution. Requires specifying machineId(s) to reset.",
+        "operationId": "resetRun",
+        "tags": [
+          "Runs"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RunIdPath"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetRunRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Run reset successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResetRunResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/runs/cancel-ci/github": {
+      "put": {
+        "summary": "Cancel run by GitHub CI",
+        "description": "Cancel a run by GitHub Actions workflow run ID and attempt number",
+        "operationId": "cancelRunByGithubCI",
+        "tags": [
+          "Runs"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelRunGithubCIRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Run cancelled successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunCancellationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/instances/{instanceId}": {
+      "get": {
+        "summary": "Get instance",
+        "description": "Get a single spec file execution instance by ID with full test results",
+        "operationId": "getInstance",
+        "tags": [
+          "Instances"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/InstanceIdPath"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstanceResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/spec-files/{projectId}": {
+      "get": {
+        "summary": "Get spec files",
+        "description": "Get spec file metrics and statistics for a project within a date range",
+        "operationId": "getSpecFiles",
+        "tags": [
+          "Spec Files"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectIdPath"
+          },
+          {
+            "$ref": "#/components/parameters/DateStartQuery"
+          },
+          {
+            "$ref": "#/components/parameters/DateEndQuery"
+          },
+          {
+            "$ref": "#/components/parameters/PageQuery"
+          },
+          {
+            "$ref": "#/components/parameters/SpecFilesLimitQuery"
+          },
+          {
+            "$ref": "#/components/parameters/TagsQuery"
+          },
+          {
+            "$ref": "#/components/parameters/BranchesQuery"
+          },
+          {
+            "$ref": "#/components/parameters/GroupsQuery"
+          },
+          {
+            "$ref": "#/components/parameters/AuthorsQuery"
+          },
+          {
+            "name": "order",
+            "in": "query",
+            "required": false,
+            "description": "Field to order results by",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "avgDuration",
+                "failedExecutions",
+                "failureRate",
+                "flakeRate",
+                "flakyExecutions",
+                "fullyReported",
+                "overallExecutions",
+                "suiteSize",
+                "timeoutExecutions",
+                "timeoutRate"
+              ],
+              "default": "avgDuration"
+            }
+          },
+          {
+            "name": "dir",
+            "in": "query",
+            "required": false,
+            "description": "Sort direction",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "default": "desc"
+            }
+          },
+          {
+            "name": "specNameFilter",
+            "in": "query",
+            "required": false,
+            "description": "Filter spec files by name (partial match)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "includeFailedInDuration",
+            "in": "query",
+            "required": false,
+            "description": "Include failed executions in duration calculation",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SpecFilesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/test-results/{signature}": {
+      "get": {
+        "summary": "Get test results",
+        "description": "Get historical test execution results for a specific test signature",
+        "operationId": "getTestResults",
+        "tags": [
+          "Test Results"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SignaturePath"
+          },
+          {
+            "$ref": "#/components/parameters/DateStartQuery"
+          },
+          {
+            "$ref": "#/components/parameters/DateEndQuery"
+          },
+          {
+            "$ref": "#/components/parameters/LimitQuery"
+          },
+          {
+            "$ref": "#/components/parameters/StartingAfterQuery"
+          },
+          {
+            "$ref": "#/components/parameters/EndingBeforeQuery"
+          },
+          {
+            "name": "branch",
+            "in": "query",
+            "required": false,
+            "description": "Filter by git branch (can be specified multiple times)",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "tag",
+            "in": "query",
+            "required": false,
+            "description": "Filter by run tags (can be specified multiple times)",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "git_author",
+            "in": "query",
+            "required": false,
+            "description": "Filter by git author (can be specified multiple times)",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "description": "Filter by test status (can be specified multiple times)",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "passed",
+                  "failed",
+                  "pending",
+                  "skipped"
+                ]
+              }
+            },
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "group",
+            "in": "query",
+            "required": false,
+            "description": "Filter by run group (can be specified multiple times)",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "style": "form",
+            "explode": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestResultsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/tests/{projectId}": {
+      "get": {
+        "summary": "Get tests explorer",
+        "description": "Get aggregated test metrics for a project within a date range",
+        "operationId": "getTestsExplorer",
+        "tags": [
+          "Tests Explorer"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectIdPath"
+          },
+          {
+            "$ref": "#/components/parameters/DateStartQuery"
+          },
+          {
+            "$ref": "#/components/parameters/DateEndQuery"
+          },
+          {
+            "$ref": "#/components/parameters/PageQuery"
+          },
+          {
+            "$ref": "#/components/parameters/TestsExplorerLimitQuery"
+          },
+          {
+            "$ref": "#/components/parameters/TagsQuery"
+          },
+          {
+            "$ref": "#/components/parameters/BranchesQuery"
+          },
+          {
+            "$ref": "#/components/parameters/GroupsQuery"
+          },
+          {
+            "$ref": "#/components/parameters/AuthorsQuery"
+          },
+          {
+            "name": "order",
+            "in": "query",
+            "required": false,
+            "description": "Field to order results by",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "failures",
+                "passes",
+                "flakiness",
+                "flakiness_x_samples",
+                "failrate_x_samples",
+                "duration",
+                "flakiness_rate_delta",
+                "failure_rate_delta",
+                "duration_x_samples",
+                "executions",
+                "title"
+              ],
+              "default": "title"
+            }
+          },
+          {
+            "name": "dir",
+            "in": "query",
+            "required": false,
+            "description": "Sort direction",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "default": "desc"
+            }
+          },
+          {
+            "name": "spec",
+            "in": "query",
+            "required": false,
+            "description": "Filter tests by spec file name (partial match)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "title",
+            "in": "query",
+            "required": false,
+            "description": "Filter tests by title (partial match)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "min_executions",
+            "in": "query",
+            "required": false,
+            "description": "Minimum number of executions to include",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "test_state",
+            "in": "query",
+            "required": false,
+            "description": "Filter by test state (can be specified multiple times)",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "passed",
+                  "failed",
+                  "pending",
+                  "skipped"
+                ]
+              }
+            },
+            "style": "form",
+            "explode": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestsExplorerResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/signature/test": {
+      "post": {
+        "summary": "Get test signature",
+        "description": "Generate a unique test signature based on project, spec file path, and test title",
+        "operationId": "getTestSignature",
+        "tags": [
+          "Signature"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestSignatureRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestSignatureResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "API key authentication using Bearer token"
+      }
+    },
+    "schemas": {
+      "ErrorResponse": {
+        "type": "object",
+        "required": [
+          "status",
+          "error"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "FAILED"
+            ]
+          },
+          "error": {
+            "type": "string",
+            "description": "Error message"
+          }
+        }
+      },
+      "ActionStatus": {
+        "type": "string",
+        "enum": [
+          "active",
+          "disabled",
+          "archived",
+          "expired"
+        ],
+        "description": "The current status of the action:\n- `active`: Action is enabled and will be applied to matching tests\n- `disabled`: Action is temporarily disabled\n- `archived`: Action has been soft-deleted\n- `expired`: Action has passed its expiration date"
+      },
+      "RuleActionSkip": {
+        "type": "object",
+        "required": [
+          "op"
+        ],
+        "properties": {
+          "op": {
+            "type": "string",
+            "enum": [
+              "skip"
+            ]
+          }
+        },
+        "example": {
+          "op": "skip"
+        }
+      },
+      "RuleActionQuarantine": {
+        "type": "object",
+        "required": [
+          "op"
+        ],
+        "properties": {
+          "op": {
+            "type": "string",
+            "enum": [
+              "quarantine"
+            ]
+          }
+        },
+        "example": {
+          "op": "quarantine"
+        }
+      },
+      "RuleActionTag": {
+        "type": "object",
+        "required": [
+          "op",
+          "details"
+        ],
+        "properties": {
+          "op": {
+            "type": "string",
+            "enum": [
+              "tag"
+            ]
+          },
+          "details": {
+            "type": "object",
+            "required": [
+              "tags"
+            ],
+            "properties": {
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 10,
+                "description": "Tags to add to matching tests"
+              }
+            }
+          }
+        },
+        "example": {
+          "op": "tag",
+          "details": {
+            "tags": [
+              "flaky",
+              "needs-investigation"
+            ]
+          }
+        }
+      },
+      "RuleAction": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/RuleActionSkip"
+          },
+          {
+            "$ref": "#/components/schemas/RuleActionQuarantine"
+          },
+          {
+            "$ref": "#/components/schemas/RuleActionTag"
+          }
+        ]
+      },
+      "ConditionType": {
+        "type": "string",
+        "enum": [
+          "testId",
+          "project",
+          "title",
+          "file",
+          "git_branch",
+          "git_authorName",
+          "git_authorEmail",
+          "git_remoteOrigin",
+          "git_message",
+          "error_message",
+          "titlePath",
+          "annotation",
+          "tag"
+        ],
+        "description": "The type of condition to match against.\n\n**Note:** Different condition types support different operators:\n- **Primitive types** (`testId`, `project`, `title`, `file`, `git_branch`, `git_authorName`, `git_authorEmail`, `git_remoteOrigin`, `git_message`): Support `eq`, `neq`, `any`, `empty`, `in`, `notIn`\n- **Complex types** (`error_message`, `titlePath`, `annotation`, `tag`): Support all operators including `inc`, `notInc`, `incAll`, `notIncAll`"
+      },
+      "ConditionOperator": {
+        "type": "string",
+        "enum": [
+          "eq",
+          "neq",
+          "any",
+          "empty",
+          "in",
+          "notIn",
+          "inc",
+          "notInc",
+          "incAll",
+          "notIncAll"
+        ],
+        "description": "The comparison operator:\n- `eq`: Equal to\n- `neq`: Not equal to\n- `any`: Matches any value (not null)\n- `empty`: Is empty or null\n- `in`: Value is in the list\n- `notIn`: Value is not in the list\n- `inc`: Includes substring (**only for**: error_message, titlePath, annotation, tag)\n- `notInc`: Does not include substring (**only for**: error_message, titlePath, annotation, tag)\n- `incAll`: Includes all values (**only for**: error_message, titlePath, annotation, tag)\n- `notIncAll`: Does not include all values (**only for**: error_message, titlePath, annotation, tag)"
+      },
+      "RuleMatcherCondition": {
+        "type": "object",
+        "required": [
+          "type",
+          "op"
+        ],
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/ConditionType"
+          },
+          "op": {
+            "$ref": "#/components/schemas/ConditionOperator"
+          },
+          "value": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            ],
+            "nullable": true,
+            "description": "The value(s) to match against"
+          }
+        },
+        "example": {
+          "type": "title",
+          "op": "eq",
+          "value": "flaky"
+        }
+      },
+      "RuleMatcher": {
+        "type": "object",
+        "required": [
+          "op",
+          "cond"
+        ],
+        "properties": {
+          "op": {
+            "type": "string",
+            "enum": [
+              "AND",
+              "OR"
+            ],
+            "description": "How to combine multiple conditions"
+          },
+          "cond": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RuleMatcherCondition"
+            },
+            "minItems": 1,
+            "description": "List of conditions to match"
+          }
+        },
+        "example": {
+          "op": "AND",
+          "cond": [
+            {
+              "type": "title",
+              "op": "in",
+              "value": [
+                "flaky"
+              ]
+            },
+            {
+              "type": "project",
+              "op": "eq",
+              "value": "chromium"
+            }
+          ]
+        }
+      },
+      "Action": {
+        "type": "object",
+        "required": [
+          "actionId",
+          "name",
+          "action",
+          "matcher",
+          "status",
+          "createdAt",
+          "createdBy"
+        ],
+        "properties": {
+          "actionId": {
+            "type": "string",
+            "description": "Unique identifier for the action"
+          },
+          "name": {
+            "type": "string",
+            "description": "Human-readable name for the action"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "description": "Optional description"
+          },
+          "action": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RuleAction"
+            },
+            "minItems": 1,
+            "description": "Actions to perform when conditions match"
+          },
+          "matcher": {
+            "$ref": "#/components/schemas/RuleMatcher"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ActionStatus"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the action was created"
+          },
+          "createdBy": {
+            "type": "string",
+            "description": "Email of the user who created the action"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "updatedBy": {
+            "type": "string",
+            "nullable": true
+          },
+          "disabledAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "disabledBy": {
+            "type": "string",
+            "nullable": true
+          },
+          "archivedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "archivedBy": {
+            "type": "string",
+            "nullable": true
+          },
+          "expiresAfter": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
+      "CreateActionRequest": {
+        "type": "object",
+        "required": [
+          "name",
+          "action",
+          "matcher"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 1000,
+            "nullable": true
+          },
+          "action": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RuleAction"
+            },
+            "minItems": 1
+          },
+          "matcher": {
+            "$ref": "#/components/schemas/RuleMatcher"
+          },
+          "expiresAfter": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
+      "UpdateActionRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 1000,
+            "nullable": true
+          },
+          "action": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RuleAction"
+            },
+            "minItems": 1
+          },
+          "matcher": {
+            "$ref": "#/components/schemas/RuleMatcher"
+          },
+          "expiresAfter": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
+      "ActionsListResponse": {
+        "type": "object",
+        "required": [
+          "status",
+          "data"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "OK"
+            ]
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Action"
+            }
+          }
+        }
+      },
+      "ActionResponse": {
+        "type": "object",
+        "required": [
+          "status",
+          "data"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "OK"
+            ]
+          },
+          "data": {
+            "$ref": "#/components/schemas/Action"
+          }
+        }
+      },
+      "ActionDeleteResponse": {
+        "type": "object",
+        "required": [
+          "status",
+          "data"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "OK"
+            ]
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "actionId",
+              "archived"
+            ],
+            "properties": {
+              "actionId": {
+                "type": "string"
+              },
+              "archived": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      },
+      "Project": {
+        "type": "object",
+        "required": [
+          "projectId",
+          "name",
+          "createdAt"
+        ],
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "description": "Unique identifier for the project"
+          },
+          "name": {
+            "type": "string",
+            "description": "Human-readable name for the project"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the project was created"
+          },
+          "failFast": {
+            "type": "boolean",
+            "nullable": true,
+            "description": "Whether fail-fast is enabled for this project"
+          },
+          "inactivityTimeoutSeconds": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Timeout in seconds after which inactive runs are marked as timed out"
+          },
+          "defaultBranchName": {
+            "type": "string",
+            "nullable": true,
+            "description": "Default branch name for the project"
+          }
+        }
+      },
+      "ProjectWithCursor": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Project"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "cursor": {
+                "type": "string",
+                "description": "Cursor for pagination"
+              }
+            }
+          }
+        ]
+      },
+      "ProjectsListResponse": {
+        "type": "object",
+        "required": [
+          "status",
+          "has_more",
+          "data"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "OK"
+            ]
+          },
+          "has_more": {
+            "type": "boolean",
+            "description": "Whether there are more items to fetch"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProjectWithCursor"
+            }
+          }
+        }
+      },
+      "ProjectResponse": {
+        "type": "object",
+        "required": [
+          "status",
+          "data"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "OK"
+            ]
+          },
+          "data": {
+            "$ref": "#/components/schemas/Project"
+          }
+        }
+      },
+      "ProjectInsightsResponse": {
+        "type": "object",
+        "required": [
+          "status",
+          "data"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "OK"
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "projectId": {
+                "type": "string"
+              },
+              "orgId": {
+                "type": "string"
+              },
+              "dateStart": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "dateEnd": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "resolution": {
+                "type": "string"
+              },
+              "results": {
+                "type": "object",
+                "properties": {
+                  "overall": {
+                    "type": "object",
+                    "properties": {
+                      "runs": {
+                        "$ref": "#/components/schemas/RunMetrics"
+                      },
+                      "tests": {
+                        "$ref": "#/components/schemas/TestMetrics"
+                      }
+                    }
+                  },
+                  "timeline": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "object",
+                        "properties": {
+                          "runs": {
+                            "$ref": "#/components/schemas/RunMetrics"
+                          },
+                          "tests": {
+                            "$ref": "#/components/schemas/TestMetrics"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "RunMetrics": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "integer",
+            "description": "Total number of runs"
+          },
+          "cancelled": {
+            "type": "integer",
+            "description": "Cancelled runs"
+          },
+          "timeouts": {
+            "type": "integer",
+            "description": "Timed out runs"
+          },
+          "completed": {
+            "type": "integer",
+            "description": "Fully completed runs"
+          },
+          "failed": {
+            "type": "integer",
+            "description": "Failed runs"
+          },
+          "passed": {
+            "type": "integer",
+            "description": "Passed runs"
+          },
+          "nonFullyReported": {
+            "type": "integer",
+            "description": "Runs that did not fully report"
+          },
+          "avgDurationSeconds": {
+            "type": "number",
+            "description": "Average run duration in seconds"
+          },
+          "avgSuccessRate": {
+            "type": "number",
+            "description": "Average success rate (0-1)"
+          }
+        }
+      },
+      "TestMetrics": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "integer",
+            "description": "Total test executions"
+          },
+          "failed": {
+            "type": "integer",
+            "description": "Failed tests"
+          },
+          "passed": {
+            "type": "integer",
+            "description": "Passed tests"
+          },
+          "pending": {
+            "type": "integer",
+            "description": "Pending tests"
+          },
+          "skipped": {
+            "type": "integer",
+            "description": "Skipped tests"
+          },
+          "flaky": {
+            "type": "integer",
+            "description": "Flaky tests"
+          }
+        }
+      },
+      "Run": {
+        "type": "object",
+        "required": [
+          "runId",
+          "projectId",
+          "createdAt",
+          "completionState",
+          "status"
+        ],
+        "properties": {
+          "runId": {
+            "type": "string",
+            "description": "Unique identifier for the run"
+          },
+          "projectId": {
+            "type": "string",
+            "description": "Project this run belongs to"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the run was created"
+          },
+          "durationMs": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Total duration of the run in milliseconds"
+          },
+          "deletedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "When the run was deleted"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Tags associated with this run"
+          },
+          "previousRunId": {
+            "type": "string",
+            "nullable": true,
+            "description": "ID of the previous run (for retry runs)"
+          },
+          "timeout": {
+            "type": "object",
+            "properties": {
+              "isTimeout": {
+                "type": "boolean"
+              },
+              "timeoutValueMs": {
+                "type": "integer",
+                "nullable": true
+              }
+            }
+          },
+          "cancellation": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "cancelledAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "cancelledBy": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              }
+            }
+          },
+          "groups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RunGroup"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/RunMeta"
+          },
+          "specs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RunSpec"
+            }
+          },
+          "completionState": {
+            "type": "string",
+            "enum": [
+              "complete",
+              "incomplete",
+              "cancelled",
+              "timedOut"
+            ],
+            "description": "The completion state of the run"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "passed",
+              "failed",
+              "running",
+              "cancelled",
+              "timedOut"
+            ],
+            "description": "The overall status of the run"
+          }
+        }
+      },
+      "RunGroup": {
+        "type": "object",
+        "properties": {
+          "groupId": {
+            "type": "string"
+          },
+          "platform": {
+            "type": "object",
+            "properties": {
+              "osName": {
+                "type": "string"
+              },
+              "osVersion": {
+                "type": "string"
+              },
+              "browserName": {
+                "type": "string"
+              },
+              "browserVersion": {
+                "type": "string"
+              }
+            }
+          },
+          "tests": {
+            "type": "object",
+            "properties": {
+              "overall": {
+                "type": "integer"
+              },
+              "passes": {
+                "type": "integer"
+              },
+              "failures": {
+                "type": "integer"
+              },
+              "pending": {
+                "type": "integer"
+              },
+              "skipped": {
+                "type": "integer"
+              },
+              "flaky": {
+                "type": "integer"
+              }
+            }
+          }
+        }
+      },
+      "RunMeta": {
+        "type": "object",
+        "properties": {
+          "ciBuildId": {
+            "type": "string",
+            "description": "CI build identifier"
+          },
+          "commit": {
+            "type": "object",
+            "properties": {
+              "sha": {
+                "type": "string"
+              },
+              "branch": {
+                "type": "string"
+              },
+              "authorName": {
+                "type": "string"
+              },
+              "authorEmail": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "remoteOrigin": {
+                "type": "string"
+              }
+            }
+          },
+          "framework": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "version": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "RunSpec": {
+        "type": "object",
+        "properties": {
+          "spec": {
+            "type": "string",
+            "description": "Spec file path"
+          },
+          "groupId": {
+            "type": "string"
+          },
+          "instanceId": {
+            "type": "string"
+          },
+          "machineId": {
+            "type": "string"
+          },
+          "claimedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "completedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "results": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "stats": {
+                "type": "object",
+                "properties": {
+                  "tests": {
+                    "type": "integer"
+                  },
+                  "passes": {
+                    "type": "integer"
+                  },
+                  "failures": {
+                    "type": "integer"
+                  },
+                  "pending": {
+                    "type": "integer"
+                  },
+                  "skipped": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "exception": {
+                "type": "string",
+                "nullable": true
+              },
+              "flaky": {
+                "type": "integer"
+              }
+            }
+          }
+        }
+      },
+      "RunFeedItem": {
+        "allOf": [
+          {
+            "type": "object",
+            "properties": {
+              "runId": {
+                "type": "string"
+              },
+              "projectId": {
+                "type": "string"
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "durationMs": {
+                "type": "integer",
+                "nullable": true
+              },
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "previousRunId": {
+                "type": "string",
+                "nullable": true
+              },
+              "cursor": {
+                "type": "string"
+              },
+              "timeout": {
+                "type": "object",
+                "properties": {
+                  "isTimeout": {
+                    "type": "boolean"
+                  },
+                  "timeoutValueMs": {
+                    "type": "integer",
+                    "nullable": true
+                  }
+                }
+              },
+              "cancellation": {
+                "type": "object",
+                "nullable": true
+              },
+              "groups": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/RunGroup"
+                }
+              },
+              "meta": {
+                "$ref": "#/components/schemas/RunMeta"
+              },
+              "completionState": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string"
+              }
+            }
+          }
+        ]
+      },
+      "RunsListResponse": {
+        "type": "object",
+        "required": [
+          "status",
+          "has_more",
+          "data"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "OK"
+            ]
+          },
+          "has_more": {
+            "type": "boolean",
+            "description": "Whether there are more items to fetch"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RunFeedItem"
+            }
+          }
+        }
+      },
+      "RunResponse": {
+        "type": "object",
+        "required": [
+          "status",
+          "data"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "OK"
+            ]
+          },
+          "data": {
+            "$ref": "#/components/schemas/Run"
+          }
+        }
+      },
+      "RunDeleteResponse": {
+        "type": "object",
+        "required": [
+          "status",
+          "data"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "OK"
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "runId": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "RunCancellationResponse": {
+        "type": "object",
+        "required": [
+          "status",
+          "data"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "OK"
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "runId": {
+                "type": "string"
+              },
+              "cancelled": {
+                "type": "boolean"
+              },
+              "cancelledAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          }
+        }
+      },
+      "ResetRunRequest": {
+        "type": "object",
+        "required": [
+          "machineId"
+        ],
+        "properties": {
+          "machineId": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "maxItems": 63,
+            "description": "Machine ID(s) to reset"
+          },
+          "isBatchedOr8n": {
+            "type": "boolean",
+            "description": "Whether to use batched orchestration"
+          }
+        }
+      },
+      "ResetRunResponse": {
+        "type": "object",
+        "required": [
+          "status",
+          "data"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "OK"
+            ]
+          },
+          "data": {
+            "type": "object",
+            "description": "Reset operation result"
+          }
+        }
+      },
+      "CancelRunGithubCIRequest": {
+        "type": "object",
+        "required": [
+          "githubRunId",
+          "githubRunAttempt"
+        ],
+        "properties": {
+          "githubRunId": {
+            "type": "string",
+            "description": "GitHub Actions workflow run ID"
+          },
+          "githubRunAttempt": {
+            "type": "integer",
+            "description": "GitHub Actions workflow run attempt number"
+          },
+          "projectId": {
+            "type": "string",
+            "description": "Optional project ID to scope the cancellation"
+          },
+          "ciBuildId": {
+            "type": "string",
+            "description": "Optional CI build ID to scope the cancellation"
+          }
+        }
+      },
+      "Instance": {
+        "type": "object",
+        "properties": {
+          "instanceId": {
+            "type": "string",
+            "description": "Unique identifier for the instance"
+          },
+          "runId": {
+            "type": "string"
+          },
+          "groupId": {
+            "type": "string"
+          },
+          "spec": {
+            "type": "string",
+            "description": "Spec file path"
+          },
+          "machineId": {
+            "type": "string"
+          },
+          "claimedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "completedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "results": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "stats": {
+                "type": "object",
+                "properties": {
+                  "tests": {
+                    "type": "integer"
+                  },
+                  "passes": {
+                    "type": "integer"
+                  },
+                  "failures": {
+                    "type": "integer"
+                  },
+                  "pending": {
+                    "type": "integer"
+                  },
+                  "skipped": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "exception": {
+                "type": "string",
+                "nullable": true
+              },
+              "flaky": {
+                "type": "integer"
+              },
+              "tests": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/InstanceTest"
+                }
+              }
+            }
+          }
+        }
+      },
+      "InstanceTest": {
+        "type": "object",
+        "properties": {
+          "testId": {
+            "type": "string"
+          },
+          "title": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "passed",
+              "failed",
+              "pending",
+              "skipped"
+            ]
+          },
+          "displayError": {
+            "type": "string",
+            "nullable": true
+          },
+          "attempts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "attemptId": {
+                  "type": "string"
+                },
+                "state": {
+                  "type": "string"
+                },
+                "wallClockStartedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "wallClockDuration": {
+                  "type": "integer"
+                },
+                "error": {
+                  "type": "object",
+                  "nullable": true,
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "stack": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "InstanceResponse": {
+        "type": "object",
+        "required": [
+          "status",
+          "data"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "OK"
+            ]
+          },
+          "data": {
+            "$ref": "#/components/schemas/Instance"
+          }
+        }
+      },
+      "SpecFile": {
+        "type": "object",
+        "properties": {
+          "signature": {
+            "type": "string",
+            "description": "Unique spec file signature"
+          },
+          "spec": {
+            "type": "string",
+            "description": "Spec file path"
+          },
+          "metrics": {
+            "type": "object",
+            "properties": {
+              "avgDuration": {
+                "type": "number",
+                "description": "Average duration in milliseconds"
+              },
+              "failedExecutions": {
+                "type": "integer"
+              },
+              "failureRate": {
+                "type": "number"
+              },
+              "flakeRate": {
+                "type": "number"
+              },
+              "flakyExecutions": {
+                "type": "integer"
+              },
+              "fullyReported": {
+                "type": "integer"
+              },
+              "overallExecutions": {
+                "type": "integer"
+              },
+              "suiteSize": {
+                "type": "integer"
+              },
+              "timeoutExecutions": {
+                "type": "integer"
+              },
+              "timeoutRate": {
+                "type": "number"
+              }
+            }
+          }
+        }
+      },
+      "SpecFilesResponse": {
+        "type": "object",
+        "required": [
+          "status",
+          "data"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "OK"
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "list": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/SpecFile"
+                }
+              },
+              "total": {
+                "type": "integer",
+                "description": "Total number of spec files"
+              },
+              "nextPage": {
+                "oneOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "boolean"
+                  }
+                ],
+                "description": "Next page number or false if no more pages"
+              }
+            }
+          }
+        }
+      },
+      "TestResult": {
+        "type": "object",
+        "properties": {
+          "cursor": {
+            "type": "string"
+          },
+          "signature": {
+            "type": "string"
+          },
+          "framework": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "projectId": {
+            "type": "string"
+          },
+          "groupId": {
+            "type": "string"
+          },
+          "runId": {
+            "type": "string"
+          },
+          "instanceId": {
+            "type": "string"
+          },
+          "spec": {
+            "type": "string"
+          },
+          "machineId": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "title": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "testId": {
+            "type": "string"
+          },
+          "displayError": {
+            "type": "string",
+            "nullable": true
+          },
+          "commit": {
+            "type": "object",
+            "properties": {
+              "branch": {
+                "type": "string"
+              },
+              "authorEmail": {
+                "type": "string"
+              },
+              "authorName": {
+                "type": "string"
+              },
+              "sha": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            }
+          },
+          "duration": {
+            "type": "integer"
+          },
+          "flaky": {
+            "type": "boolean"
+          },
+          "expectedStatus": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "passed",
+              "failed",
+              "pending",
+              "skipped"
+            ]
+          },
+          "attempts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "attemptId": {
+                  "type": "string"
+                },
+                "state": {
+                  "type": "string"
+                },
+                "error": {
+                  "type": "object",
+                  "nullable": true,
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "stack": {
+                      "type": "string"
+                    },
+                    "location": {
+                      "type": "object"
+                    }
+                  }
+                },
+                "startedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "duration": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "annotations": {
+            "type": "array",
+            "nullable": true,
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "TestResultsResponse": {
+        "type": "object",
+        "required": [
+          "status",
+          "has_more",
+          "data"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "OK"
+            ]
+          },
+          "has_more": {
+            "type": "boolean"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TestResult"
+            }
+          }
+        }
+      },
+      "TestExplorerItem": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Test title"
+          },
+          "signature": {
+            "type": "string",
+            "description": "Unique test signature"
+          },
+          "spec": {
+            "type": "string",
+            "description": "Spec file path"
+          },
+          "metrics": {
+            "type": "object",
+            "properties": {
+              "executions": {
+                "type": "integer"
+              },
+              "failures": {
+                "type": "integer"
+              },
+              "ignored": {
+                "type": "integer"
+              },
+              "passes": {
+                "type": "integer"
+              },
+              "flaky": {
+                "type": "integer"
+              },
+              "flakinessRate": {
+                "type": "number"
+              },
+              "failureRate": {
+                "type": "number"
+              },
+              "avgDurationMs": {
+                "type": "number"
+              },
+              "flakinessVolume": {
+                "type": "number"
+              },
+              "failureVolume": {
+                "type": "number"
+              },
+              "durationVolume": {
+                "type": "number"
+              }
+            }
+          },
+          "latestTag": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "lastSeen": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
+      "TestsExplorerResponse": {
+        "type": "object",
+        "required": [
+          "status",
+          "data"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "OK"
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "list": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/TestExplorerItem"
+                }
+              },
+              "count": {
+                "type": "integer"
+              },
+              "total": {
+                "type": "integer"
+              },
+              "nextPage": {
+                "oneOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "boolean"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "TestSignatureRequest": {
+        "type": "object",
+        "required": [
+          "projectId",
+          "specFilePath",
+          "testTitle"
+        ],
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "description": "The project ID"
+          },
+          "specFilePath": {
+            "type": "string",
+            "description": "Full path to the spec file"
+          },
+          "testTitle": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 1
+              }
+            ],
+            "description": "Test title or array of titles (for nested describe blocks)"
+          }
+        }
+      },
+      "TestSignatureResponse": {
+        "type": "object",
+        "required": [
+          "status",
+          "data"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "OK"
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "signature": {
+                "type": "string",
+                "description": "The generated test signature"
+              }
+            }
+          }
+        }
+      }
+    },
+    "parameters": {
+      "ProjectIdQuery": {
+        "name": "projectId",
+        "in": "query",
+        "required": true,
+        "description": "The project ID",
+        "schema": {
+          "type": "string"
+        },
+        "example": "proj_abc123"
+      },
+      "ProjectIdPath": {
+        "name": "projectId",
+        "in": "path",
+        "required": true,
+        "description": "The project ID",
+        "schema": {
+          "type": "string"
+        },
+        "example": "proj_abc123"
+      },
+      "ActionIdPath": {
+        "name": "actionId",
+        "in": "path",
+        "required": true,
+        "description": "The action ID",
+        "schema": {
+          "type": "string"
+        },
+        "example": "507f1f77bcf86cd799439011"
+      },
+      "RunIdPath": {
+        "name": "runId",
+        "in": "path",
+        "required": true,
+        "description": "The run ID",
+        "schema": {
+          "type": "string"
+        },
+        "example": "run_abc123"
+      },
+      "InstanceIdPath": {
+        "name": "instanceId",
+        "in": "path",
+        "required": true,
+        "description": "The instance ID",
+        "schema": {
+          "type": "string"
+        },
+        "example": "inst_abc123"
+      },
+      "SignaturePath": {
+        "name": "signature",
+        "in": "path",
+        "required": true,
+        "description": "The test signature",
+        "schema": {
+          "type": "string"
+        },
+        "example": "abc123def456"
+      },
+      "LimitQuery": {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "description": "Maximum number of items to return (default: 10)",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 10
+        }
+      },
+      "StartingAfterQuery": {
+        "name": "starting_after",
+        "in": "query",
+        "required": false,
+        "description": "Cursor for pagination. Returns items after this cursor value.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "EndingBeforeQuery": {
+        "name": "ending_before",
+        "in": "query",
+        "required": false,
+        "description": "Cursor for pagination. Returns items before this cursor value.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "PageQuery": {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "description": "Page number (0-indexed)",
+        "schema": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0
+        }
+      },
+      "SpecFilesLimitQuery": {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "description": "Maximum number of items to return (default: 50, max: 50)",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50,
+          "default": 50
+        }
+      },
+      "TestsExplorerLimitQuery": {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "description": "Maximum number of items to return (default: 50)",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 50
+        }
+      },
+      "DateStartQuery": {
+        "name": "date_start",
+        "in": "query",
+        "required": true,
+        "description": "Start date in ISO 8601 format",
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "example": "2024-01-01T00:00:00.000Z"
+      },
+      "DateEndQuery": {
+        "name": "date_end",
+        "in": "query",
+        "required": true,
+        "description": "End date in ISO 8601 format",
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "example": "2024-01-31T23:59:59.999Z"
+      },
+      "StatusFilter": {
+        "name": "status",
+        "in": "query",
+        "required": false,
+        "description": "Filter actions by status (can be specified multiple times)",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "active",
+              "disabled",
+              "archived",
+              "expired"
+            ]
+          }
+        },
+        "style": "form",
+        "explode": true,
+        "example": [
+          "active",
+          "disabled"
+        ]
+      },
+      "SearchFilter": {
+        "name": "search",
+        "in": "query",
+        "required": false,
+        "description": "Search actions by name",
+        "schema": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "example": "flaky test"
+      },
+      "ResolutionQuery": {
+        "name": "resolution",
+        "in": "query",
+        "required": false,
+        "description": "Time resolution for histogram data",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "1h",
+            "1d",
+            "1w"
+          ],
+          "default": "1d"
+        }
+      },
+      "TagsQuery": {
+        "name": "tags",
+        "in": "query",
+        "required": false,
+        "description": "Filter by tags (can be specified multiple times)",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "style": "form",
+        "explode": true
+      },
+      "BranchesQuery": {
+        "name": "branches",
+        "in": "query",
+        "required": false,
+        "description": "Filter by branches (can be specified multiple times)",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "style": "form",
+        "explode": true
+      },
+      "GroupsQuery": {
+        "name": "groups",
+        "in": "query",
+        "required": false,
+        "description": "Filter by groups (can be specified multiple times)",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "style": "form",
+        "explode": true
+      },
+      "AuthorsQuery": {
+        "name": "authors",
+        "in": "query",
+        "required": false,
+        "description": "Filter by git authors (can be specified multiple times)",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "style": "form",
+        "explode": true
+      },
+      "RunFeedBranchQuery": {
+        "name": "branch",
+        "in": "query",
+        "required": false,
+        "description": "Filter runs by git branch name",
+        "schema": {
+          "type": "string"
+        },
+        "example": "main"
+      },
+      "RunFeedTagQuery": {
+        "name": "tag",
+        "in": "query",
+        "required": false,
+        "description": "Filter runs by tags (can be specified multiple times). Use tag_operator to control matching behavior.",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "style": "form",
+        "explode": true,
+        "example": [
+          "workflow-master",
+          "nightly"
+        ]
+      },
+      "RunFeedTagOperatorQuery": {
+        "name": "tag_operator",
+        "in": "query",
+        "required": false,
+        "description": "Logical operator for tag filtering. AND requires all tags to be present (default), OR requires any tag to be present.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "AND",
+            "OR"
+          ],
+          "default": "AND"
+        },
+        "example": "AND"
+      },
+      "RunFeedSearchQuery": {
+        "name": "search",
+        "in": "query",
+        "required": false,
+        "description": "Search runs by ciBuildId or commit message. Case-insensitive.",
+        "schema": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "example": "fix login bug"
+      },
+      "RunFeedAuthorQuery": {
+        "name": "author",
+        "in": "query",
+        "required": false,
+        "description": "Filter runs by git commit author name (can be specified multiple times).",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "style": "form",
+        "explode": true,
+        "example": [
+          "John Doe"
+        ]
+      },
+      "RunFeedStatusQuery": {
+        "name": "status",
+        "in": "query",
+        "required": false,
+        "description": "Filter runs by status (can be specified multiple times). PASSED: all tests passed, FAILED: some tests failed, RUNNING: run is in progress and passing, FAILING: run is in progress but has failures.",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "PASSED",
+              "FAILED",
+              "RUNNING",
+              "FAILING"
+            ]
+          }
+        },
+        "style": "form",
+        "explode": true,
+        "example": [
+          "PASSED",
+          "FAILED"
+        ]
+      },
+      "RunFeedCompletionStateQuery": {
+        "name": "completion_state",
+        "in": "query",
+        "required": false,
+        "description": "Filter runs by completion state (can be specified multiple times). COMPLETE: run finished normally, IN_PROGRESS: run is still executing, CANCELED: run was canceled, TIMEOUT: run timed out.",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "COMPLETE",
+              "IN_PROGRESS",
+              "CANCELED",
+              "TIMEOUT"
+            ]
+          }
+        },
+        "style": "form",
+        "explode": true,
+        "example": [
+          "COMPLETE"
+        ]
+      },
+      "RunFeedDateStartQuery": {
+        "name": "date_start",
+        "in": "query",
+        "required": false,
+        "description": "Filter runs created on or after this date (ISO 8601 format).",
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "example": "2024-01-01T00:00:00Z"
+      },
+      "RunFeedDateEndQuery": {
+        "name": "date_end",
+        "in": "query",
+        "required": false,
+        "description": "Filter runs created before this date (ISO 8601 format).",
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "example": "2024-12-31T23:59:59Z"
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Invalid request parameters",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "status": "FAILED",
+              "error": "Invalid request body: name is required"
+            }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "Authentication failed",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "status": "FAILED",
+              "error": "Invalid authentication credentials"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Resource not found",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "status": "FAILED",
+              "error": "Not found"
+            }
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Actions",
+      "description": "Manage test actions (rules) that automatically modify test behavior.\n\nActions allow you to:\n- **Skip** tests that match certain conditions\n- **Quarantine** flaky tests so their failures don't fail the run\n- **Tag** tests with custom labels for organization\n\nEach action has a **matcher** that defines which tests it applies to,\nbased on conditions like test title, file path, tags, git branch, etc."
+    },
+    {
+      "name": "Projects",
+      "description": "Manage and query projects in your organization.\n\nProjects are the top-level containers for test runs, specs, and test results.\nEach project has a unique project ID and can be configured with various settings."
+    },
+    {
+      "name": "Runs",
+      "description": "Query and manage test runs.\n\nA run represents a single execution of your test suite. Runs contain spec files\nwhich are executed across multiple instances. You can query run details, cancel\nruns, reset failed specs, and delete runs."
+    },
+    {
+      "name": "Instances",
+      "description": "Query spec file execution instances.\n\nAn instance represents a single spec file execution within a run. It contains\ndetailed information about test results, duration, and machine that executed\nthe spec file."
+    },
+    {
+      "name": "Test Results",
+      "description": "Query historical test execution results.\n\nTest results provide detailed information about individual test executions\nacross multiple runs. You can filter by date range, branch, tags, git author,\nand test status."
+    },
+    {
+      "name": "Tests Explorer",
+      "description": "Explore and analyze test metrics.\n\nThe Tests Explorer provides aggregated metrics for tests within a project,\nincluding execution counts, failure rates, flakiness rates, and duration statistics."
+    },
+    {
+      "name": "Spec Files",
+      "description": "Query spec file metrics and statistics.\n\nGet aggregated metrics for spec files within a project, including execution counts,\nfailure rates, flakiness rates, and duration statistics."
+    },
+    {
+      "name": "Signature",
+      "description": "Generate test signatures.\n\nTest signatures are unique identifiers for tests based on project, spec file path,\nand test title. They are used to track tests across multiple runs."
+    }
+  ]
+}
