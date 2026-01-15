@@ -99,7 +99,17 @@ export async function deleteApi<T>(path: string): Promise<T | null> {
       logger.error(response);
       return null;
     }
-    return (await response.json()) as T;
+    // Handle 204 No Content responses (common for DELETE operations)
+    if (response.status === 204 || response.headers.get("content-length") === "0") {
+      return {} as T;
+    }
+    // Check if response has content before parsing JSON
+    const contentType = response.headers.get("content-type");
+    if (contentType && contentType.includes("application/json")) {
+      return (await response.json()) as T;
+    }
+    // If no JSON content, return empty object
+    return {} as T;
   } catch (error: any) {
     logger.error("Error making Currents DELETE request:", error.toString());
     return null;
