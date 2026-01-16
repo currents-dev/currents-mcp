@@ -63,44 +63,32 @@ const RuleMatcher = z.object({
   cond: z.array(RuleMatcherCondition).min(1).describe("List of conditions to match"),
 });
 
-const zodSchema = z
-  .object({
-    actionId: z.string().describe("The action ID to update."),
-    name: z
-      .string()
-      .min(1)
-      .max(255)
-      .optional()
-      .describe("Human-readable name for the action."),
-    description: z
-      .string()
-      .max(1000)
-      .optional()
-      .nullable()
-      .describe("Optional description for the action."),
-    action: z
-      .array(RuleAction)
-      .min(1)
-      .optional()
-      .describe("Actions to perform when conditions match."),
-    matcher: RuleMatcher.optional().describe("Matcher defining which tests this action applies to."),
-    expiresAfter: z
-      .string()
-      .optional()
-      .nullable()
-      .describe("Optional expiration date in ISO 8601 format."),
-  })
-  .refine(
-    (data) =>
-      data.name !== undefined ||
-      data.description !== undefined ||
-      data.action !== undefined ||
-      data.matcher !== undefined ||
-      data.expiresAfter !== undefined,
-    {
-      message: "At least one field to update must be provided (name, description, action, matcher, or expiresAfter).",
-    }
-  );
+const zodSchema = z.object({
+  actionId: z.string().describe("The action ID to update."),
+  name: z
+    .string()
+    .min(1)
+    .max(255)
+    .optional()
+    .describe("Human-readable name for the action."),
+  description: z
+    .string()
+    .max(1000)
+    .optional()
+    .nullable()
+    .describe("Optional description for the action."),
+  action: z
+    .array(RuleAction)
+    .min(1)
+    .optional()
+    .describe("Actions to perform when conditions match."),
+  matcher: RuleMatcher.optional().describe("Matcher defining which tests this action applies to."),
+  expiresAfter: z
+    .string()
+    .optional()
+    .nullable()
+    .describe("Optional expiration date in ISO 8601 format."),
+});
 
 interface UpdateActionRequest {
   name?: string;
@@ -124,6 +112,24 @@ const handler = async ({
   expiresAfter,
 }: z.infer<typeof zodSchema>) => {
   logger.info(`Updating action ${actionId}`);
+
+  // Validate that at least one update field is provided
+  if (
+    name === undefined &&
+    description === undefined &&
+    action === undefined &&
+    matcher === undefined &&
+    expiresAfter === undefined
+  ) {
+    return {
+      content: [
+        {
+          type: "text" as const,
+          text: "Error: At least one field to update must be provided (name, description, action, matcher, or expiresAfter).",
+        },
+      ],
+    };
+  }
 
   const body: UpdateActionRequest = {};
   
