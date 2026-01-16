@@ -19,7 +19,7 @@ describe("getProjectsTool", () => {
       mockProjects
     );
 
-    const result = await getProjectsTool.handler();
+    const result = await getProjectsTool.handler({ fetchAll: true });
 
     expect(result).toEqual({
       content: [
@@ -37,7 +37,7 @@ describe("getProjectsTool", () => {
   it("should return error message when API request fails", async () => {
     vi.spyOn(request, "fetchCursorBasedPaginatedApi").mockResolvedValue(null);
 
-    const result = await getProjectsTool.handler();
+    const result = await getProjectsTool.handler({ fetchAll: true });
 
     expect(result).toEqual({
       content: [
