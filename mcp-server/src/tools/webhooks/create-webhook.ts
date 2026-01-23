@@ -18,7 +18,6 @@ const zodSchema = z.object({
   hookEvents: z
     .array(z.enum(["RUN_FINISH", "RUN_START", "RUN_TIMEOUT", "RUN_CANCELED"]))
     .optional()
-    .default([])
     .describe("Events that trigger this webhook. Options: RUN_FINISH (run completed), RUN_START (run started), RUN_TIMEOUT (run timed out), RUN_CANCELED (run was cancelled)."),
   label: z
     .string()
