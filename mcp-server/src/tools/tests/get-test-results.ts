@@ -6,10 +6,12 @@ const zodSchema = z.object({
   signature: z.string().describe("The test signature."),
   date_start: z
     .string()
-    .describe("Start date in ISO 8601 format."),
+    .optional()
+    .describe("Start date in ISO 8601 format. Defaults to 365 days ago."),
   date_end: z
     .string()
-    .describe("End date in ISO 8601 format."),
+    .optional()
+    .describe("End date in ISO 8601 format. Defaults to now."),
   limit: z
     .number()
     .optional()
@@ -50,8 +52,8 @@ const zodSchema = z.object({
 
 const handler = async ({
   signature,
-  date_start,
-  date_end,
+  date_start = new Date(new Date().setDate(new Date().getDate() - 365)).toISOString(),
+  date_end = new Date().toISOString(),
   limit = 10,
   starting_after,
   ending_before,
