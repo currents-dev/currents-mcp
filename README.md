@@ -18,6 +18,11 @@ This is a MCP server that allows you to provide test results context to your AI 
 | `currents-get-tests-performance`      | Retrieves test historical performance metrics for a specific project.      |
 | `currents-get-tests-signatures`       | Retrieves a test signature by its spec file name and test name.            |
 | `currents-get-test-results`           | Retrieves debugging data from test results of a test by its signature.     |
+| `currents-list-webhooks`              | List all webhooks configured for a project.                                |
+| `currents-create-webhook`             | Create a new webhook to receive notifications on run events.               |
+| `currents-get-webhook`                | Get details of a specific webhook by ID.                                   |
+| `currents-update-webhook`             | Update an existing webhook's URL, headers, events, or label.               |
+| `currents-delete-webhook`             | Delete a webhook.                                                          |
 
 ## Setup
 
