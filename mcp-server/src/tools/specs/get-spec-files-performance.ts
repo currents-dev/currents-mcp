@@ -8,15 +8,13 @@ const zodSchema = z.object({
     .describe("The project ID to fetch spec files performance metrics from."),
   date_start: z
     .string()
-    .optional()
     .describe(
-      "The start of the date range to fetch the metrics from. ISO 8601 date format. Defaults to 30 days ago."
+      "Start date in ISO 8601 format."
     ),
   date_end: z
     .string()
-    .optional()
     .describe(
-      "The end of the date range to fetch the metrics from. ISO 8601 date format. Defaults to now."
+      "End date in ISO 8601 format."
     ),
   specNameFilter: z
     .string()
@@ -75,8 +73,8 @@ const zodSchema = z.object({
 
 const handler = async ({
   projectId,
-  date_start = new Date(new Date().setDate(new Date().getDate() - 30)).toISOString(),
-  date_end = new Date().toISOString(),
+  date_start,
+  date_end,
   specNameFilter,
   order = "avgDuration",
   dir = "desc",
