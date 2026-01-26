@@ -30,6 +30,12 @@ import { getSpecInstancesTool } from "./tools/specs/get-spec-instances.js";
 import { getTestResultsTool } from "./tools/tests/get-test-results.js";
 import { getTestsPerformanceTool } from "./tools/tests/get-tests-performance.js";
 import { getTestSignatureTool } from "./tools/tests/get-tests-signature.js";
+// Webhooks tools
+import { listWebhooksTool } from "./tools/webhooks/list-webhooks.js";
+import { createWebhookTool } from "./tools/webhooks/create-webhook.js";
+import { getWebhookTool } from "./tools/webhooks/get-webhook.js";
+import { updateWebhookTool } from "./tools/webhooks/update-webhook.js";
+import { deleteWebhookTool } from "./tools/webhooks/delete-webhook.js";
 
 if (CURRENTS_API_KEY === "") {
   logger.error("CURRENTS_API_KEY env variable is not set.");
@@ -197,6 +203,42 @@ server.tool(
   "Retrieves historical test execution results for a specific test signature. Supports filtering by date range, branch, tags, git author, test status (passed/failed/pending/skipped), and run group. Requires the test signature. If the signature is not known, first call 'currents-get-test-signature'.",
   getTestResultsTool.schema,
   getTestResultsTool.handler
+);
+
+// Webhooks API tools
+server.tool(
+  "currents-list-webhooks",
+  "List all webhooks for a project. Webhooks allow you to receive HTTP POST notifications when certain events occur in your test runs: RUN_FINISH (run completed), RUN_START (run started), RUN_TIMEOUT (run timed out), RUN_CANCELED (run was cancelled). Requires a projectId.",
+  listWebhooksTool.schema,
+  listWebhooksTool.handler
+);
+
+server.tool(
+  "currents-create-webhook",
+  "Create a new webhook for a project. Specify the URL to receive POST notifications, optional custom headers (as JSON string), events to trigger on (RUN_FINISH, RUN_START, RUN_TIMEOUT, RUN_CANCELED), and an optional label. Requires projectId and url.",
+  createWebhookTool.schema,
+  createWebhookTool.handler
+);
+
+server.tool(
+  "currents-get-webhook",
+  "Get a single webhook by ID. The hookId is a UUID. Returns full webhook details including url, headers, events, label, and timestamps.",
+  getWebhookTool.schema,
+  getWebhookTool.handler
+);
+
+server.tool(
+  "currents-update-webhook",
+  "Update an existing webhook. You can update the url, headers (as JSON string), hookEvents array, or label. All fields are optional. The hookId is a UUID.",
+  updateWebhookTool.schema,
+  updateWebhookTool.handler
+);
+
+server.tool(
+  "currents-delete-webhook",
+  "Delete a webhook. This permanently removes the webhook. The hookId is a UUID.",
+  deleteWebhookTool.schema,
+  deleteWebhookTool.handler
 );
 
 async function main() {
