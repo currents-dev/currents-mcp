@@ -5,6 +5,13 @@
     "build",
     "README.md"
   ],
+  "keywords": [
+    "currents",
+    "mcp-server",
+    "playwright",
+    "dashboard",
+    "reporting"
+  ],
   "bin": "./build/index.js",
   "version": "2.2.3",
   "description": "Currents MCP server",
@@ -22,8 +29,12 @@
     "release": "release-it",
     "release:dry": "release-it --dry-run"
   },
-  "keywords": [],
-  "author": "",
+  "author": "Currents Software Inc",
+  "homepage": "https://currents.dev",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/currents-dev/currents-mcp.git"
+  },
   "license": "Apache-2.0",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.25.2",

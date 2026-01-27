@@ -81,6 +81,6 @@ By connecting AI tools (e.g., via MCP) to Currents, you are granting them access
 
 - [Currents](https://currents.dev)
 - [Currents Documentation](https://docs.currents.dev)
-- [Contributuion Guide](./CONTRIBUTE.md)
-- [Releasing and Publishing](./RELEASE.md)
-- [License]('./LICENSE.md)
+- [Contribution Guide](https://github.com/currents-dev/currents-mcp/blob/main/CONTRIBUTE.md)
+- [Releasing and Publishing](https://github.com/currents-dev/currents-mcp/blob/main/RELEASE.md)
+- [License](https://github.com/currents-dev/currents-mcp/blob/main/LICENSE.md)

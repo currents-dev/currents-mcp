@@ -2,6 +2,7 @@
 
 const { execSync } = require("child_process");
 const fs = require("fs");
+const path = require("path");
 const pkg = require("./package.json");
 const { Command } = require("commander");
 
@@ -19,7 +20,24 @@ if (!options.tag) {
 }
 console.log(process.cwd());
 
-fs.copyFileSync("../README.md", "./README.md");
+// Copy README from root - remove symlink first if it exists
+const readmePath = "./README.md";
+try {
+  const stat = fs.lstatSync(readmePath);
+  if (stat.isSymbolicLink()) {
+    console.log("Removing README.md symlink...");
+    fs.unlinkSync(readmePath);
+  }
+} catch (err) {
+  // File doesn't exist, that's fine
+}
+
+console.log("Copying README.md from root...");
+fs.copyFileSync("../README.md", readmePath);
+
+// Verify README was copied
+const readmeContent = fs.readFileSync(readmePath, "utf-8");
+console.log(`README.md copied (${readmeContent.length} bytes)`);
 
 pkg.devDependencies = {};
 delete pkg["release-it"];
