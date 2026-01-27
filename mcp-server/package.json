@@ -2,7 +2,8 @@
   "name": "@currents/mcp",
   "type": "module",
   "files": [
-    "build"
+    "build",
+    "README.md"
   ],
   "bin": "./build/index.js",
   "version": "2.2.1",
