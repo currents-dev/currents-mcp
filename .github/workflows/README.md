@@ -4,6 +4,41 @@ This directory contains automated CI/CD workflows for the Currents MCP Server pr
 
 ## Available Workflows
 
+### `release.yaml` - Create Release
+
+Creates a new release with changelog, git tag, and GitHub release.
+
+**Triggers:**
+
+- Manual dispatch only (workflow_dispatch)
+
+**Inputs:**
+
+- `dry_run` (boolean, default: false): Preview the release without making changes
+
+**What it does:**
+
+1. Checks out the code with full git history
+2. Sets up Node.js 24.x
+3. Installs dependencies
+4. Runs the test suite
+5. Analyzes commits since last tag to determine version bump:
+   - `feat:` commits → minor version bump (e.g., 2.1.3 → 2.2.0)
+   - `fix:` commits → patch version bump (e.g., 2.1.3 → 2.1.4)
+   - `BREAKING CHANGE:` → major version bump (e.g., 2.1.3 → 3.0.0)
+6. Updates CHANGELOG.md with new entries
+7. Creates a git commit and tag
+8. Creates a GitHub release with auto-generated notes
+
+**Usage:**
+
+1. Go to Actions → "Create Release"
+2. Click "Run workflow"
+3. Optionally enable "Dry run" to preview changes
+4. After release completes, trigger "Publish NPM Package" workflow to publish to npm
+
+---
+
 ### `test.yml` - Unit Tests
 
 Runs the unit test suite on every push and pull request.
@@ -21,12 +56,6 @@ Runs the unit test suite on every push and pull request.
 4. Runs the test suite with `npm run test:run`
 5. Generates code coverage reports
 6. Optionally uploads coverage to Codecov (requires `CODECOV_TOKEN` secret)
-
-**Matrix Strategy:**
-The workflow runs tests on multiple Node.js versions to ensure compatibility:
-
-- Node.js 20.x (LTS)
-- Node.js 22.x (Latest)
 
 **Coverage Reports:**
 Coverage reports are generated for all Node versions, but only uploaded from Node 20.x to avoid duplicate reports. Coverage files are located in `mcp-server/coverage/`.
