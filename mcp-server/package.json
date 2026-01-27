@@ -13,7 +13,7 @@
     "reporting"
   ],
   "bin": "./build/index.js",
-  "version": "2.2.3",
+  "version": "2.2.4",
   "description": "Currents MCP server",
   "main": "index.js",
   "scripts": {
