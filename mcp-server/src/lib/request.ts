@@ -56,6 +56,66 @@ export async function postApi<T, B>(path: string, body: B): Promise<T | null> {
   }
 }
 
+export async function putApi<T, B>(path: string, body?: B): Promise<T | null> {
+  const headers = {
+    "User-Agent": USER_AGENT,
+    Accept: "application/json",
+    "Content-Type": "application/json",
+    Authorization: "Bearer " + CURRENTS_API_KEY,
+  };
+
+  try {
+    const response = await fetch(`${CURRENTS_API_URL}${path}`, {
+      method: "PUT",
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    if (!response.ok) {
+      logger.error(`HTTP error! status: ${response.status}`);
+      logger.error(response);
+      return null;
+    }
+    return (await response.json()) as T;
+  } catch (error: any) {
+    logger.error("Error making Currents PUT request:", error.toString());
+    return null;
+  }
+}
+
+export async function deleteApi<T>(path: string): Promise<T | null> {
+  const headers = {
+    "User-Agent": USER_AGENT,
+    Accept: "application/json",
+    Authorization: "Bearer " + CURRENTS_API_KEY,
+  };
+
+  try {
+    const response = await fetch(`${CURRENTS_API_URL}${path}`, {
+      method: "DELETE",
+      headers,
+    });
+    if (!response.ok) {
+      logger.error(`HTTP error! status: ${response.status}`);
+      logger.error(response);
+      return null;
+    }
+    // Handle 204 No Content responses (common for DELETE operations)
+    if (response.status === 204 || response.headers.get("content-length") === "0") {
+      return {} as T;
+    }
+    // Check if response has content before parsing JSON
+    const contentType = response.headers.get("content-type");
+    if (contentType && contentType.includes("application/json")) {
+      return (await response.json()) as T;
+    }
+    // If no JSON content, return empty object
+    return {} as T;
+  } catch (error: any) {
+    logger.error("Error making Currents DELETE request:", error.toString());
+    return null;
+  }
+}
+
 export async function fetchCursorBasedPaginatedApi<T>(
   path: string
 ): Promise<T[] | null> {

@@ -19,7 +19,7 @@
     "todomvc-common": "^1.0.1"
   },
   "devDependencies": {
-    "@currents/playwright": "^1.11.7",
+    "@currents/playwright": "^1.21.0",
     "@playwright/test": "^1.56.1",
     "@types/node": "^18.11.18",
     "browserify": "^16.2.3",
