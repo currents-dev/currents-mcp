@@ -1,6 +1,0 @@
-node_modules
-build
-.git
-.currents-debug
-test-results
-playwright-report
