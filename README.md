@@ -37,7 +37,7 @@ Get a Currents API key by following the [instructions here](https://docs.current
 
 ### NPX
 
-```
+```json
 {
   "mcpServers": {
     "currents": {
@@ -60,7 +60,7 @@ Add the following to your `claude_desktop_config.json`:
 
 #### NPX
 
-```
+```json
 {
   "mcpServers": {
     "currents": {
