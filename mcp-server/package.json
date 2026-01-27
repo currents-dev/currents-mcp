@@ -17,7 +17,9 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "release": "release-it",
+    "release:dry": "release-it --dry-run"
   },
   "keywords": [],
   "author": "",
@@ -29,18 +31,9 @@
     "pino-pretty": "^13.1.1",
     "zod": "^4.3.5"
   },
-  "release-it": {
-    "git": {
-      "requireCleanWorkingDir": false
-    }
-  },
   "devDependencies": {
-    "@types/node": "^22.13.17",
-    "@vitest/coverage-v8": "^4.0.16",
-    "@vitest/ui": "^4.0.16",
-    "release-it": "^19.1.0",
-    "rimraf": "^6.0.1",
-    "typescript": "^5.8.2",
-    "vitest": "^4.0.16"
+    "@release-it/conventional-changelog": "^10.0.0",
+    "release-it": "^19.0.3",
+    "vitest": "^4.0.18"
   }
 }
