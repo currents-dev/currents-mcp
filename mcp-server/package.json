@@ -6,7 +6,7 @@
     "README.md"
   ],
   "bin": "./build/index.js",
-  "version": "2.2.2",
+  "version": "2.2.3",
   "description": "Currents MCP server",
   "main": "index.js",
   "scripts": {
