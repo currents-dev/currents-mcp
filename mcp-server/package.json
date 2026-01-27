@@ -6,7 +6,7 @@
     "README.md"
   ],
   "bin": "./build/index.js",
-  "version": "2.2.1",
+  "version": "2.2.2",
   "description": "Currents MCP server",
   "main": "index.js",
   "scripts": {
@@ -24,7 +24,7 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "Apache-2.0",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.25.2",
     "commander": "^12.1.0",
