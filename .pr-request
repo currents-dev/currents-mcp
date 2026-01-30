@@ -1,0 +1,8 @@
+{
+  "branch": "ai/feat/openapi-mcp-parity",
+  "base": "main",
+  "title": "feat: ensure OpenAPI parity - add missing flaky parameter",
+  "url": "https://github.com/currents-dev/currents-mcp/pull/new/ai/feat/openapi-mcp-parity",
+  "status": "ready",
+  "description_file": "OPENAPI_PARITY_PR_SUMMARY.md"
+}
