@@ -44,6 +44,10 @@ const zodSchema = z.object({
     .array(z.enum(["passed", "failed", "pending", "skipped"]))
     .optional()
     .describe("Filter by test status (can be specified multiple times)."),
+  flaky: z
+    .boolean()
+    .optional()
+    .describe("Filter for flaky test results."),
   group: z
     .array(z.string())
     .optional()
@@ -61,6 +65,7 @@ const handler = async ({
   tag,
   git_author,
   status,
+  flaky,
   group,
 }: z.infer<typeof zodSchema>) => {
   const queryParams = new URLSearchParams();
@@ -90,6 +95,10 @@ const handler = async ({
 
   if (status && status.length > 0) {
     status.forEach((s) => queryParams.append("status", s));
+  }
+
+  if (flaky !== undefined) {
+    queryParams.append("flaky", flaky.toString());
   }
 
   if (group && group.length > 0) {
