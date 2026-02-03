@@ -44,6 +44,10 @@ const zodSchema = z.object({
     .array(z.enum(["passed", "failed", "pending", "skipped"]))
     .optional()
     .describe("Filter by test status (can be specified multiple times)."),
+  flaky: z
+    .boolean()
+    .optional()
+    .describe("Filter by flaky status. When true, returns only flaky tests. When false, returns only non-flaky tests. When omitted, returns all tests regardless of flaky status. Can be combined with status filter using AND logic (e.g., status[]=passed&flaky=true returns only flaky passed tests)."),
   group: z
     .array(z.string())
     .optional()
@@ -61,6 +65,7 @@ const handler = async ({
   tag,
   git_author,
   status,
+  flaky,
   group,
 }: z.infer<typeof zodSchema>) => {
   const queryParams = new URLSearchParams();
@@ -85,15 +90,19 @@ const handler = async ({
   }
 
   if (git_author && git_author.length > 0) {
-    git_author.forEach((a) => queryParams.append("git_author", a));
+    git_author.forEach((a) => queryParams.append("git_author[]", a));
   }
 
   if (status && status.length > 0) {
-    status.forEach((s) => queryParams.append("status", s));
+    status.forEach((s) => queryParams.append("status[]", s));
+  }
+
+  if (flaky !== undefined) {
+    queryParams.append("flaky", flaky.toString());
   }
 
   if (group && group.length > 0) {
-    group.forEach((g) => queryParams.append("group", g));
+    group.forEach((g) => queryParams.append("group[]", g));
   }
 
   logger.info(
