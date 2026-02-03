@@ -6,12 +6,10 @@ const zodSchema = z.object({
   signature: z.string().describe("The test signature."),
   date_start: z
     .string()
-    .optional()
-    .describe("Start date in ISO 8601 format. Defaults to 365 days ago."),
+    .describe("Start date in ISO 8601 format (required)."),
   date_end: z
     .string()
-    .optional()
-    .describe("End date in ISO 8601 format. Defaults to now."),
+    .describe("End date in ISO 8601 format (required)."),
   limit: z
     .number()
     .optional()
@@ -48,12 +46,16 @@ const zodSchema = z.object({
     .array(z.string())
     .optional()
     .describe("Filter by run group (can be specified multiple times)."),
+  flaky: z
+    .boolean()
+    .optional()
+    .describe("Filter by flaky status. When true, returns only flaky tests. When false, returns only non-flaky tests. When omitted, returns all tests regardless of flaky status."),
 });
 
 const handler = async ({
   signature,
-  date_start = new Date(new Date().setDate(new Date().getDate() - 365)).toISOString(),
-  date_end = new Date().toISOString(),
+  date_start,
+  date_end,
   limit = 10,
   starting_after,
   ending_before,
@@ -62,6 +64,7 @@ const handler = async ({
   git_author,
   status,
   group,
+  flaky,
 }: z.infer<typeof zodSchema>) => {
   const queryParams = new URLSearchParams();
   queryParams.append("date_start", date_start);
@@ -85,15 +88,19 @@ const handler = async ({
   }
 
   if (git_author && git_author.length > 0) {
-    git_author.forEach((a) => queryParams.append("git_author", a));
+    git_author.forEach((a) => queryParams.append("git_author[]", a));
   }
 
   if (status && status.length > 0) {
-    status.forEach((s) => queryParams.append("status", s));
+    status.forEach((s) => queryParams.append("status[]", s));
   }
 
   if (group && group.length > 0) {
-    group.forEach((g) => queryParams.append("group", g));
+    group.forEach((g) => queryParams.append("group[]", g));
+  }
+
+  if (flaky !== undefined) {
+    queryParams.append("flaky", flaky.toString());
   }
 
   logger.info(

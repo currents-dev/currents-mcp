@@ -8,10 +8,10 @@ const zodSchema = z.object({
     .describe("The project ID to fetch insights for."),
   date_start: z
     .string()
-    .describe("Start date in ISO 8601 format."),
+    .describe("Start date in ISO 8601 format (required)."),
   date_end: z
     .string()
-    .describe("End date in ISO 8601 format."),
+    .describe("End date in ISO 8601 format (required)."),
   resolution: z
     .enum(["1h", "1d", "1w"])
     .optional()
@@ -50,19 +50,19 @@ const handler = async ({
   queryParams.append("resolution", resolution);
 
   if (tags && tags.length > 0) {
-    tags.forEach((t) => queryParams.append("tags", t));
+    tags.forEach((t) => queryParams.append("tags[]", t));
   }
 
   if (branches && branches.length > 0) {
-    branches.forEach((b) => queryParams.append("branches", b));
+    branches.forEach((b) => queryParams.append("branches[]", b));
   }
 
   if (groups && groups.length > 0) {
-    groups.forEach((g) => queryParams.append("groups", g));
+    groups.forEach((g) => queryParams.append("groups[]", g));
   }
 
   if (authors && authors.length > 0) {
-    authors.forEach((a) => queryParams.append("authors", a));
+    authors.forEach((a) => queryParams.append("authors[]", a));
   }
 
   logger.info(
