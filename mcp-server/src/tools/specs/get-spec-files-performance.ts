@@ -101,19 +101,19 @@ const handler = async ({
   }
 
   if (tags && tags.length > 0) {
-    tags.forEach((t) => queryParams.append("tags", t));
+    tags.forEach((t) => queryParams.append("tags[]", t));
   }
 
   if (branches && branches.length > 0) {
-    branches.forEach((b) => queryParams.append("branches", b));
+    branches.forEach((b) => queryParams.append("branches[]", b));
   }
 
   if (groups && groups.length > 0) {
-    groups.forEach((g) => queryParams.append("groups", g));
+    groups.forEach((g) => queryParams.append("groups[]", g));
   }
 
   if (authors && authors.length > 0) {
-    authors.forEach((a) => queryParams.append("authors", a));
+    authors.forEach((a) => queryParams.append("authors[]", a));
   }
 
   if (includeFailedInDuration) {
