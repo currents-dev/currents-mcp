@@ -8,15 +8,13 @@ const zodSchema = z.object({
     .describe("The project ID to fetch spec files performance metrics from."),
   date_start: z
     .string()
-    .optional()
     .describe(
-      "The start of the date range to fetch the metrics from. ISO 8601 date format. Defaults to 30 days ago."
+      "The start of the date range to fetch the metrics from. ISO 8601 date format (required)."
     ),
   date_end: z
     .string()
-    .optional()
     .describe(
-      "The end of the date range to fetch the metrics from. ISO 8601 date format. Defaults to now."
+      "The end of the date range to fetch the metrics from. ISO 8601 date format (required)."
     ),
   specNameFilter: z
     .string()
@@ -75,8 +73,8 @@ const zodSchema = z.object({
 
 const handler = async ({
   projectId,
-  date_start = new Date(new Date().setDate(new Date().getDate() - 30)).toISOString(),
-  date_end = new Date().toISOString(),
+  date_start,
+  date_end,
   specNameFilter,
   order = "avgDuration",
   dir = "desc",
@@ -101,19 +99,19 @@ const handler = async ({
   }
 
   if (tags && tags.length > 0) {
-    tags.forEach((t) => queryParams.append("tags", t));
+    tags.forEach((t) => queryParams.append("tags[]", t));
   }
 
   if (branches && branches.length > 0) {
-    branches.forEach((b) => queryParams.append("branches", b));
+    branches.forEach((b) => queryParams.append("branches[]", b));
   }
 
   if (groups && groups.length > 0) {
-    groups.forEach((g) => queryParams.append("groups", g));
+    groups.forEach((g) => queryParams.append("groups[]", g));
   }
 
   if (authors && authors.length > 0) {
-    authors.forEach((a) => queryParams.append("authors", a));
+    authors.forEach((a) => queryParams.append("authors[]", a));
   }
 
   if (includeFailedInDuration) {

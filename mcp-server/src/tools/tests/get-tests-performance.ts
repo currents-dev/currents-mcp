@@ -8,15 +8,13 @@ const zodSchema = z.object({
     .describe("The project ID to fetch test performance metrics from."),
   date_start: z
     .string()
-    .optional()
     .describe(
-      "The start of the date range to fetch the metrics from. ISO 8601 date format. Defaults to 30 days ago."
+      "The start of the date range to fetch the metrics from. ISO 8601 date format (required)."
     ),
   date_end: z
     .string()
-    .optional()
     .describe(
-      "The end of the date range to fetch the metrics from. ISO 8601 date format. Defaults to now."
+      "The end of the date range to fetch the metrics from. ISO 8601 date format (required)."
     ),
   spec: z
     .string()
@@ -82,12 +80,16 @@ const zodSchema = z.object({
     .array(z.enum(["passed", "failed", "pending", "skipped"]))
     .optional()
     .describe("Filter by test state (can be specified multiple times)."),
+  metric_settings: z
+    .string()
+    .optional()
+    .describe("Override which test statuses are included in metric calculations. Pass a JSON object with optional keys: executions, avgDuration, flakinessRate, failureRate. Each value is an array of status strings: passed, failed, pending, skipped. Example: {\"executions\":[\"failed\",\"passed\"],\"failureRate\":[\"failed\"]}"),
 });
 
 const handler = async ({
   projectId,
-  date_start = new Date(new Date().setDate(new Date().getDate() - 30)).toISOString(),
-  date_end = new Date().toISOString(),
+  date_start,
+  date_end,
   spec,
   title,
   order = "title",
@@ -100,6 +102,7 @@ const handler = async ({
   authors,
   min_executions,
   test_state,
+  metric_settings,
 }: z.infer<typeof zodSchema>) => {
   const queryParams = new URLSearchParams();
   queryParams.append("date_start", date_start);
@@ -118,19 +121,19 @@ const handler = async ({
   }
 
   if (tags && tags.length > 0) {
-    tags.forEach((t) => queryParams.append("tags", t));
+    tags.forEach((t) => queryParams.append("tags[]", t));
   }
 
   if (branches && branches.length > 0) {
-    branches.forEach((b) => queryParams.append("branches", b));
+    branches.forEach((b) => queryParams.append("branches[]", b));
   }
 
   if (groups && groups.length > 0) {
-    groups.forEach((g) => queryParams.append("groups", g));
+    groups.forEach((g) => queryParams.append("groups[]", g));
   }
 
   if (authors && authors.length > 0) {
-    authors.forEach((a) => queryParams.append("authors", a));
+    authors.forEach((a) => queryParams.append("authors[]", a));
   }
 
   if (min_executions !== undefined) {
@@ -138,7 +141,11 @@ const handler = async ({
   }
 
   if (test_state && test_state.length > 0) {
-    test_state.forEach((ts) => queryParams.append("test_state", ts));
+    test_state.forEach((ts) => queryParams.append("test_state[]", ts));
+  }
+
+  if (metric_settings) {
+    queryParams.append("metric_settings", metric_settings);
   }
 
   logger.info(

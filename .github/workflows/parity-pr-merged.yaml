@@ -1,0 +1,73 @@
+# When a PR from a branch named cursor/currents-mcp-parity-* is merged:
+# 1. Create a new branch with bumped patch version in mcp-server/package.json
+# 2. Open a PR for that branch
+# 3. Trigger the Publish workflow on that branch with channel=latest
+
+name: Parity PR merged – release
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  release-and-publish:
+    name: Bump version, create PR, trigger publish
+    if: github.event_name == 'workflow_dispatch' || (github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'cursor/currents-mcp-parity-'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Get current version and bump patch
+        id: version
+        working-directory: ./mcp-server
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          MAJOR=$(echo "$VERSION" | cut -d. -f1)
+          MINOR=$(echo "$VERSION" | cut -d. -f2)
+          PATCH=$(echo "$VERSION" | cut -d. -f3)
+          PATCH=$((PATCH + 1))
+          NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+          echo "current=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "new=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+          echo "Bumped $VERSION -> $NEW_VERSION"
+
+      - name: Create release branch and bump version
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          BRANCH="release/${{ steps.version.outputs.new }}"
+          git checkout -b "$BRANCH"
+          cd mcp-server && npm pkg set version="${{ steps.version.outputs.new }}" && cd ..
+          git add mcp-server/package.json
+          git commit -m "chore: bump version to ${{ steps.version.outputs.new }}"
+          git push origin "$BRANCH"
+          echo "branch=$BRANCH" >> "$GITHUB_ENV"
+
+      - name: Create PR
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          gh pr create \
+            --base main \
+            --head "${{ env.branch }}" \
+            --title "Release ${{ steps.version.outputs.new }}" \
+            --body "Auto-generated release PR after parity branch merge. Version bumped to ${{ steps.version.outputs.new }}."
+
+      - name: Trigger Publish workflow (latest)
+        env:
+          BRANCH: ${{ env.branch }}
+        run: |
+          curl -sS -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.GH_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/publish.yaml/dispatches" \
+            -d "{\"ref\":\"$BRANCH\",\"inputs\":{\"channel\":\"latest\"}}"
