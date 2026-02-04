@@ -13,7 +13,7 @@
     "reporting"
   ],
   "bin": "./build/index.js",
-  "version": "2.2.4",
+  "version": "2.2.5",
   "description": "Currents MCP server",
   "main": "index.js",
   "scripts": {
@@ -45,9 +45,9 @@
   },
   "devDependencies": {
     "@release-it/conventional-changelog": "^10.0.0",
+    "release-it": "^19.0.3",
     "rimraf": "^6.0.1",
     "typescript": "^5.8.2",
-    "release-it": "^19.0.3",
     "vitest": "^4.0.18"
   }
 }
