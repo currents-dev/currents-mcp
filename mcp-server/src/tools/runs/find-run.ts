@@ -43,7 +43,7 @@ const handler = async ({
   }
 
   if (tag && tag.length > 0) {
-    tag.forEach((t) => queryParams.append("tag", t));
+    tag.forEach((t) => queryParams.append("tag[]", t));
   }
 
   if (pwLastRun !== undefined) {
