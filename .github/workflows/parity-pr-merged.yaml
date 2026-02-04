@@ -49,7 +49,7 @@ jobs:
           cd mcp-server && npm pkg set version="${{ steps.version.outputs.new }}" && cd ..
           git add mcp-server/package.json
           git commit -m "chore: bump version to ${{ steps.version.outputs.new }}"
-          git push origin "$BRANCH"
+          git push --force origin "$BRANCH"
           echo "branch=$BRANCH" >> "$GITHUB_ENV"
 
       - name: Create PR
