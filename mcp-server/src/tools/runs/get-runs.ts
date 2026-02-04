@@ -91,7 +91,7 @@ const handler = async ({
   }
 
   if (tag && tag.length > 0) {
-    tag.forEach((t) => queryParams.append("tag", t));
+    tag.forEach((t) => queryParams.append("tag[]", t));
   }
 
   if (tag_operator) {
@@ -103,7 +103,7 @@ const handler = async ({
   }
 
   if (author && author.length > 0) {
-    author.forEach((a) => queryParams.append("author", a));
+    author.forEach((a) => queryParams.append("author[]", a));
   }
 
   if (status && status.length > 0) {

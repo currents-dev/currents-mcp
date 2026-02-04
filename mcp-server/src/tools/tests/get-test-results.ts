@@ -80,11 +80,11 @@ const handler = async ({
   }
 
   if (branch && branch.length > 0) {
-    branch.forEach((b) => queryParams.append("branch", b));
+    branch.forEach((b) => queryParams.append("branch[]", b));
   }
 
   if (tag && tag.length > 0) {
-    tag.forEach((t) => queryParams.append("tag", t));
+    tag.forEach((t) => queryParams.append("tag[]", t));
   }
 
   if (git_author && git_author.length > 0) {
