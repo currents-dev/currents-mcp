@@ -1,6 +1,16 @@
 # Changelog
 
-## [2.2.4](https://github.com/currents-dev/currents-mcp/compare/v2.2.3...v2.2.4) (2026-01-27)
+## [2.2.5](https://github.com/currents-dev/currents-mcp/compare/v2.2.4...v2.2.5) (2026-02-05)
+
+### Bug Fixes
+
+* fix tests performance tool order parameter enum values to use camelCase (`flakinessXSamples`, `failRateXSamples`, `durationDelta`, etc.) ([#47](https://github.com/currents-dev/currents-mcp/pull/47))
+* add missing `durationDelta` enum value to tests performance order parameter ([#47](https://github.com/currents-dev/currents-mcp/pull/47))
+* fix `find-run` tool to use `tag[]` bracket notation for array parameter ([#47](https://github.com/currents-dev/currents-mcp/pull/47))
+
+### Documentation
+
+* add comprehensive parity analysis documentation ([#47](https://github.com/currents-dev/currents-mcp/pull/47))## [2.2.4](https://github.com/currents-dev/currents-mcp/compare/v2.2.3...v2.2.4) (2026-01-27)
 
 ## [2.2.3](https://github.com/currents-dev/currents-mcp/compare/v2.2.1...v2.2.3) (2026-01-27)
 
