@@ -13,6 +13,10 @@ on:
           - beta
           - latest
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   publish:
     runs-on: ubuntu-latest
@@ -31,11 +35,12 @@ jobs:
           node-version: "24.x"
           registry-url: "https://registry.npmjs.org"
 
+      - name: Update npm to support Trusted Publishing
+        run: npm install -g npm@latest
+
       - run: npm ci
       - name: Publish to NPM
         run: |
           git config user.name "Currents NPM Bot"
           git config user.email "npm@currents.dev"
           npm run publish:mcp -- -- --tag ${{ github.event.inputs.channel }}
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
