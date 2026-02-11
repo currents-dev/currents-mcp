@@ -14,7 +14,7 @@ const zodSchema = z.object({
     .string()
     .optional()
     .describe("Git branch name. Used when ciBuildId is not provided."),
-  tag: z
+  tags: z
     .array(z.string())
     .optional()
     .describe("Run tags to filter by (can be specified multiple times)."),
@@ -28,7 +28,7 @@ const handler = async ({
   projectId,
   ciBuildId,
   branch,
-  tag,
+  tags,
   pwLastRun,
 }: z.infer<typeof zodSchema>) => {
   const queryParams = new URLSearchParams();
@@ -42,8 +42,8 @@ const handler = async ({
     queryParams.append("branch", branch);
   }
 
-  if (tag && tag.length > 0) {
-    tag.forEach((t) => queryParams.append("tag[]", t));
+  if (tags && tags.length > 0) {
+    tags.forEach((t) => queryParams.append("tags[]", t));
   }
 
   if (pwLastRun !== undefined) {
