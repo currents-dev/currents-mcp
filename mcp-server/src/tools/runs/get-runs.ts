@@ -22,11 +22,11 @@ const zodSchema = z.object({
     .describe(
       "Cursor for pagination. Returns items before this cursor value."
     ),
-  branch: z
-    .string()
+  branches: z
+    .array(z.string())
     .optional()
-    .describe("Filter runs by git branch name."),
-  tag: z
+    .describe("Filter runs by git branch names (can be specified multiple times)."),
+  tags: z
     .array(z.string())
     .optional()
     .describe("Filter runs by tags (can be specified multiple times). Use tag_operator to control matching behavior."),
@@ -38,10 +38,10 @@ const zodSchema = z.object({
     .string()
     .optional()
     .describe("Search runs by ciBuildId or commit message. Case-insensitive."),
-  author: z
+  authors: z
     .array(z.string())
     .optional()
-    .describe("Filter runs by git commit author name (can be specified multiple times)."),
+    .describe("Filter runs by git commit author names (can be specified multiple times)."),
   status: z
     .array(z.enum(["PASSED", "FAILED", "RUNNING", "FAILING"]))
     .optional()
@@ -65,11 +65,11 @@ const handler = async ({
   limit = 10,
   starting_after,
   ending_before,
-  branch,
-  tag,
+  branches,
+  tags,
   tag_operator,
   search,
-  author,
+  authors,
   status,
   completion_state,
   date_start,
@@ -86,12 +86,12 @@ const handler = async ({
     queryParams.append("ending_before", ending_before);
   }
 
-  if (branch) {
-    queryParams.append("branch", branch);
+  if (branches && branches.length > 0) {
+    branches.forEach((b) => queryParams.append("branches[]", b));
   }
 
-  if (tag && tag.length > 0) {
-    tag.forEach((t) => queryParams.append("tag", t));
+  if (tags && tags.length > 0) {
+    tags.forEach((t) => queryParams.append("tags[]", t));
   }
 
   if (tag_operator) {
@@ -102,8 +102,8 @@ const handler = async ({
     queryParams.append("search", search);
   }
 
-  if (author && author.length > 0) {
-    author.forEach((a) => queryParams.append("author", a));
+  if (authors && authors.length > 0) {
+    authors.forEach((a) => queryParams.append("authors[]", a));
   }
 
   if (status && status.length > 0) {
