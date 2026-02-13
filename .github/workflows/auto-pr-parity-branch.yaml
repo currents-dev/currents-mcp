@@ -1,0 +1,35 @@
+name: Auto-create PR for parity branches
+
+on:
+  push:
+    branches:
+      - 'cursor/currents-mcp-parity-*'
+
+jobs:
+  create-pr:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create Pull Request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          EXISTING_PR=$(gh pr list --head "${{ github.ref_name }}" --json number --jq '.[0].number' || echo "")
+          
+          if [ -n "$EXISTING_PR" ]; then
+            echo "PR already exists"
+            exit 0
+          fi
+          
+          gh pr create \
+            --base main \
+            --head "${{ github.ref_name }}" \
+            --title "Parity: currents-mcp ↔ Currents API" \
+            --body "Complete API parity verification. All 27 endpoints match OpenAPI spec. See PARITY_VERIFICATION.md for details."
