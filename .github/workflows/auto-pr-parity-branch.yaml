@@ -21,68 +21,15 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Check if PR already exists
-          EXISTING_PR=$(gh pr list --head "${{ github.ref_name }}" --json number --jq '.[0].number')
+          EXISTING_PR=$(gh pr list --head "${{ github.ref_name }}" --json number --jq '.[0].number' || echo "")
           
           if [ -n "$EXISTING_PR" ]; then
-            echo "PR already exists: #$EXISTING_PR"
+            echo "PR already exists"
             exit 0
           fi
           
-          # Create PR
           gh pr create \
             --base main \
             --head "${{ github.ref_name }}" \
             --title "Parity: currents-mcp ↔ Currents API" \
-            --body "# API Parity Verification & Documentation
-
-## Summary
-
-This PR documents the **complete parity** between \`currents-mcp\` and the Currents REST API. After comprehensive analysis, all 27 API endpoints are correctly implemented with accurate parameter schemas, request bodies, and response handling.
-
-## Parity Matrix
-
-| Endpoint | Method | OpenAPI Operation | MCP Tool | Status |
-|----------|--------|-------------------|----------|--------|
-| /actions | GET | listActions | currents-list-actions | ✅ OK |
-| /actions | POST | createAction | currents-create-action | ✅ OK |
-| /actions/{actionId} | DELETE | deleteAction | currents-delete-action | ✅ OK |
-| /actions/{actionId} | GET | getAction | currents-get-action | ✅ OK |
-| /actions/{actionId} | PUT | updateAction | currents-update-action | ✅ OK |
-| /actions/{actionId}/disable | PUT | disableAction | currents-disable-action | ✅ OK |
-| /actions/{actionId}/enable | PUT | enableAction | currents-enable-action | ✅ OK |
-| /instances/{instanceId} | GET | getInstance | currents-get-spec-instance | ✅ OK |
-| /projects | GET | listProjects | currents-get-projects | ✅ OK |
-| /projects/{projectId} | GET | getProject | currents-get-project | ✅ OK |
-| /projects/{projectId}/insights | GET | getProjectInsights | currents-get-project-insights | ✅ OK |
-| /projects/{projectId}/runs | GET | listProjectRuns | currents-get-runs | ✅ OK |
-| /runs/cancel-ci/github | PUT | cancelRunByGithubCI | currents-cancel-run-github-ci | ✅ OK |
-| /runs/find | GET | findRun | currents-find-run | ✅ OK |
-| /runs/{runId} | DELETE | deleteRun | currents-delete-run | ✅ OK |
-| /runs/{runId} | GET | getRun | currents-get-run-details | ✅ OK |
-| /runs/{runId}/cancel | PUT | cancelRun | currents-cancel-run | ✅ OK |
-| /runs/{runId}/reset | PUT | resetRun | currents-reset-run | ✅ OK |
-| /signature/test | POST | getTestSignature | currents-get-tests-signatures | ✅ OK |
-| /spec-files/{projectId} | GET | getSpecFiles | currents-get-spec-files-performance | ✅ OK |
-| /test-results/{signature} | GET | getTestResults | currents-get-test-results | ✅ OK |
-| /tests/{projectId} | GET | getTestsExplorer | currents-get-tests-performance | ✅ OK |
-| /webhooks | GET | listWebhooks | currents-list-webhooks | ✅ OK |
-| /webhooks | POST | createWebhook | currents-create-webhook | ✅ OK |
-| /webhooks/{hookId} | DELETE | deleteWebhook | currents-delete-webhook | ✅ OK |
-| /webhooks/{hookId} | GET | getWebhook | currents-get-webhook | ✅ OK |
-| /webhooks/{hookId} | PUT | updateWebhook | currents-update-webhook | ✅ OK |
-
-## Verification
-
-- ✅ **Tests**: 35/35 passed
-- ✅ **Build**: TypeScript compilation successful  
-- ✅ **Coverage**: 27/27 endpoints (100%)
-- ✅ **Documentation**: See \`PARITY_VERIFICATION.md\`
-
-## References
-
-- OpenAPI Spec: https://api.currents.dev/v1/docs/openapi.json
-- Branch: ${{ github.ref_name }}
-
----
-*Auto-generated from parity verification branch*"
+            --body "Complete API parity verification. All 27 endpoints match OpenAPI spec. See PARITY_VERIFICATION.md for details."
