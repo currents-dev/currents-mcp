@@ -26,26 +26,26 @@ const zodSchema = z.object({
     .describe(
       "Cursor for pagination. Returns items before this cursor value."
     ),
-  branch: z
+  branches: z
     .array(z.string())
     .optional()
-    .describe("Filter by git branch (can be specified multiple times)."),
-  tag: z
+    .describe("Filter by git branches (can be specified multiple times)."),
+  tags: z
     .array(z.string())
     .optional()
     .describe("Filter by run tags (can be specified multiple times)."),
-  git_author: z
+  authors: z
     .array(z.string())
     .optional()
-    .describe("Filter by git author (can be specified multiple times)."),
+    .describe("Filter by git authors (can be specified multiple times)."),
   status: z
     .array(z.enum(["passed", "failed", "pending", "skipped"]))
     .optional()
     .describe("Filter by test status (can be specified multiple times)."),
-  group: z
+  groups: z
     .array(z.string())
     .optional()
-    .describe("Filter by run group (can be specified multiple times)."),
+    .describe("Filter by run groups (can be specified multiple times)."),
   flaky: z
     .boolean()
     .optional()
@@ -59,11 +59,11 @@ const handler = async ({
   limit = 10,
   starting_after,
   ending_before,
-  branch,
-  tag,
-  git_author,
+  branches,
+  tags,
+  authors,
   status,
-  group,
+  groups,
   flaky,
 }: z.infer<typeof zodSchema>) => {
   const queryParams = new URLSearchParams();
@@ -79,24 +79,24 @@ const handler = async ({
     queryParams.append("ending_before", ending_before);
   }
 
-  if (branch && branch.length > 0) {
-    branch.forEach((b) => queryParams.append("branch", b));
+  if (branches && branches.length > 0) {
+    branches.forEach((b) => queryParams.append("branches[]", b));
   }
 
-  if (tag && tag.length > 0) {
-    tag.forEach((t) => queryParams.append("tag", t));
+  if (tags && tags.length > 0) {
+    tags.forEach((t) => queryParams.append("tags[]", t));
   }
 
-  if (git_author && git_author.length > 0) {
-    git_author.forEach((a) => queryParams.append("git_author[]", a));
+  if (authors && authors.length > 0) {
+    authors.forEach((a) => queryParams.append("authors[]", a));
   }
 
   if (status && status.length > 0) {
     status.forEach((s) => queryParams.append("status[]", s));
   }
 
-  if (group && group.length > 0) {
-    group.forEach((g) => queryParams.append("group[]", g));
+  if (groups && groups.length > 0) {
+    groups.forEach((g) => queryParams.append("groups[]", g));
   }
 
   if (flaky !== undefined) {
