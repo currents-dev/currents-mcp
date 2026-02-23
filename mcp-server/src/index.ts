@@ -30,6 +30,8 @@ import { getSpecInstancesTool } from "./tools/specs/get-spec-instances.js";
 import { getTestResultsTool } from "./tools/tests/get-test-results.js";
 import { getTestsPerformanceTool } from "./tools/tests/get-tests-performance.js";
 import { getTestSignatureTool } from "./tools/tests/get-tests-signature.js";
+// Errors tools
+import { getErrorsExplorerTool } from "./tools/errors/get-errors-explorer.js";
 // Webhooks tools
 import { listWebhooksTool } from "./tools/webhooks/list-webhooks.js";
 import { createWebhookTool } from "./tools/webhooks/create-webhook.js";
@@ -203,6 +205,14 @@ server.tool(
   "Retrieves historical test execution results for a specific test signature. Supports filtering by date range, branch, tags, git author, test status (passed/failed/pending/skipped), and run group. Requires the test signature. If the signature is not known, first call 'currents-get-test-signature'.",
   getTestResultsTool.schema,
   getTestResultsTool.handler
+);
+
+// Errors API tools
+server.tool(
+  "currents-get-errors-explorer",
+  "Get aggregated error metrics for a project within a date range. Supports filtering by error_target, error_message, error_category, error_action, tags, branches, authors, and groups. Supports grouping by target, action, category, or message. Returns error counts, affected tests and branches, with timeline data. Requires projectId, date_start, and date_end.",
+  getErrorsExplorerTool.schema,
+  getErrorsExplorerTool.handler
 );
 
 // Webhooks API tools
