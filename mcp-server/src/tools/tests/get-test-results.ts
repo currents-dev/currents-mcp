@@ -12,6 +12,8 @@ const zodSchema = z.object({
     .describe("End date in ISO 8601 format (required)."),
   limit: z
     .number()
+    .min(1)
+    .max(100)
     .optional()
     .describe("Maximum number of items to return (default: 10, max: 100)."),
   starting_after: z

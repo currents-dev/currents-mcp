@@ -8,6 +8,8 @@ const zodSchema = z.object({
     .describe("The project ID to fetch runs from."),
   limit: z
     .number()
+    .min(1)
+    .max(100)
     .optional()
     .describe("The maximum number of results to return per page (default: 10, max: 100)."),
   starting_after: z
