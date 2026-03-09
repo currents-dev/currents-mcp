@@ -24,7 +24,7 @@ This is a MCP server that allows you to provide test results context to your AI 
 | `currents-get-spec-files-performance` | Retrieves spec files performance metrics for a specific project within a date range.                                                     |
 | `currents-get-tests-performance`      | Retrieves aggregated test metrics for a specific project within a date range.                                                            |
 | `currents-get-tests-signatures`       | Generates a unique test signature based on project, spec file path, and test title.                                                      |
-| `currents-get-test-results`           | Retrieves historical test execution results for a specific test signature.                                                               |
+| `currents-get-test-results`           | Retrieves historical test execution results for a specific test signature with filtering by annotations, status, flaky, and more.        |
 | `currents-get-errors-explorer`        | Get aggregated error metrics for a project within a date range with comprehensive filtering and grouping.                                |
 | `currents-list-actions`               | List all actions for a project with optional filtering.                                                                                  |
 | `currents-create-action`              | Create a new action for a project.                                                                                                       |

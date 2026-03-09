@@ -50,6 +50,10 @@ const zodSchema = z.object({
     .boolean()
     .optional()
     .describe("Filter by flaky status. When true, returns only flaky tests. When false, returns only non-flaky tests. When omitted, returns all tests regardless of flaky status."),
+  annotations: z
+    .string()
+    .optional()
+    .describe("Filter by test annotations. The parameter value must be a JSON-stringified array of objects: `[{ \"type\": \"string\", \"description\": \"string\" | [\"string\"] or null }]`. description is optional; omit or set to null to match any value for that annotation. Example: [{\"type\":\"owner\",\"description\":[\"John Doe\"]},{\"type\":\"skip\"}]"),
 });
 
 const handler = async ({
@@ -65,6 +69,7 @@ const handler = async ({
   status,
   groups,
   flaky,
+  annotations,
 }: z.infer<typeof zodSchema>) => {
   const queryParams = new URLSearchParams();
   queryParams.append("date_start", date_start);
@@ -101,6 +106,10 @@ const handler = async ({
 
   if (flaky !== undefined) {
     queryParams.append("flaky", flaky.toString());
+  }
+
+  if (annotations) {
+    queryParams.append("annotations", annotations);
   }
 
   logger.info(
