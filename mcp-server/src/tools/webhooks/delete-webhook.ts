@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { deleteApi } from "../../lib/request.js";
+import { deleteApi, getLastApiError } from "../../lib/request.js";
 import { logger } from "../../lib/logger.js";
 
 const zodSchema = z.object({
@@ -20,7 +20,7 @@ const handler = async ({
       content: [
         {
           type: "text" as const,
-          text: "Failed to delete webhook",
+          text: getLastApiError() || "Failed to delete webhook",
         },
       ],
     };

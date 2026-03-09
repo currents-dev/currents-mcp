@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { fetchApi, fetchCursorBasedPaginatedApi } from "../../lib/request.js";
+import { fetchApi, fetchCursorBasedPaginatedApi, getLastApiError } from "../../lib/request.js";
 import { logger } from "../../lib/logger.js";
 
 const zodSchema = z.object({
@@ -38,21 +38,21 @@ const handler = async ({
         content: [
           {
             type: "text" as const,
-            text: "Failed to retrieve projects",
-          },
-        ],
-      };
-    }
-
-    return {
-      content: [
-        {
-          type: "text" as const,
-          text: JSON.stringify(data, null, 2),
+          text: getLastApiError() || "Failed to retrieve projects",
         },
       ],
     };
   }
+
+  return {
+    content: [
+      {
+        type: "text" as const,
+        text: JSON.stringify(data, null, 2),
+      },
+    ],
+  };
+}
 
   // Otherwise, use manual pagination with parameters
   const queryParams = new URLSearchParams();
@@ -81,7 +81,7 @@ const handler = async ({
       content: [
         {
           type: "text" as const,
-          text: "Failed to retrieve projects",
+          text: getLastApiError() || "Failed to retrieve projects",
         },
       ],
     };

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { putApi } from "../../lib/request.js";
+import { putApi, getLastApiError } from "../../lib/request.js";
 import { logger } from "../../lib/logger.js";
 
 const zodSchema = z.object({
@@ -50,7 +50,7 @@ const handler = async ({
       content: [
         {
           type: "text" as const,
-          text: "Failed to reset run",
+          text: getLastApiError() || "Failed to reset run",
         },
       ],
     };

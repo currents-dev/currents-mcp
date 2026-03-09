@@ -9,7 +9,33 @@ export interface PaginatedResponse<T> {
   data: T[];
 }
 
+let _lastApiError: string | null = null;
+
+export function getLastApiError(): string | null {
+  const err = _lastApiError;
+  _lastApiError = null;
+  return err;
+}
+
+async function extractErrorMessage(response: Response): Promise<string> {
+  try {
+    const body = await response.json();
+    if (body && typeof body.error === "string") {
+      return `HTTP ${response.status}: ${body.error}`;
+    }
+    return `HTTP ${response.status}: ${JSON.stringify(body)}`;
+  } catch {
+    try {
+      const text = await response.text();
+      return `HTTP ${response.status}: ${text || response.statusText}`;
+    } catch {
+      return `HTTP ${response.status}: ${response.statusText}`;
+    }
+  }
+}
+
 export async function fetchApi<T>(path: string): Promise<T | null> {
+  _lastApiError = null;
   const headers = {
     "User-Agent": USER_AGENT,
     Accept: "application/json",
@@ -19,18 +45,20 @@ export async function fetchApi<T>(path: string): Promise<T | null> {
   try {
     const response = await fetch(`${CURRENTS_API_URL}${path}`, { headers });
     if (!response.ok) {
-      logger.error(`HTTP error! status: ${response.status}`);
-      logger.error(response);
+      _lastApiError = await extractErrorMessage(response);
+      logger.error(_lastApiError);
       return null;
     }
     return (await response.json()) as T;
   } catch (error: any) {
+    _lastApiError = `Request error: ${error.toString()}`;
     logger.error("Error making Currents request:", error.toString());
     return null;
   }
 }
 
 export async function postApi<T, B>(path: string, body: B): Promise<T | null> {
+  _lastApiError = null;
   const headers = {
     "User-Agent": USER_AGENT,
     Accept: "application/json",
@@ -45,18 +73,20 @@ export async function postApi<T, B>(path: string, body: B): Promise<T | null> {
       body: JSON.stringify(body),
     });
     if (!response.ok) {
-      logger.error(`HTTP error! status: ${response.status}`);
-      logger.error(response);
+      _lastApiError = await extractErrorMessage(response);
+      logger.error(_lastApiError);
       return null;
     }
     return (await response.json()) as T;
   } catch (error: any) {
+    _lastApiError = `Request error: ${error.toString()}`;
     logger.error("Error making Currents POST request:", error.toString());
     return null;
   }
 }
 
 export async function putApi<T, B>(path: string, body?: B): Promise<T | null> {
+  _lastApiError = null;
   const headers = {
     "User-Agent": USER_AGENT,
     Accept: "application/json",
@@ -71,18 +101,20 @@ export async function putApi<T, B>(path: string, body?: B): Promise<T | null> {
       body: body ? JSON.stringify(body) : undefined,
     });
     if (!response.ok) {
-      logger.error(`HTTP error! status: ${response.status}`);
-      logger.error(response);
+      _lastApiError = await extractErrorMessage(response);
+      logger.error(_lastApiError);
       return null;
     }
     return (await response.json()) as T;
   } catch (error: any) {
+    _lastApiError = `Request error: ${error.toString()}`;
     logger.error("Error making Currents PUT request:", error.toString());
     return null;
   }
 }
 
 export async function deleteApi<T>(path: string): Promise<T | null> {
+  _lastApiError = null;
   const headers = {
     "User-Agent": USER_AGENT,
     Accept: "application/json",
@@ -95,22 +127,20 @@ export async function deleteApi<T>(path: string): Promise<T | null> {
       headers,
     });
     if (!response.ok) {
-      logger.error(`HTTP error! status: ${response.status}`);
-      logger.error(response);
+      _lastApiError = await extractErrorMessage(response);
+      logger.error(_lastApiError);
       return null;
     }
-    // Handle 204 No Content responses (common for DELETE operations)
     if (response.status === 204 || response.headers.get("content-length") === "0") {
       return {} as T;
     }
-    // Check if response has content before parsing JSON
     const contentType = response.headers.get("content-type");
     if (contentType && contentType.includes("application/json")) {
       return (await response.json()) as T;
     }
-    // If no JSON content, return empty object
     return {} as T;
   } catch (error: any) {
+    _lastApiError = `Request error: ${error.toString()}`;
     logger.error("Error making Currents DELETE request:", error.toString());
     return null;
   }

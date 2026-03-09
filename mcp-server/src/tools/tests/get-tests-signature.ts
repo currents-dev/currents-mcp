@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { postApi } from "../../lib/request.js";
+import { postApi, getLastApiError } from "../../lib/request.js";
 import { logger } from "../../lib/logger.js";
 
 const zodSchema = z.object({
@@ -52,7 +52,7 @@ const handler = async ({
       content: [
         {
           type: "text" as const,
-          text: "Failed to generate test signature",
+          text: getLastApiError() || "Failed to generate test signature",
         },
       ],
     };

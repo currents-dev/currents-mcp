@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { fetchApi } from "../../lib/request.js";
+import { fetchApi, getLastApiError } from "../../lib/request.js";
 
 const zodSchema = z.object({
   instanceId: z
@@ -15,7 +15,7 @@ const handler = async ({ instanceId }: z.infer<typeof zodSchema>) => {
       content: [
         {
           type: "text" as const,
-          text: "Failed to retrieve spec file instances",
+          text: getLastApiError() || "Failed to retrieve spec file instances",
         },
       ],
     };

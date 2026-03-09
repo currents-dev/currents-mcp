@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { fetchApi } from "../../lib/request.js";
+import { fetchApi, getLastApiError } from "../../lib/request.js";
 import { logger } from "../../lib/logger.js";
 
 const zodSchema = z.object({
@@ -50,6 +50,10 @@ const zodSchema = z.object({
     .boolean()
     .optional()
     .describe("Filter by flaky status. When true, returns only flaky tests. When false, returns only non-flaky tests. When omitted, returns all tests regardless of flaky status."),
+  annotations: z
+    .string()
+    .optional()
+    .describe("Filter by annotations. JSON-stringified array of objects with 'type' (required) and 'description' (optional) fields. Example: '[{\"type\":\"flaky\"},{\"type\":\"intentional\",\"description\":\"known issue\"}]'."),
 });
 
 const handler = async ({
@@ -65,6 +69,7 @@ const handler = async ({
   status,
   groups,
   flaky,
+  annotations,
 }: z.infer<typeof zodSchema>) => {
   const queryParams = new URLSearchParams();
   queryParams.append("date_start", date_start);
@@ -103,6 +108,10 @@ const handler = async ({
     queryParams.append("flaky", flaky.toString());
   }
 
+  if (annotations) {
+    queryParams.append("annotations", annotations);
+  }
+
   logger.info(
     `Fetching test results for test ${signature} with query params: ${queryParams.toString()}`
   );
@@ -116,7 +125,7 @@ const handler = async ({
       content: [
         {
           type: "text" as const,
-          text: "Failed to retrieve test results",
+          text: getLastApiError() || "Failed to retrieve test results",
         },
       ],
     };

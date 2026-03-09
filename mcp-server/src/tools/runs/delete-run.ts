@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { deleteApi } from "../../lib/request.js";
+import { deleteApi, getLastApiError } from "../../lib/request.js";
 import { logger } from "../../lib/logger.js";
 
 const zodSchema = z.object({
@@ -16,7 +16,7 @@ const handler = async ({ runId }: z.infer<typeof zodSchema>) => {
       content: [
         {
           type: "text" as const,
-          text: "Failed to delete run",
+          text: getLastApiError() || "Failed to delete run",
         },
       ],
     };

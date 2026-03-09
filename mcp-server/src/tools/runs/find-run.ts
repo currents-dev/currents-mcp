@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { fetchApi } from "../../lib/request.js";
+import { fetchApi, getLastApiError } from "../../lib/request.js";
 import { logger } from "../../lib/logger.js";
 
 const zodSchema = z.object({
@@ -59,7 +59,7 @@ const handler = async ({
       content: [
         {
           type: "text" as const,
-          text: "Failed to find run",
+          text: getLastApiError() || "Failed to find run",
         },
       ],
     };

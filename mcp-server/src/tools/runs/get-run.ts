@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { fetchApi } from "../../lib/request.js";
+import { fetchApi, getLastApiError } from "../../lib/request.js";
 
 const zodSchema = z.object({
   runId: z.string().describe("The run ID to fetch details for."),
@@ -13,7 +13,7 @@ const handler = async ({ runId }: z.infer<typeof zodSchema>) => {
       content: [
         {
           type: "text" as const,
-          text: "Failed to retrieve run data",
+          text: getLastApiError() || "Failed to retrieve run data",
         },
       ],
     };

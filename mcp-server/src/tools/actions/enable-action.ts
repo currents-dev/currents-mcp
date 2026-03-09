@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { putApi } from "../../lib/request.js";
+import { putApi, getLastApiError } from "../../lib/request.js";
 import { logger } from "../../lib/logger.js";
 
 const zodSchema = z.object({
@@ -16,7 +16,7 @@ const handler = async ({ actionId }: z.infer<typeof zodSchema>) => {
       content: [
         {
           type: "text" as const,
-          text: "Failed to enable action",
+          text: getLastApiError() || "Failed to enable action",
         },
       ],
     };

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fetchApi, fetchCursorBasedPaginatedApi } from "./request.js";
+import { fetchApi, fetchCursorBasedPaginatedApi, getLastApiError } from "./request.js";
 
 // Mock the env module
 vi.mock("./env.js", () => ({
@@ -43,23 +43,45 @@ describe("fetchApi", () => {
     );
   });
 
-  it("should return null on HTTP error", async () => {
+  it("should return null on HTTP error and capture error details", async () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: false,
       status: 404,
+      json: async () => ({ status: "FAILED", error: "Not found" }),
     });
 
     const result = await fetchApi("/not-found");
 
     expect(result).toBeNull();
+    const lastError = getLastApiError();
+    expect(lastError).toBe("HTTP 404: Not found");
   });
 
-  it("should return null on network error", async () => {
+  it("should return null on network error and capture error details", async () => {
     global.fetch = vi.fn().mockRejectedValue(new Error("Network error"));
 
     const result = await fetchApi("/test-path");
 
     expect(result).toBeNull();
+    const lastError = getLastApiError();
+    expect(lastError).toContain("Network error");
+  });
+
+  it("should clear last error on successful request", async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+      json: async () => ({ status: "FAILED", error: "Server error" }),
+    });
+    await fetchApi("/fail");
+
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ data: "ok" }),
+    });
+    await fetchApi("/success");
+
+    expect(getLastApiError()).toBeNull();
   });
 });
 

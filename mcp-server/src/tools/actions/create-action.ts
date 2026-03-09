@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { postApi } from "../../lib/request.js";
+import { postApi, getLastApiError } from "../../lib/request.js";
 import { logger } from "../../lib/logger.js";
 
 // Define condition type and operator enums
@@ -134,7 +134,7 @@ const handler = async ({
       content: [
         {
           type: "text" as const,
-          text: "Failed to create action",
+          text: getLastApiError() || "Failed to create action",
         },
       ],
     };
