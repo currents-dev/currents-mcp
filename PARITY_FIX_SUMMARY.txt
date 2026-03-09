@@ -1,0 +1,64 @@
+╔══════════════════════════════════════════════════════════════════════════╗
+║                 CURRENTS MCP API PARITY - TASK SUMMARY                   ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+✅ BRANCH: cursor/currents-mcp-parity-x7m9q4w2 (pushed)
+✅ ANALYSIS: All 28 endpoints verified against OpenAPI v1.0.0
+✅ FOUND: 1 missing parameter (annotations in get-test-results)
+✅ FIXED: Added annotations parameter with proper schema
+✅ TESTED: 35/35 tests passing
+✅ BUILD: Successful
+✅ COMMITTED: 8b90fde
+❌ PR BLOCKED: GITHUB_ACCESS_TOKEN_MIGUEL invalid (401)
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║                           THE FIX APPLIED                                ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+FILE: mcp-server/src/tools/tests/get-test-results.ts
+
+ADDED TO SCHEMA:
+  annotations: z
+    .string()
+    .optional()
+    .describe("Filter by test annotations. JSON array: [{ type, description }]")
+
+ADDED TO HANDLER:
+  if (annotations) {
+    queryParams.append("annotations", annotations);
+  }
+
+RESULT: currents-get-test-results now supports filtering by test annotations
+        (e.g., owner, skip, priority) matching OpenAPI spec exactly.
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║                      MANUAL PR CREATION REQUIRED                         ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+CLICK THIS URL TO CREATE PR:
+https://github.com/currents-dev/currents-mcp/compare/main...cursor/currents-mcp-parity-x7m9q4w2?expand=1
+
+PR TITLE: Parity: currents-mcp ↔ Currents API
+PR BODY: See PARITY_MATRIX.md (in repo root)
+
+AFTER PR CREATED, SEND TO SLACK #n8n-trigger:
+┌────────────────────────────────────────────────────────────────────────┐
+│ PR: [YOUR_PR_URL]                                                      │
+│ Cloud Agent: [YOUR_CONVERSATION_URL]                                   │
+│                                                                         │
+│ Added missing annotations parameter to test results tool. All 28       │
+│ Currents API endpoints now have complete parity with OpenAPI spec      │
+│ v1.0.0. Tests passing (35/35).                                         │
+└────────────────────────────────────────────────────────────────────────┘
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║                      FIX TOKEN FOR FUTURE RUNS                           ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+The GITHUB_ACCESS_TOKEN_MIGUEL secret is invalid/expired.
+
+TO FIX:
+1. Generate new token: https://github.com/settings/tokens
+2. Scopes needed: repo, workflow, pull_request
+3. Update: Cursor Dashboard > Cloud Agents > Secrets
+4. Set: GITHUB_ACCESS_TOKEN_MIGUEL = [YOUR_NEW_TOKEN]
