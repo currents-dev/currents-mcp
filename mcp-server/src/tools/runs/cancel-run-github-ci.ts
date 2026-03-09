@@ -8,6 +8,7 @@ const zodSchema = z.object({
     .describe("GitHub Actions workflow run ID."),
   githubRunAttempt: z
     .number()
+    .int()
     .describe("GitHub Actions workflow run attempt number."),
   projectId: z
     .string()
