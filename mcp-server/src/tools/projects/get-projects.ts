@@ -5,9 +5,10 @@ import { logger } from "../../lib/logger.js";
 const zodSchema = z.object({
   limit: z
     .number()
-    .max(100)
+    .min(1)
+    .max(50)
     .optional()
-    .describe("Maximum number of items to return (default: 10, max: 100)."),
+    .describe("Maximum number of items to return (default: 10, max: 50)."),
   starting_after: z
     .string()
     .optional()

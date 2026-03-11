@@ -13,7 +13,7 @@ const zodSchema = z.object({
     .string()
     .describe("End date in ISO 8601 format (required)."),
   resolution: z
-    .enum(["1h", "1d", "1w"])
+    .enum(["1d", "1w"])
     .optional()
     .describe("Time resolution for histogram data. Defaults to '1d'."),
   tags: z

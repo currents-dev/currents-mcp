@@ -14,12 +14,17 @@ const zodSchema = z.object({
     .string()
     .optional()
     .describe("Search actions by name."),
+  actionTypes: z
+    .array(z.enum(["skip", "quarantine", "tag"]))
+    .optional()
+    .describe("Filter actions by action type (can be specified multiple times)."),
 });
 
 const handler = async ({
   projectId,
   status,
   search,
+  actionTypes,
 }: z.infer<typeof zodSchema>) => {
   const queryParams = new URLSearchParams();
   queryParams.append("projectId", projectId);
@@ -30,6 +35,10 @@ const handler = async ({
 
   if (search) {
     queryParams.append("search", search);
+  }
+
+  if (actionTypes && actionTypes.length > 0) {
+    actionTypes.forEach((t) => queryParams.append("actionTypes", t));
   }
 
   logger.info(

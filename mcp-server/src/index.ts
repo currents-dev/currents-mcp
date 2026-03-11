@@ -51,7 +51,7 @@ const server = new McpServer({
 // Actions API tools
 server.tool(
   "currents-list-actions",
-  "List all actions for a project with optional filtering. Actions are rules that automatically modify test behavior (skip, quarantine, tag). Supports filtering by status (active/disabled/archived/expired) and search by name. Requires a projectId.",
+  "List all actions for a project with optional filtering. Actions are rules that automatically modify test behavior (skip, quarantine, tag). Supports filtering by status (active/disabled/archived/expired), action type (skip/quarantine/tag), and search by name. Requires a projectId.",
   listActionsTool.schema,
   listActionsTool.handler
 );
@@ -115,7 +115,7 @@ server.tool(
 
 server.tool(
   "currents-get-project-insights",
-  "Get aggregated run and test metrics for a project within a date range. Returns overall metrics and timeline data with configurable resolution (1h/1d/1w). Supports filtering by tags, branches, groups, and authors. Requires projectId, date_start, and date_end.",
+  "Get aggregated run and test metrics for a project within a date range. Returns overall metrics and timeline data with configurable resolution (1d/1w). Supports filtering by tags, branches, groups, and authors. Requires projectId, date_start, and date_end.",
   getProjectInsightsTool.schema,
   getProjectInsightsTool.handler
 );
