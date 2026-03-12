@@ -202,7 +202,7 @@ server.tool(
 
 server.tool(
   "currents-get-test-results",
-  "Retrieves historical test execution results for a specific test signature. Supports filtering by date range, branch, tags, git author, test status (passed/failed/pending/skipped), run group, flaky status, and annotations. Requires the test signature. If the signature is not known, first call 'currents-get-test-signature'.",
+  "Retrieves historical test execution results for a specific test signature. Supports filtering by date range, branch, tags, git author, test status (passed/failed/pending/skipped), run group, flaky status, and annotations. Requires the test signature. If the signature is not known, first call 'currents-get-tests-signatures'.",
   getTestResultsTool.schema,
   getTestResultsTool.handler
 );
