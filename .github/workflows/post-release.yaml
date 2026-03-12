@@ -1,0 +1,16 @@
+name: Post Release
+
+on:
+  pull_request:
+    types:
+      - closed
+    branches:
+      - main
+
+jobs:
+  notify:
+    if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'release/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify n8n about release branch merged and start documentation workflow
+        run: curl -X GET https://n8n.currents.dev/webhook/fb9c3837-70bf-4688-a41f-a962edc82801
