@@ -1,4 +1,4 @@
-# When a PR from a branch named cursor/currents-mcp-parity-* is merged:
+# When a PR from a branch named cursor/currents-mcp-parity-* or cursor/currents-mcp-api-parity-* is merged:
 # 1. Create a new branch with bumped patch version in mcp-server/package.json
 # 2. Open a PR for that branch
 # 3. Trigger the Publish workflow on that branch with channel=latest
@@ -14,7 +14,7 @@ on:
 jobs:
   release-and-publish:
     name: Bump version, create PR, trigger publish
-    if: github.event_name == 'workflow_dispatch' || (github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'cursor/currents-mcp-parity-'))
+    if: github.event_name == 'workflow_dispatch' || (github.event.pull_request.merged == true && (startsWith(github.event.pull_request.head.ref, 'cursor/currents-mcp-parity-') || startsWith(github.event.pull_request.head.ref, 'cursor/currents-mcp-api-parity-')))
     runs-on: ubuntu-latest
     permissions:
       contents: write

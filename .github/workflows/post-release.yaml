@@ -13,4 +13,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Notify n8n about release branch merged and start documentation workflow
-        run: curl -X GET https://n8n.currents.dev/webhook/fb9c3837-70bf-4688-a41f-a962edc82801
+        run: curl -X GET https://n8n.currents.dev/webhook/994e4283-4d98-4a68-a0f3-2bcfb251d4e5
