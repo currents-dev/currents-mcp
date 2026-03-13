@@ -43,10 +43,15 @@ const zodSchema = z.object({
     .describe("The direction to sort the results in. Defaults to 'desc'."),
   limit: z
     .number()
+    .int()
+    .min(1)
+    .max(50)
     .optional()
     .describe("The maximum number of results to return per page (default: 50, max: 50)."),
   page: z
     .number()
+    .int()
+    .min(0)
     .optional()
     .describe("The page number to fetch (0-indexed). Defaults to 0."),
   tags: z

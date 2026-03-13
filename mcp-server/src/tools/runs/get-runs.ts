@@ -8,6 +8,9 @@ const zodSchema = z.object({
     .describe("The project ID to fetch runs from."),
   limit: z
     .number()
+    .int()
+    .min(1)
+    .max(100)
     .optional()
     .describe("The maximum number of results to return per page (default: 10, max: 100)."),
   starting_after: z
@@ -36,6 +39,7 @@ const zodSchema = z.object({
     .describe("Logical operator for tag filtering. AND requires all tags to be present (default), OR requires any tag to be present."),
   search: z
     .string()
+    .max(200)
     .optional()
     .describe("Search runs by ciBuildId or commit message. Case-insensitive."),
   authors: z

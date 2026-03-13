@@ -12,6 +12,7 @@ const zodSchema = z.object({
     .describe("Filter actions by status (can be specified multiple times)."),
   search: z
     .string()
+    .max(100)
     .optional()
     .describe("Search actions by name."),
 });
