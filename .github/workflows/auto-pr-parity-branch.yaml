@@ -32,4 +32,4 @@ jobs:
             --base main \
             --head "${{ github.ref_name }}" \
             --title "Parity: currents-mcp ↔ Currents API" \
-            --body "Complete API parity verification. All 27 endpoints match OpenAPI spec. See PARITY_MATRIX_7k2m8x.md for details."
+            --body "Complete API parity verification. All 27 endpoints match OpenAPI spec. See PARITY_MATRIX.md for details."
