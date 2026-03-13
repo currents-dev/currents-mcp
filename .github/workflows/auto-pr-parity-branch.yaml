@@ -21,7 +21,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          EXISTING_PR=$(gh pr list --head "${{ github.ref_name }}" --json number --jq '.[0].number' || echo "")
+          EXISTING_PR=$(gh pr list --head "${{ github.ref_name }}" --json number --jq '.[0].number // empty' || echo "")
           
           if [ -n "$EXISTING_PR" ]; then
             echo "PR already exists"
