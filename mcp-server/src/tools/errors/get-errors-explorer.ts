@@ -14,10 +14,15 @@ const zodSchema = z.object({
     .describe("End date in ISO 8601 format (required)."),
   page: z
     .number()
+    .int()
+    .min(0)
     .optional()
     .describe("Page number (0-indexed). Defaults to 0."),
   limit: z
     .number()
+    .int()
+    .min(1)
+    .max(100)
     .optional()
     .describe("Maximum number of results (1-100). Defaults to 50."),
   tags: z
@@ -74,6 +79,9 @@ const zodSchema = z.object({
     .describe("Metric used for timeline ranking. Defaults to 'occurrence'."),
   top_n: z
     .number()
+    .int()
+    .min(1)
+    .max(50)
     .optional()
     .describe("Maximum number of top errors per timeline bucket (1-50). Default: 5."),
 });
