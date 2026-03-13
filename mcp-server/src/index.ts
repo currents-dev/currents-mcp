@@ -188,7 +188,7 @@ server.tool(
 // Tests API tools
 server.tool(
   "currents-get-tests-performance",
-  "Retrieves aggregated test metrics for a specific project within a date range. Supports ordering by failures, passes, flakiness, duration, executions, title, and various delta metrics. Supports filtering by spec name, test title, tags, branches, groups, authors, minimum executions, and test state. Requires a projectId. If the projectId is not known, first call 'currents-get-projects' and ask the user to select the project.",
+  "Retrieves aggregated test metrics for a specific project within a date range. Supports ordering by failures, passes, flakiness, duration, executions, title, and various delta metrics. Supports filtering by spec name, test title, tags, branches, groups, authors, minimum executions, test state, and annotations. Requires a projectId. If the projectId is not known, first call 'currents-get-projects' and ask the user to select the project.",
   getTestsPerformanceTool.schema,
   getTestsPerformanceTool.handler
 );
