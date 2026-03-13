@@ -85,6 +85,10 @@ const zodSchema = z.object({
     .string()
     .optional()
     .describe("Override which test statuses are included in metric calculations. Pass a JSON object with optional keys: executions, avgDuration, flakinessRate, failureRate. Each value is an array of status strings: passed, failed, pending, skipped. Example: {\"executions\":[\"failed\",\"passed\"],\"failureRate\":[\"failed\"]}"),
+  annotations: z
+    .string()
+    .optional()
+    .describe('Filter by test annotations. JSON-stringified array of objects: [{"type": "string", "description": "string" | ["string"] or null}]. Omit description or set to null to match any value for that annotation type.'),
 });
 
 const handler = async ({
@@ -104,6 +108,7 @@ const handler = async ({
   min_executions,
   test_state,
   metric_settings,
+  annotations,
 }: z.infer<typeof zodSchema>) => {
   const queryParams = new URLSearchParams();
   queryParams.append("date_start", date_start);
@@ -147,6 +152,10 @@ const handler = async ({
 
   if (metric_settings) {
     queryParams.append("metric_settings", metric_settings);
+  }
+
+  if (annotations) {
+    queryParams.append("annotations", annotations);
   }
 
   logger.info(
