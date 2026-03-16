@@ -14,6 +14,7 @@ const zodSchema = z.object({
     .string()
     .max(4096)
     .optional()
+    .nullable()
     .describe("Custom headers as a JSON object string (e.g., {\"Authorization\": \"Bearer token\"})."),
   hookEvents: z
     .array(z.enum(["RUN_FINISH", "RUN_START", "RUN_TIMEOUT", "RUN_CANCELED"]))
@@ -24,6 +25,7 @@ const zodSchema = z.object({
     .min(1)
     .max(255)
     .optional()
+    .nullable()
     .describe("Human-readable label for the webhook."),
 });
 
