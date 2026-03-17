@@ -11,6 +11,8 @@ import { updateActionTool } from "./tools/actions/update-action.js";
 import { deleteActionTool } from "./tools/actions/delete-action.js";
 import { enableActionTool } from "./tools/actions/enable-action.js";
 import { disableActionTool } from "./tools/actions/disable-action.js";
+import { listAffectedTestsTool } from "./tools/actions/list-affected-tests.js";
+import { getAffectedTestExecutionsTool } from "./tools/actions/get-affected-test-executions.js";
 // Projects tools
 import { getProjectsTool } from "./tools/projects/get-projects.js";
 import { getProjectTool } from "./tools/projects/get-project.js";
@@ -96,6 +98,20 @@ server.tool(
   "Disable an active action. Changes the action status to disabled, temporarily preventing it from applying to tests. The actionId is globally unique.",
   disableActionTool.schema,
   disableActionTool.handler
+);
+
+server.tool(
+  "currents-list-affected-tests",
+  "List tests affected by actions (quarantine, skip, tag) for a project within a date range. Returns aggregated data grouped by test signature. Supports filtering by action types, action ID, status, and search. Requires projectId, date_start, and date_end. (Preview endpoint: fields and path may change.)",
+  listAffectedTestsTool.schema,
+  listAffectedTestsTool.handler
+);
+
+server.tool(
+  "currents-get-affected-test-executions",
+  "Get execution details for a specific test affected by actions within a date range. Returns individual test execution records with action info. Requires projectId, signature, date_start, and date_end. (Preview endpoint: fields and path may change.)",
+  getAffectedTestExecutionsTool.schema,
+  getAffectedTestExecutionsTool.handler
 );
 
 // Projects API tools
