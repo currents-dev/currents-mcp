@@ -45,9 +45,9 @@ const zodSchema = z.object({
     .optional()
     .describe("Sort direction. Defaults to 'desc'."),
   status: z
-    .enum(["active", "expired"])
+    .array(z.enum(["active", "disabled", "expired", "archived"]))
     .optional()
-    .describe("Filter by action status: active or expired."),
+    .describe("Filter by action status. Accepts multiple values. Omit for all statuses."),
 });
 
 const handler = async ({
@@ -84,8 +84,8 @@ const handler = async ({
     queryParams.append("dir", dir);
   }
 
-  if (status) {
-    queryParams.append("status", status);
+  if (status && status.length > 0) {
+    status.forEach((s) => queryParams.append("status", s));
   }
 
   logger.info(
