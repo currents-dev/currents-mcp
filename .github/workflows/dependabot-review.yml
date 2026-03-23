@@ -1,0 +1,258 @@
+name: Dependabot PR Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  cursor-agent-review:
+    name: Cursor Agent Dependency Review
+    if: startsWith(github.head_ref, 'dependabot/')
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    permissions:
+      pull-requests: read
+
+    steps:
+      - name: Launch Cursor Agent
+        id: launch
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+        run: |
+          PR_URL="${{ github.event.pull_request.html_url }}"
+          PR_TITLE="${{ github.event.pull_request.title }}"
+
+          PROMPT=$(cat <<'PROMPT_EOF'
+          You are reviewing a Dependabot pull request for the currents-mcp repository.
+          This is a TypeScript MCP server located in the `mcp-server/` directory.
+          It builds with `tsc` and tests with `vitest`.
+
+          ## Step 1 — Inspect Changed Dependencies
+
+          - Review all changed files, focusing on `mcp-server/package.json` and `mcp-server/package-lock.json`.
+          - Identify which dependencies were added, removed, or updated.
+          - Determine the semver level of each change (major, minor, patch).
+          - Look up the changelog or release notes for each updated dependency to check for breaking changes, deprecations, or notable fixes.
+
+          ## Step 2 — Build
+
+          Run the following and capture the full output:
+          ```
+          cd mcp-server && npm ci && npm run build
+          ```
+          If the build fails, record the error output verbatim.
+
+          ## Step 3 — Test
+
+          Run the following and capture the full output:
+          ```
+          cd mcp-server && npm run test:run
+          ```
+          If any tests fail, record the failures verbatim.
+
+          ## Step 4 — Execute
+
+          Verify the package can start without runtime errors:
+          ```
+          cd mcp-server && timeout 10 node build/index.js --help || true
+          ```
+          If a `--help` flag is not available, start the process and kill it after a few seconds to confirm it boots.
+
+          ## Step 5 — Risk Assessment
+
+          Evaluate overall risk as LOW, MEDIUM, or HIGH based on:
+          - Semver level (patch = low, minor = medium, major = high baseline)
+          - Whether breaking changes are documented
+          - How central the dependency is to the project (e.g. core SDK vs dev tooling)
+          - Whether the dependency is a direct or transitive dependency
+          - Whether any source code changes are required
+
+          ## Step 6 — Propose Code / Test Updates
+
+          If the dependency update requires code or test changes (e.g. API changes, deprecated usage):
+          - Make the necessary code changes on the current branch.
+          - Add or update tests to cover the changes.
+          - Commit with a clear message like "chore: adapt code to <dep>@<version> update".
+
+          ## Step 7 — PR Comment
+
+          Post a SINGLE structured comment on the PR using `gh pr comment` with this format:
+
+          ```
+          ## 🤖 Dependabot PR Review — Automated Analysis
+
+          ### Dependencies Changed
+          - `<package>`: `<old_version>` → `<new_version>` (patch|minor|major)
+
+          ### Build Result
+          ✅ Passed | ❌ Failed (with error summary)
+
+          ### Test Result
+          ✅ All tests passed | ❌ N test(s) failed (with failure summary)
+
+          ### Execution Check
+          ✅ Starts successfully | ❌ Runtime error (with details)
+
+          ### Risk Assessment
+          **LOW|MEDIUM|HIGH** — <brief explanation>
+
+          ### Code Changes Proposed
+          None | <description of changes made>
+
+          ### Decision
+          ✅ Auto-approved and merged | ⚠️ Requires human review
+
+          cc @miguelangaranocurrents
+          ```
+
+          ## Step 8 — Decision
+
+          **If ALL of the following are true:**
+          - Build succeeded
+          - All tests passed
+          - Execution check passed
+          - Risk is LOW or MEDIUM with no breaking changes
+
+          **Then:** Approve the PR with `gh pr review --approve` and merge it with `gh pr merge --squash`. In the PR comment, note that it was auto-approved and merged, tagging @miguelangaranocurrents for visibility.
+
+          **Otherwise:** Do NOT approve or merge. In the PR comment, clearly explain what failed or what the risks are, and tag @miguelangaranocurrents requesting human review.
+          PROMPT_EOF
+          )
+
+          PROMPT=$(echo "$PROMPT" | sed 's/^ *//')
+
+          PAYLOAD=$(jq -n \
+            --arg prompt "$PROMPT" \
+            --arg pr_url "$PR_URL" \
+            '{
+              prompt: { text: $prompt },
+              model: "claude-4.6-opus-thinking",
+              source: { prUrl: $pr_url },
+              target: { autoBranch: false }
+            }')
+
+          RESPONSE=$(curl -s -w "\n%{http_code}" --request POST \
+            --url https://api.cursor.com/v0/agents \
+            -u "$CURSOR_API_KEY:" \
+            --header 'Content-Type: application/json' \
+            --data "$PAYLOAD")
+
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+
+          if [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 300 ]; then
+            echo "::error::Cursor API returned HTTP $HTTP_CODE"
+            echo "$BODY"
+            exit 1
+          fi
+
+          AGENT_ID=$(echo "$BODY" | jq -r '.id')
+          AGENT_URL=$(echo "$BODY" | jq -r '.target.url // empty')
+
+          if [ -z "$AGENT_ID" ] || [ "$AGENT_ID" = "null" ]; then
+            echo "::error::Failed to extract agent ID from response"
+            echo "$BODY"
+            exit 1
+          fi
+
+          echo "agent_id=$AGENT_ID" >> "$GITHUB_OUTPUT"
+          echo "agent_url=$AGENT_URL" >> "$GITHUB_OUTPUT"
+          echo "Agent launched: $AGENT_ID"
+          echo "Dashboard: $AGENT_URL"
+
+      - name: Poll for Agent Completion
+        id: poll
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+        run: |
+          AGENT_ID="${{ steps.launch.outputs.agent_id }}"
+          FINAL_STATUS="TIMEOUT"
+
+          for i in $(seq 1 60); do
+            RESPONSE=$(curl -s -u "$CURSOR_API_KEY:" \
+              "https://api.cursor.com/v0/agents/$AGENT_ID")
+
+            STATUS=$(echo "$RESPONSE" | jq -r '.status')
+            echo "[$i/60] Agent status: $STATUS"
+
+            if [ "$STATUS" = "FINISHED" ] || [ "$STATUS" = "ERROR" ] || [ "$STATUS" = "EXPIRED" ]; then
+              FINAL_STATUS="$STATUS"
+              break
+            fi
+
+            sleep 30
+          done
+
+          echo "status=$FINAL_STATUS" >> "$GITHUB_OUTPUT"
+
+          if [ "$FINAL_STATUS" = "ERROR" ]; then
+            echo "::warning::Cursor agent finished with ERROR status"
+          elif [ "$FINAL_STATUS" = "TIMEOUT" ]; then
+            echo "::warning::Cursor agent did not finish within 30 minutes"
+          elif [ "$FINAL_STATUS" = "EXPIRED" ]; then
+            echo "::warning::Cursor agent session expired"
+          fi
+
+      - name: Notify Slack
+        if: always()
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          AGENT_ID="${{ steps.launch.outputs.agent_id }}"
+          AGENT_URL="${{ steps.launch.outputs.agent_url }}"
+          AGENT_STATUS="${{ steps.poll.outputs.status }}"
+          PR_URL="${{ github.event.pull_request.html_url }}"
+          PR_TITLE="${{ github.event.pull_request.title }}"
+
+          SUMMARY=""
+          if [ -n "$AGENT_ID" ] && [ "$AGENT_ID" != "null" ]; then
+            SUMMARY=$(curl -s -u "$CURSOR_API_KEY:" \
+              "https://api.cursor.com/v0/agents/$AGENT_ID" | jq -r '.name // "No summary available"')
+          fi
+
+          case "$AGENT_STATUS" in
+            FINISHED) STATUS_EMOJI="white_check_mark"; STATUS_TEXT="Completed" ;;
+            ERROR)    STATUS_EMOJI="x";                STATUS_TEXT="Error" ;;
+            EXPIRED)  STATUS_EMOJI="hourglass";        STATUS_TEXT="Expired" ;;
+            TIMEOUT)  STATUS_EMOJI="warning";          STATUS_TEXT="Timed Out" ;;
+            *)        STATUS_EMOJI="question";         STATUS_TEXT="Unknown ($AGENT_STATUS)" ;;
+          esac
+
+          AGENT_LINK=""
+          if [ -n "$AGENT_URL" ] && [ "$AGENT_URL" != "null" ]; then
+            AGENT_LINK="\n<$AGENT_URL|View in Cursor Dashboard>"
+          fi
+
+          PAYLOAD=$(jq -n \
+            --arg pr_title "$PR_TITLE" \
+            --arg pr_url "$PR_URL" \
+            --arg status_emoji "$STATUS_EMOJI" \
+            --arg status_text "$STATUS_TEXT" \
+            --arg summary "$SUMMARY" \
+            --arg agent_link "$AGENT_LINK" \
+            '{
+              blocks: [
+                {
+                  type: "header",
+                  text: { type: "plain_text", text: "Dependabot PR Review", emoji: true }
+                },
+                {
+                  type: "section",
+                  fields: [
+                    { type: "mrkdwn", text: ("*PR:*\n<" + $pr_url + "|" + $pr_title + ">") },
+                    { type: "mrkdwn", text: ("*Status:*\n:" + $status_emoji + ": " + $status_text) }
+                  ]
+                },
+                {
+                  type: "section",
+                  text: { type: "mrkdwn", text: ("*Summary:*\n" + $summary + $agent_link) }
+                }
+              ]
+            }')
+
+          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+            -H 'Content-Type: application/json' \
+            --data "$PAYLOAD"
+
+          echo "Slack notification sent"
