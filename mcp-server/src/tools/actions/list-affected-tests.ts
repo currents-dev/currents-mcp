@@ -29,21 +29,21 @@ const zodSchema = z.object({
     .string()
     .max(100)
     .optional()
-    .describe("Search affected tests by name."),
-  actionTypes: z
+    .describe("Search by spec file path, test title, or action name (case-insensitive)."),
+  action_type: z
     .array(z.enum(["quarantine", "skip", "tag"]))
     .optional()
     .describe(
       "Filter by action types (can be specified multiple times)."
     ),
-  actionId: z
+  action_id: z
     .string()
     .optional()
     .describe("Filter by a specific action ID."),
   dir: z
     .enum(["asc", "desc"])
     .optional()
-    .describe("Sort direction. Defaults to 'desc'."),
+    .describe("Sort direction for lastSeen. Defaults to 'desc'."),
   status: z
     .array(z.enum(["active", "disabled", "expired", "archived"]))
     .optional()
@@ -57,12 +57,13 @@ const handler = async ({
   page = 0,
   limit = 25,
   search,
-  actionTypes,
-  actionId,
+  action_type,
+  action_id,
   dir,
   status,
 }: z.infer<typeof zodSchema>) => {
   const queryParams = new URLSearchParams();
+  queryParams.append("projectId", projectId);
   queryParams.append("date_start", date_start);
   queryParams.append("date_end", date_end);
   queryParams.append("page", page.toString());
@@ -72,12 +73,12 @@ const handler = async ({
     queryParams.append("search", search);
   }
 
-  if (actionTypes && actionTypes.length > 0) {
-    actionTypes.forEach((t) => queryParams.append("actionTypes", t));
+  if (action_type && action_type.length > 0) {
+    action_type.forEach((t) => queryParams.append("action_type", t));
   }
 
-  if (actionId) {
-    queryParams.append("actionId", actionId);
+  if (action_id) {
+    queryParams.append("action_id", action_id);
   }
 
   if (dir) {
@@ -93,7 +94,7 @@ const handler = async ({
   );
 
   const data = await fetchApi(
-    `/actions/tests/${projectId}?${queryParams.toString()}`
+    `/actions/tests?${queryParams.toString()}`
   );
 
   if (!data) {
