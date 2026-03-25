@@ -1,6 +1,9 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { CURRENTS_API_KEY } from "./lib/env.js";
+import {
+  CURRENTS_API_KEY,
+  MISSING_CURRENTS_API_KEY_MESSAGE,
+} from "./lib/env.js";
 import { logger } from "./lib/logger.js";
 // Actions tools
 import { listActionsTool } from "./tools/actions/list-actions.js";
@@ -40,10 +43,6 @@ import { createWebhookTool } from "./tools/webhooks/create-webhook.js";
 import { getWebhookTool } from "./tools/webhooks/get-webhook.js";
 import { updateWebhookTool } from "./tools/webhooks/update-webhook.js";
 import { deleteWebhookTool } from "./tools/webhooks/delete-webhook.js";
-
-if (CURRENTS_API_KEY === "") {
-  logger.error("CURRENTS_API_KEY env variable is not set.");
-}
 
 const server = new McpServer({
   name: "currents",
@@ -369,6 +368,10 @@ server.registerTool(
 
 /** Starts the MCP server over stdio (used by the CLI and programmatic embedders). */
 export async function startMcpServer(): Promise<void> {
+  if (!CURRENTS_API_KEY) {
+    throw new Error(MISSING_CURRENTS_API_KEY_MESSAGE);
+  }
+
   const transport = new StdioServerTransport();
   await server.connect(transport);
   logger.debug("🚀 Currents MCP Server is live");

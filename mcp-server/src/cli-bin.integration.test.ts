@@ -55,6 +55,11 @@ describe.skipIf(!existsSync(buildIndex))(
         timeout: 45_000,
         encoding: "utf-8",
         stdio: ["pipe", "pipe", "pipe"],
+        env: {
+          ...process.env,
+          // Required for server startup; value is unused in this smoke test.
+          CURRENTS_API_KEY: "vitest-cli-pack-smoke",
+        },
       });
       const combined = `${r.stdout ?? ""}${r.stderr ?? ""}`;
       const timedOut =
