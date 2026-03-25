@@ -76,6 +76,6 @@ const handler = async ({
 };
 
 export const findRunTool = {
-  schema: zodSchema.shape,
+  schema: zodSchema,
   handler,
 };

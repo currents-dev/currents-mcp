@@ -119,6 +119,6 @@ const handler = async ({
 };
 
 export const listAffectedTestsTool = {
-  schema: zodSchema.shape,
+  schema: zodSchema,
   handler,
 };

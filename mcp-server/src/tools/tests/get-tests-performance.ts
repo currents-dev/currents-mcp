@@ -192,6 +192,6 @@ const handler = async ({
 };
 
 export const getTestsPerformanceTool = {
-  schema: zodSchema.shape,
+  schema: zodSchema,
   handler,
 };

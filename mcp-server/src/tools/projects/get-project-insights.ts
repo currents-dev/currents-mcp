@@ -95,6 +95,6 @@ const handler = async ({
 };
 
 export const getProjectInsightsTool = {
-  schema: zodSchema.shape,
+  schema: zodSchema,
   handler,
 };

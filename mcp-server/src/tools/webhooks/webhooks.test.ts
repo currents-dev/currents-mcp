@@ -63,7 +63,7 @@ describe("listWebhooksTool", () => {
 
   it("should have correct schema structure", () => {
     expect(listWebhooksTool.schema).toBeDefined();
-    expect(listWebhooksTool.schema.projectId).toBeDefined();
+    expect(listWebhooksTool.schema.shape.projectId).toBeDefined();
   });
 });
 
@@ -113,7 +113,7 @@ describe("getWebhookTool", () => {
 
   it("should have correct schema structure", () => {
     expect(getWebhookTool.schema).toBeDefined();
-    expect(getWebhookTool.schema.hookId).toBeDefined();
+    expect(getWebhookTool.schema.shape.hookId).toBeDefined();
   });
 });
 
@@ -208,11 +208,11 @@ describe("createWebhookTool", () => {
 
   it("should have correct schema structure", () => {
     expect(createWebhookTool.schema).toBeDefined();
-    expect(createWebhookTool.schema.projectId).toBeDefined();
-    expect(createWebhookTool.schema.url).toBeDefined();
-    expect(createWebhookTool.schema.headers).toBeDefined();
-    expect(createWebhookTool.schema.hookEvents).toBeDefined();
-    expect(createWebhookTool.schema.label).toBeDefined();
+    expect(createWebhookTool.schema.shape.projectId).toBeDefined();
+    expect(createWebhookTool.schema.shape.url).toBeDefined();
+    expect(createWebhookTool.schema.shape.headers).toBeDefined();
+    expect(createWebhookTool.schema.shape.hookEvents).toBeDefined();
+    expect(createWebhookTool.schema.shape.label).toBeDefined();
   });
 });
 
@@ -326,11 +326,11 @@ describe("updateWebhookTool", () => {
 
   it("should have correct schema structure", () => {
     expect(updateWebhookTool.schema).toBeDefined();
-    expect(updateWebhookTool.schema.hookId).toBeDefined();
-    expect(updateWebhookTool.schema.url).toBeDefined();
-    expect(updateWebhookTool.schema.headers).toBeDefined();
-    expect(updateWebhookTool.schema.hookEvents).toBeDefined();
-    expect(updateWebhookTool.schema.label).toBeDefined();
+    expect(updateWebhookTool.schema.shape.hookId).toBeDefined();
+    expect(updateWebhookTool.schema.shape.url).toBeDefined();
+    expect(updateWebhookTool.schema.shape.headers).toBeDefined();
+    expect(updateWebhookTool.schema.shape.hookEvents).toBeDefined();
+    expect(updateWebhookTool.schema.shape.label).toBeDefined();
   });
 });
 
@@ -394,6 +394,6 @@ describe("deleteWebhookTool", () => {
 
   it("should have correct schema structure", () => {
     expect(deleteWebhookTool.schema).toBeDefined();
-    expect(deleteWebhookTool.schema.hookId).toBeDefined();
+    expect(deleteWebhookTool.schema.shape.hookId).toBeDefined();
   });
 });

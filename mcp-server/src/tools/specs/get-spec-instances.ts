@@ -32,6 +32,6 @@ const handler = async ({ instanceId }: z.infer<typeof zodSchema>) => {
 };
 
 export const getSpecInstancesTool = {
-  schema: zodSchema.shape,
+  schema: zodSchema,
   handler,
 };
