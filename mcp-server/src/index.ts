@@ -13,6 +13,7 @@ import { enableActionTool } from "./tools/actions/enable-action.js";
 import { disableActionTool } from "./tools/actions/disable-action.js";
 import { listAffectedTestsTool } from "./tools/actions/list-affected-tests.js";
 import { getAffectedTestExecutionsTool } from "./tools/actions/get-affected-test-executions.js";
+import { getAffectedTestExecutionsByActionTool } from "./tools/actions/get-affected-test-executions-by-action.js";
 // Projects tools
 import { getProjectsTool } from "./tools/projects/get-projects.js";
 import { getProjectTool } from "./tools/projects/get-project.js";
@@ -109,9 +110,16 @@ server.tool(
 
 server.tool(
   "currents-get-affected-test-executions",
-  "Get execution details for a specific test affected by actions within a date range. Returns individual test execution records with action info. Requires projectId, signature, date_start, and date_end. (Preview endpoint: fields and path may change.)",
+  "Get execution details for a specific affected test (by signature) within a date range. Returns individual test execution records with action info. Results are paginated with cursor-based pagination using starting_after and ending_before. Requires projectId, signature, date_start, and date_end. To list executions for a single rule across all tests, use currents-get-affected-test-executions-by-action instead.",
   getAffectedTestExecutionsTool.schema,
   getAffectedTestExecutionsTool.handler
+);
+
+server.tool(
+  "currents-get-affected-test-executions-by-action",
+  "List test executions where a specific action/rule was applied, within a date range. Uses cursor-based pagination with starting_after and ending_before. Requires actionId, date_start, and date_end.",
+  getAffectedTestExecutionsByActionTool.schema,
+  getAffectedTestExecutionsByActionTool.handler
 );
 
 // Projects API tools
