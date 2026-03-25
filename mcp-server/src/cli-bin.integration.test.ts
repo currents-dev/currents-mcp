@@ -1,3 +1,17 @@
+/**
+ * Packaged **CLI** integration tests: the `bin` field and `npx` behavior for a
+ * tarball shaped like a publish (not the programmatic `exports` entry; see
+ * `package-published-esm.integration.test.ts` for `import "@currents/mcp"`).
+ *
+
+ * 1. Prerequisite: `build/index.js` exists (`npm run test:run` runs `build`
+ *    first). If missing, the suite is skipped so `vitest` without a prior
+ *    build does not fail noisily.
+ * 2. `packTarball`: `npm pack` from the package root → one `.tgz` under a
+ *    temp dir. Contents follow `package.json` `files` and npm’s pack rules
+ *    (same artifact shape as registry install, minus release-only publish.cjs
+ *    mutations).
+ */
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -9,6 +23,7 @@ const root = fileURLToPath(new URL("..", import.meta.url));
 const buildIndex = path.join(root, "build", "index.js");
 
 function packTarball(packDest: string): string {
+  // Respect `files` and standard pack rules; do not mutate package.json (unlike release `publish.cjs`).
   execFileSync("npm", ["pack", "--pack-destination", packDest], {
     cwd: root,
     stdio: ["ignore", "pipe", "pipe"],
@@ -24,7 +39,14 @@ describe.skipIf(!existsSync(buildIndex))(
   "packaged CLI (npx / bin)",
   { timeout: 60_000 },
   () => {
-    // Local tarballs need --package <tgz> <bin>; registry `npx @currents/mcp` maps to bin `mcp`.
+    /**
+     * `npx -y --package <abs-path-to.tgz> mcp`: npm treats the tarball as the
+     *    package to install transiently; `mcp` is the bin name from that package’s
+     *    `package.json` `bin` map (not the scoped package name). The child should
+     *    start the MCP server and log the “live” line (stdio MCP servers run until
+     *    stdin closes; we cap wall time with `spawnSync` timeout). Accept either
+     *    that log line or process timeout as success so slow CI still passes.
+     *  */
     it("starts via npx --package tarball mcp", () => {
       const packDir = mkdtempSync(path.join(tmpdir(), "mcp-pack-"));
       const tarball = packTarball(packDir);
@@ -37,11 +59,18 @@ describe.skipIf(!existsSync(buildIndex))(
       const combined = `${r.stdout ?? ""}${r.stderr ?? ""}`;
       const timedOut =
         r.error != null && "code" in r.error && r.error.code === "ETIMEDOUT";
-      expect(
-        combined.includes("Currents MCP Server is live") || timedOut
-      ).toBe(true);
+      expect(combined.includes("Currents MCP Server is live") || timedOut).toBe(
+        true
+      );
     });
 
+    /*
+     * Second `it` — consumer project + `node_modules/.bin`:
+     * - `npm init -y` and `npm install <tgz>` in a fresh temp project. npm links
+     *    `node_modules/.bin/mcp` (or `mcp.cmd` on Windows) to the packed CLI.
+     * - Assert the shim exists. This catches broken `bin`, wrong `files` (missing
+     *    `build/index.js`), or install layout issues without spawning the server.
+     * */
     it("exposes mcp bin after npm install from tarball", () => {
       const packDir = mkdtempSync(path.join(tmpdir(), "mcp-pack-"));
       const installDir = mkdtempSync(path.join(tmpdir(), "mcp-install-"));
