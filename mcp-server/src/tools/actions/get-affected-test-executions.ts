@@ -8,7 +8,7 @@ const zodSchema = z.object({
     .describe("The project ID."),
   signature: z
     .string()
-    .describe("The test signature to fetch affected executions for."),
+    .describe("The test signature hash to fetch affected executions for."),
   date_start: z
     .string()
     .describe("Start date in ISO 8601 format (required)."),
@@ -21,26 +21,20 @@ const zodSchema = z.object({
     .min(1)
     .max(50)
     .optional()
-    .describe("Maximum number of results (1-50). Defaults to 25."),
-  dir: z
-    .enum(["asc", "desc"])
-    .optional()
-    .describe("Sort direction. Defaults to 'desc'."),
-  actionTypes: z
-    .array(z.enum(["quarantine", "skip", "tag"]))
-    .optional()
-    .describe(
-      "Filter by action types (can be specified multiple times)."
-    ),
-  actionId: z
+    .describe("Maximum number of executions (1-50). Defaults to 25."),
+  starting_after: z
     .string()
     .optional()
-    .describe("Filter by a specific action ID."),
+    .describe("Cursor for pagination. Returns items after this cursor value."),
+  ending_before: z
+    .string()
+    .optional()
+    .describe("Cursor for pagination. Returns items before this cursor value."),
   search: z
     .string()
     .max(100)
     .optional()
-    .describe("Search executions by name."),
+    .describe("Search by action name (case-insensitive)."),
 });
 
 const handler = async ({
@@ -49,26 +43,22 @@ const handler = async ({
   date_start,
   date_end,
   limit = 25,
-  dir,
-  actionTypes,
-  actionId,
+  starting_after,
+  ending_before,
   search,
 }: z.infer<typeof zodSchema>) => {
   const queryParams = new URLSearchParams();
+  queryParams.append("projectId", projectId);
   queryParams.append("date_start", date_start);
   queryParams.append("date_end", date_end);
   queryParams.append("limit", limit.toString());
 
-  if (dir) {
-    queryParams.append("dir", dir);
+  if (starting_after) {
+    queryParams.append("starting_after", starting_after);
   }
 
-  if (actionTypes && actionTypes.length > 0) {
-    actionTypes.forEach((t) => queryParams.append("actionTypes", t));
-  }
-
-  if (actionId) {
-    queryParams.append("actionId", actionId);
+  if (ending_before) {
+    queryParams.append("ending_before", ending_before);
   }
 
   if (search) {
@@ -80,7 +70,7 @@ const handler = async ({
   );
 
   const data = await fetchApi(
-    `/actions/tests/${projectId}/${signature}?${queryParams.toString()}`
+    `/actions/tests/${signature}?${queryParams.toString()}`
   );
 
   if (!data) {
