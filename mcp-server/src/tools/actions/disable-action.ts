@@ -33,6 +33,6 @@ const handler = async ({ actionId }: z.infer<typeof zodSchema>) => {
 };
 
 export const disableActionTool = {
-  schema: zodSchema.shape,
+  schema: zodSchema,
   handler,
 };

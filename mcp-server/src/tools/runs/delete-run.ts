@@ -33,6 +33,6 @@ const handler = async ({ runId }: z.infer<typeof zodSchema>) => {
 };
 
 export const deleteRunTool = {
-  schema: zodSchema.shape,
+  schema: zodSchema,
   handler,
 };

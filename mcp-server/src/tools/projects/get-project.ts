@@ -33,6 +33,6 @@ const handler = async ({ projectId }: z.infer<typeof zodSchema>) => {
 };
 
 export const getProjectTool = {
-  schema: zodSchema.shape,
+  schema: zodSchema,
   handler,
 };

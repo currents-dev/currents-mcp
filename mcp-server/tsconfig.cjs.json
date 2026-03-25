@@ -1,0 +1,18 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    /* TS5110: CommonJS + Node16/NodeNext resolution is invalid; this build targets Node 20+ runtime only. */
+    "module": "CommonJS",
+    "moduleResolution": "Node10",
+    "outDir": "./build/cjs",
+    "declaration": false,
+    "declarationMap": false
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": [
+    "node_modules",
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "src/index.ts"
+  ]
+}

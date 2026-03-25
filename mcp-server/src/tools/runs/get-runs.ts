@@ -154,6 +154,6 @@ const handler = async ({
 };
 
 export const getRunsTool = {
-  schema: zodSchema.shape,
+  schema: zodSchema,
   handler,
 };

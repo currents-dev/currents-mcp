@@ -90,6 +90,6 @@ const handler = async ({
 };
 
 export const getAffectedTestExecutionsByActionTool = {
-  schema: zodSchema.shape,
+  schema: zodSchema,
   handler,
 };

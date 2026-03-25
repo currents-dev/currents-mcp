@@ -100,6 +100,6 @@ const handler = async ({
 };
 
 export const getProjectsTool = {
-  schema: zodSchema.shape,
+  schema: zodSchema,
   handler,
 };

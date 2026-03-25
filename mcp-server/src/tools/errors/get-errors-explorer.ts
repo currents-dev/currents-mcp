@@ -199,6 +199,6 @@ const handler = async ({
 };
 
 export const getErrorsExplorerTool = {
-  schema: zodSchema.shape,
+  schema: zodSchema,
   handler,
 };

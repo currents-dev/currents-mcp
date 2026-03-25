@@ -151,6 +151,6 @@ const handler = async ({
 };
 
 export const createActionTool = {
-  schema: zodSchema.shape,
+  schema: zodSchema,
   handler,
 };

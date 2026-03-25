@@ -37,6 +37,6 @@ const handler = async ({
 };
 
 export const deleteWebhookTool = {
-  schema: zodSchema.shape,
+  schema: zodSchema,
   handler,
 };
