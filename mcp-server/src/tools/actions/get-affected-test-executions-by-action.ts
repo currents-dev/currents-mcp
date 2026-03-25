@@ -3,12 +3,9 @@ import { fetchApi } from "../../lib/request.js";
 import { logger } from "../../lib/logger.js";
 
 const zodSchema = z.object({
-  projectId: z
+  actionId: z
     .string()
-    .describe("The project ID."),
-  signature: z
-    .string()
-    .describe("The test signature hash to fetch affected executions for."),
+    .describe("The action ID to fetch affected test executions for."),
   date_start: z
     .string()
     .describe("Start date in ISO 8601 format (required)."),
@@ -38,8 +35,7 @@ const zodSchema = z.object({
 });
 
 const handler = async ({
-  projectId,
-  signature,
+  actionId,
   date_start,
   date_end,
   limit = 25,
@@ -48,7 +44,6 @@ const handler = async ({
   search,
 }: z.infer<typeof zodSchema>) => {
   const queryParams = new URLSearchParams();
-  queryParams.append("projectId", projectId);
   queryParams.append("date_start", date_start);
   queryParams.append("date_end", date_end);
   queryParams.append("limit", limit.toString());
@@ -66,11 +61,11 @@ const handler = async ({
   }
 
   logger.info(
-    `Fetching affected test executions for project ${projectId}, signature ${signature} with query params: ${queryParams.toString()}`
+    `Fetching affected test executions for action ${actionId} with query params: ${queryParams.toString()}`
   );
 
   const data = await fetchApi(
-    `/actions/tests/${signature}?${queryParams.toString()}`
+    `/actions/${actionId}/tests?${queryParams.toString()}`
   );
 
   if (!data) {
@@ -78,7 +73,7 @@ const handler = async ({
       content: [
         {
           type: "text" as const,
-          text: "Failed to retrieve affected test executions",
+          text: "Failed to retrieve affected test executions for action",
         },
       ],
     };
@@ -94,7 +89,7 @@ const handler = async ({
   };
 };
 
-export const getAffectedTestExecutionsTool = {
+export const getAffectedTestExecutionsByActionTool = {
   schema: zodSchema.shape,
   handler,
 };

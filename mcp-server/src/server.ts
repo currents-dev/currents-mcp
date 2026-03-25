@@ -12,6 +12,7 @@ import { enableActionTool } from "./tools/actions/enable-action.js";
 import { disableActionTool } from "./tools/actions/disable-action.js";
 import { listAffectedTestsTool } from "./tools/actions/list-affected-tests.js";
 import { getAffectedTestExecutionsTool } from "./tools/actions/get-affected-test-executions.js";
+import { getAffectedTestExecutionsByActionTool } from "./tools/actions/get-affected-test-executions-by-action.js";
 // Projects tools
 import { getProjectsTool } from "./tools/projects/get-projects.js";
 import { getProjectTool } from "./tools/projects/get-project.js";
@@ -125,10 +126,21 @@ server.registerTool(
 server.registerTool(
   "currents-get-affected-test-executions",
   {
-    description: "Get execution details for a specific test affected by actions within a date range. Returns individual test execution records with action info. Requires projectId, signature, date_start, and date_end. (Preview endpoint: fields and path may change.)",
+    description:
+      "Get execution details for a specific affected test (by signature) within a date range. Returns individual test execution records with action info. Uses cursor-based pagination. Requires projectId, signature, date_start, and date_end.",
     inputSchema: getAffectedTestExecutionsTool.schema,
   },
   getAffectedTestExecutionsTool.handler
+);
+
+server.registerTool(
+  "currents-get-affected-test-executions-by-action",
+  {
+    description:
+      "List test executions where a specific action/rule was applied, within a date range. Uses cursor-based pagination. Requires actionId, date_start, and date_end.",
+    inputSchema: getAffectedTestExecutionsByActionTool.schema,
+  },
+  getAffectedTestExecutionsByActionTool.handler
 );
 
 // Projects API tools
