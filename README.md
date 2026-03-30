@@ -92,6 +92,10 @@ Add the following to enable Currents MCP on Claude Desktop (edit `claude_desktop
 
 By connecting AI tools (e.g., via MCP) to Currents, you are granting them access to your API key, test results and CI metadata. It is your responsibility to vet any AI agents or services you use, and to ensure they handle your data securely.
 
+## Hosted deployment
+
+A hosted deployment is available on [Fronteir AI](https://fronteir.ai/mcp/currents-dev-currents-mcp).
+
 ## References
 
 - [Currents](https://currents.dev)
