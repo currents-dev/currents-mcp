@@ -199,30 +199,8 @@ jobs:
           CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
-          AGENT_ID="${{ steps.launch.outputs.agent_id }}"
-          AGENT_URL="${{ steps.launch.outputs.agent_url }}"
-          AGENT_STATUS="${{ steps.poll.outputs.status }}"
           PR_URL="${{ github.event.pull_request.html_url }}"
           PR_TITLE="${{ github.event.pull_request.title }}"
-
-          SUMMARY=""
-          if [ -n "$AGENT_ID" ] && [ "$AGENT_ID" != "null" ]; then
-            SUMMARY=$(curl -s -u "$CURSOR_API_KEY:" \
-              "https://api.cursor.com/v0/agents/$AGENT_ID" | jq -r '.name // "No summary available"')
-          fi
-
-          case "$AGENT_STATUS" in
-            FINISHED) STATUS_EMOJI="white_check_mark"; STATUS_TEXT="Completed" ;;
-            ERROR)    STATUS_EMOJI="x";                STATUS_TEXT="Error" ;;
-            EXPIRED)  STATUS_EMOJI="hourglass";        STATUS_TEXT="Expired" ;;
-            TIMEOUT)  STATUS_EMOJI="warning";          STATUS_TEXT="Timed Out" ;;
-            *)        STATUS_EMOJI="question";         STATUS_TEXT="Unknown ($AGENT_STATUS)" ;;
-          esac
-
-          AGENT_LINK=""
-          if [ -n "$AGENT_URL" ] && [ "$AGENT_URL" != "null" ]; then
-            AGENT_LINK="\n<$AGENT_URL|View in Cursor Dashboard>"
-          fi
 
           PAYLOAD=$(jq -n \
             --arg pr_title "$PR_TITLE" \
