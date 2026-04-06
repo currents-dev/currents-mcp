@@ -126,7 +126,6 @@ jobs:
             --arg pr_url "$PR_URL" \
             '{
               prompt: { text: $prompt },
-              model: "claude-opus-4-6",
               source: { prUrl: $pr_url },
               target: { autoBranch: false }
             }')
