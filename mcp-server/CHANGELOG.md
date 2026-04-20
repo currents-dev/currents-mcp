@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased (2026-04-20)
+
+### Added
+
+* MCP tool `currents-get-context` for `GET /context` (test failure context for AI debugging).
+
+### Fixed
+
+* `currents-list-affected-tests`: serialize `action_type` query params as `action_type[]` to match OpenAPI.
+* `currents-update-webhook`: require at least one updatable field so the HTTP request body is never empty (matches OpenAPI `requestBody.required: true`).
+* `postApi`: treat HTTP 201 and empty JSON bodies like other successful POST responses.
+
 ## [2.2.5](https://github.com/currents-dev/currents-mcp/compare/v2.2.4...v2.2.5) (2026-02-05)
 
 ### Bug Fixes
@@ -10,7 +22,9 @@
 
 ### Documentation
 
-* add comprehensive parity analysis documentation ([#47](https://github.com/currents-dev/currents-mcp/pull/47))## [2.2.4](https://github.com/currents-dev/currents-mcp/compare/v2.2.3...v2.2.4) (2026-01-27)
+* add comprehensive parity analysis documentation ([#47](https://github.com/currents-dev/currents-mcp/pull/47))
+
+## [2.2.4](https://github.com/currents-dev/currents-mcp/compare/v2.2.3...v2.2.4) (2026-01-27)
 
 ## [2.2.3](https://github.com/currents-dev/currents-mcp/compare/v2.2.1...v2.2.3) (2026-01-27)
 

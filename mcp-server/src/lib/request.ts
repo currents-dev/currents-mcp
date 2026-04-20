@@ -49,7 +49,14 @@ export async function postApi<T, B>(path: string, body: B): Promise<T | null> {
       logger.error(response);
       return null;
     }
-    return (await response.json()) as T;
+    if (response.status === 204 || response.headers.get("content-length") === "0") {
+      return {} as T;
+    }
+    const contentType = response.headers.get("content-type");
+    if (contentType && contentType.includes("application/json")) {
+      return (await response.json()) as T;
+    }
+    return {} as T;
   } catch (error: any) {
     logger.error("Error making Currents POST request:", error.toString());
     return null;
