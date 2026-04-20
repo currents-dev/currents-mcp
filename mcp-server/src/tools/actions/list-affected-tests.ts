@@ -74,7 +74,7 @@ const handler = async ({
   }
 
   if (action_type && action_type.length > 0) {
-    action_type.forEach((t) => queryParams.append("action_type", t));
+    action_type.forEach((t) => queryParams.append("action_type[]", t));
   }
 
   if (action_id) {

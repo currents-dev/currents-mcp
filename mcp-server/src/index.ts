@@ -35,6 +35,7 @@ import { getTestsPerformanceTool } from "./tools/tests/get-tests-performance.js"
 import { getTestSignatureTool } from "./tools/tests/get-tests-signature.js";
 // Errors tools
 import { getErrorsExplorerTool } from "./tools/errors/get-errors-explorer.js";
+import { getContextTool } from "./tools/context/get-context.js";
 // Webhooks tools
 import { listWebhooksTool } from "./tools/webhooks/list-webhooks.js";
 import { createWebhookTool } from "./tools/webhooks/create-webhook.js";
@@ -103,7 +104,7 @@ server.tool(
 
 server.tool(
   "currents-list-affected-tests",
-  "List tests affected by actions (quarantine, skip, tag) for a project within a date range. Returns aggregated data grouped by test signature. Supports filtering by action types, action ID, status, and search. Requires projectId, date_start, and date_end. (Preview endpoint: fields and path may change.)",
+  "List tests affected by actions (quarantine, skip, tag) for a project within a date range. Returns aggregated data grouped by test signature. Supports filtering by action types, action ID, status, and search. Requires projectId, date_start, and date_end.",
   listAffectedTestsTool.schema,
   listAffectedTestsTool.handler
 );
@@ -237,6 +238,13 @@ server.tool(
   "Get aggregated error metrics for a project within a date range. Supports filtering by error_target, error_message, error_category, error_action, tags, branches, authors, and groups. Supports grouping by target, action, category, or message. Returns error counts, affected tests and branches, with timeline data. Requires projectId, date_start, and date_end.",
   getErrorsExplorerTool.schema,
   getErrorsExplorerTool.handler
+);
+
+server.tool(
+  "currents-get-context",
+  "Retrieve structured test failure context for AI debugging (GET /context). Supports run-level (run_id only), instance-level (run_id + instance_id), or test-level (instance_id + test_id). Optional format json|md, detail default|compact|summary, and pagination limit/page for run/instance levels.",
+  getContextTool.schema,
+  getContextTool.handler
 );
 
 // Webhooks API tools

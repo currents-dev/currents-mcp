@@ -283,14 +283,7 @@ describe("updateWebhookTool", () => {
     });
   });
 
-  it("should update webhook with hookId only (no changes)", async () => {
-    const mockResponse = {
-      hookId: "webhook-123",
-      url: "https://example.com/webhook",
-    };
-
-    vi.spyOn(request, "putApi").mockResolvedValue(mockResponse);
-
+  it("should reject update with hookId only (OpenAPI requires request body)", async () => {
     const result = await updateWebhookTool.handler({
       hookId: "webhook-123",
     });
@@ -299,11 +292,11 @@ describe("updateWebhookTool", () => {
       content: [
         {
           type: "text",
-          text: JSON.stringify(mockResponse, null, 2),
+          text: "Error: At least one field to update must be provided (url, headers, hookEvents, or label).",
         },
       ],
     });
-    expect(request.putApi).toHaveBeenCalledWith("/webhooks/webhook-123", {});
+    expect(request.putApi).not.toHaveBeenCalled();
   });
 
   it("should return error message when API request fails", async () => {
