@@ -33,10 +33,28 @@ const zodSchema = z.object({
     .array(z.string())
     .optional()
     .describe("Filter runs by tags (can be specified multiple times). Use tag_operator to control matching behavior."),
+  tag: z
+    .array(z.string())
+    .optional()
+    .describe(
+      "Deprecated OpenAPI alias: serialized as tag[] (same as tags but uses the legacy query name)."
+    ),
   tag_operator: z
     .enum(["AND", "OR"])
     .optional()
     .describe("Logical operator for tag filtering. AND requires all tags to be present (default), OR requires any tag to be present."),
+  branch: z
+    .string()
+    .optional()
+    .describe(
+      "Deprecated OpenAPI parameter: single branch filter (use branches for branches[])."
+    ),
+  author: z
+    .array(z.string())
+    .optional()
+    .describe(
+      "Deprecated OpenAPI alias: serialized as author[] (use authors for authors[])."
+    ),
   search: z
     .string()
     .max(200)
@@ -71,7 +89,10 @@ const handler = async ({
   ending_before,
   branches,
   tags,
+  tag,
   tag_operator,
+  branch,
+  author,
   search,
   authors,
   status,
@@ -98,8 +119,16 @@ const handler = async ({
     tags.forEach((t) => queryParams.append("tags[]", t));
   }
 
+  if (tag && tag.length > 0) {
+    tag.forEach((t) => queryParams.append("tag[]", t));
+  }
+
   if (tag_operator) {
     queryParams.append("tag_operator", tag_operator);
+  }
+
+  if (branch) {
+    queryParams.append("branch", branch);
   }
 
   if (search) {
@@ -110,12 +139,18 @@ const handler = async ({
     authors.forEach((a) => queryParams.append("authors[]", a));
   }
 
+  if (author && author.length > 0) {
+    author.forEach((a) => queryParams.append("author[]", a));
+  }
+
   if (status && status.length > 0) {
-    status.forEach((s) => queryParams.append("status", s));
+    status.forEach((s) => queryParams.append("status[]", s));
   }
 
   if (completion_state && completion_state.length > 0) {
-    completion_state.forEach((cs) => queryParams.append("completion_state", cs));
+    completion_state.forEach((cs) =>
+      queryParams.append("completion_state[]", cs)
+    );
   }
 
   if (date_start) {

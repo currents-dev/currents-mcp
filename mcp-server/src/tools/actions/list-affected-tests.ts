@@ -86,7 +86,7 @@ const handler = async ({
   }
 
   if (status && status.length > 0) {
-    status.forEach((s) => queryParams.append("status", s));
+    status.forEach((s) => queryParams.append("status[]", s));
   }
 
   logger.info(

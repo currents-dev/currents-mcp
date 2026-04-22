@@ -8,7 +8,7 @@ const zodSchema = z
       .string()
       .optional()
       .describe(
-        "Run identifier. Required for run-level (run_id only) and instance-level (run_id + instance_id, no test_id). Omit for test-level (instance_id + test_id)."
+        "Run identifier. Required for run-level and instance-level (run_id + instance_id, omit test_id). Optional for test-level (instance_id + test_id); the server resolves the run from the instance and ignores run_id for lookup."
       ),
     instance_id: z
       .string()
@@ -76,7 +76,7 @@ const zodSchema = z
       }
       return;
     }
-    if (instance_id) {
+    if (instance_id && !test_id) {
       if (!run_id) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
