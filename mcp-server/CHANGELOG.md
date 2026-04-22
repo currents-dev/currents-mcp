@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased (2026-04-22)
+
+### Added
+
+* Optional query inputs on `currents-get-runs` for deprecated OpenAPI aliases: `tag` → `tag[]`, `branch`, `author` → `author[]`.
+* Optional deprecated filters on `currents-get-test-results`: `branch` → `branch[]`, `tag` → `tag[]`, `git_author` → `git_author[]`, `group` → `group[]`.
+* Optional `tag` on `currents-find-run` (serialized as `tag[]` alongside `tags[]`).
+
+### Fixed
+
+* Align array query serialization with OpenAPI `style: form` + `explode: true` for `status[]` / `completion_state[]` on `currents-get-runs`, `status[]` on `currents-list-actions` and `currents-list-affected-tests`.
+* `currents-get-context`: allow test-level requests with `instance_id` + `test_id` and no `run_id`, per OpenAPI description.
+
 ## Unreleased (2026-04-20)
 
 ### Added

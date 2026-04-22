@@ -26,7 +26,7 @@ const handler = async ({
   queryParams.append("projectId", projectId);
 
   if (status && status.length > 0) {
-    status.forEach((s) => queryParams.append("status", s));
+    status.forEach((s) => queryParams.append("status[]", s));
   }
 
   if (search) {

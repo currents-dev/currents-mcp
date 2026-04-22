@@ -17,7 +17,15 @@ const zodSchema = z.object({
   tags: z
     .array(z.string())
     .optional()
-    .describe("Run tags to filter by (can be specified multiple times)."),
+    .describe(
+      "Run tags as tags[] (OpenAPI). Serialized as tags[]=... for each value."
+    ),
+  tag: z
+    .array(z.string())
+    .optional()
+    .describe(
+      "Deprecated OpenAPI duplicate: serialized as tag[] (in addition to tags[] if both are set)."
+    ),
   pwLastRun: z
     .boolean()
     .optional()
@@ -29,6 +37,7 @@ const handler = async ({
   ciBuildId,
   branch,
   tags,
+  tag,
   pwLastRun,
 }: z.infer<typeof zodSchema>) => {
   const queryParams = new URLSearchParams();
@@ -44,6 +53,10 @@ const handler = async ({
 
   if (tags && tags.length > 0) {
     tags.forEach((t) => queryParams.append("tags[]", t));
+  }
+
+  if (tag && tag.length > 0) {
+    tag.forEach((t) => queryParams.append("tag[]", t));
   }
 
   if (pwLastRun !== undefined) {

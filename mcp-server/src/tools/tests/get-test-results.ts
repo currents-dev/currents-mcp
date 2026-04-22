@@ -33,14 +33,30 @@ const zodSchema = z.object({
     .array(z.string())
     .optional()
     .describe("Filter by git branches (can be specified multiple times)."),
+  branch: z
+    .array(z.string())
+    .optional()
+    .describe(
+      "Deprecated OpenAPI filter: serialized as branch[] (prefer branches)."
+    ),
   tags: z
     .array(z.string())
     .optional()
     .describe("Filter by run tags (can be specified multiple times)."),
+  tag: z
+    .array(z.string())
+    .optional()
+    .describe("Deprecated OpenAPI filter: serialized as tag[] (prefer tags)."),
   authors: z
     .array(z.string())
     .optional()
     .describe("Filter by git authors (can be specified multiple times)."),
+  git_author: z
+    .array(z.string())
+    .optional()
+    .describe(
+      "Deprecated OpenAPI filter: serialized as git_author[] (prefer authors)."
+    ),
   status: z
     .array(z.enum(["passed", "failed", "pending", "skipped"]))
     .optional()
@@ -49,6 +65,12 @@ const zodSchema = z.object({
     .array(z.string())
     .optional()
     .describe("Filter by run groups (can be specified multiple times)."),
+  group: z
+    .array(z.string())
+    .optional()
+    .describe(
+      "Deprecated OpenAPI filter: serialized as group[] (prefer groups)."
+    ),
   flaky: z
     .boolean()
     .optional()
@@ -67,10 +89,14 @@ const handler = async ({
   starting_after,
   ending_before,
   branches,
+  branch,
   tags,
+  tag,
   authors,
+  git_author,
   status,
   groups,
+  group,
   flaky,
   annotations,
 }: z.infer<typeof zodSchema>) => {
@@ -91,12 +117,24 @@ const handler = async ({
     branches.forEach((b) => queryParams.append("branches[]", b));
   }
 
+  if (branch && branch.length > 0) {
+    branch.forEach((b) => queryParams.append("branch[]", b));
+  }
+
   if (tags && tags.length > 0) {
     tags.forEach((t) => queryParams.append("tags[]", t));
   }
 
+  if (tag && tag.length > 0) {
+    tag.forEach((t) => queryParams.append("tag[]", t));
+  }
+
   if (authors && authors.length > 0) {
     authors.forEach((a) => queryParams.append("authors[]", a));
+  }
+
+  if (git_author && git_author.length > 0) {
+    git_author.forEach((a) => queryParams.append("git_author[]", a));
   }
 
   if (status && status.length > 0) {
@@ -105,6 +143,10 @@ const handler = async ({
 
   if (groups && groups.length > 0) {
     groups.forEach((g) => queryParams.append("groups[]", g));
+  }
+
+  if (group && group.length > 0) {
+    group.forEach((g) => queryParams.append("group[]", g));
   }
 
   if (flaky !== undefined) {

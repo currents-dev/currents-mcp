@@ -56,4 +56,20 @@ describe("getContextTool", () => {
     );
     expect(fetch).not.toHaveBeenCalled();
   });
+
+  it("allows test-level shape with instance_id + test_id without run_id", async () => {
+    await getContextTool.handler({
+      instance_id: "inst-1",
+      test_id: "t1",
+      format: "json",
+      detail: "default",
+      limit: 10,
+      page: 0,
+    });
+
+    expect(fetch).toHaveBeenCalledWith(
+      "https://api.test.com/v1/context?instance_id=inst-1&test_id=t1&format=json&detail=default&limit=10&page=0",
+      expect.any(Object)
+    );
+  });
 });
