@@ -42,6 +42,15 @@ const zodSchema = z.object({
     .max(200)
     .optional()
     .describe("Search runs by ciBuildId or commit message. Case-insensitive."),
+  pr_id: z
+    .string()
+    .min(1)
+    .max(128)
+    .regex(/^[!-~]+$/)
+    .optional()
+    .describe(
+      "Filter runs by normalized pull request id (meta.pr.id). Printable ASCII only, max 128 characters."
+    ),
   authors: z
     .array(z.string())
     .optional()
@@ -73,6 +82,7 @@ const handler = async ({
   tags,
   tag_operator,
   search,
+  pr_id,
   authors,
   status,
   completion_state,
@@ -106,16 +116,22 @@ const handler = async ({
     queryParams.append("search", search);
   }
 
+  if (pr_id) {
+    queryParams.append("pr_id", pr_id);
+  }
+
   if (authors && authors.length > 0) {
     authors.forEach((a) => queryParams.append("authors[]", a));
   }
 
   if (status && status.length > 0) {
-    status.forEach((s) => queryParams.append("status", s));
+    status.forEach((s) => queryParams.append("status[]", s));
   }
 
   if (completion_state && completion_state.length > 0) {
-    completion_state.forEach((cs) => queryParams.append("completion_state", cs));
+    completion_state.forEach((cs) =>
+      queryParams.append("completion_state[]", cs)
+    );
   }
 
   if (date_start) {

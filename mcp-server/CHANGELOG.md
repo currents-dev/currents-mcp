@@ -8,7 +8,9 @@
 
 ### Fixed
 
-* `currents-list-affected-tests`: serialize `action_type` query params as `action_type[]` to match OpenAPI.
+* `currents-list-affected-tests`: serialize `action_type` as repeated `action_type` query keys (OpenAPI `style: form`, `explode: true`).
+* `currents-get-runs`: serialize `status` and `completion_state` as `status[]` and `completion_state[]`; add optional `pr_id` query param per OpenAPI list runs.
+* MCP tools intentionally omit deprecated-only OpenAPI query parameters (for example `tag[]` on find run).
 * `currents-update-webhook`: require at least one updatable field so the HTTP request body is never empty (matches OpenAPI `requestBody.required: true`).
 * `postApi`: treat HTTP 201 and empty JSON bodies like other successful POST responses.
 
