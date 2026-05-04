@@ -9,7 +9,7 @@ describe("getRunsTool", () => {
     vi.clearAllMocks();
   });
 
-  it("serializes list runs query per OpenAPI (status[], completion_state[], pr_id)", async () => {
+  it("serializes list runs query per OpenAPI (repeated status, completion_state, pr_id)", async () => {
     vi.spyOn(request, "fetchApi").mockResolvedValue({ status: "OK", data: [] });
 
     await getRunsTool.handler({
@@ -20,9 +20,9 @@ describe("getRunsTool", () => {
     });
 
     const url = vi.mocked(request.fetchApi).mock.calls[0][0] as string;
-    expect(url).toContain("status%5B%5D=PASSED");
-    expect(url).toContain("status%5B%5D=FAILED");
-    expect(url).toContain("completion_state%5B%5D=COMPLETE");
+    expect(url).toContain("status=PASSED");
+    expect(url).toContain("status=FAILED");
+    expect(url).toContain("completion_state=COMPLETE");
     expect(url).toContain("pr_id=42");
   });
 });

@@ -125,13 +125,11 @@ const handler = async ({
   }
 
   if (status && status.length > 0) {
-    status.forEach((s) => queryParams.append("status[]", s));
+    status.forEach((s) => queryParams.append("status", s));
   }
 
   if (completion_state && completion_state.length > 0) {
-    completion_state.forEach((cs) =>
-      queryParams.append("completion_state[]", cs)
-    );
+    completion_state.forEach((cs) => queryParams.append("completion_state", cs));
   }
 
   if (date_start) {
