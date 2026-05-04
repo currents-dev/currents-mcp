@@ -9,7 +9,7 @@ describe("listAffectedTestsTool", () => {
     vi.clearAllMocks();
   });
 
-  it("serializes action_type as action_type[] per OpenAPI", async () => {
+  it("serializes action_type as repeated action_type per OpenAPI (form explode)", async () => {
     vi.spyOn(request, "fetchApi").mockResolvedValue({ status: "OK", data: [] });
 
     await listAffectedTestsTool.handler({
@@ -20,10 +20,10 @@ describe("listAffectedTestsTool", () => {
     });
 
     expect(request.fetchApi).toHaveBeenCalledWith(
-      expect.stringContaining("action_type%5B%5D=skip")
+      expect.stringContaining("action_type=skip")
     );
     expect(request.fetchApi).toHaveBeenCalledWith(
-      expect.stringContaining("action_type%5B%5D=tag")
+      expect.stringContaining("action_type=tag")
     );
   });
 });
