@@ -166,6 +166,6 @@ const handler = async ({
 };
 
 export const updateActionTool = {
-  schema: zodSchema.shape,
+  schema: zodSchema,
   handler,
 };

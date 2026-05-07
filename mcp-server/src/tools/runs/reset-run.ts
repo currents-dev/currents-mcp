@@ -67,6 +67,6 @@ const handler = async ({
 };
 
 export const resetRunTool = {
-  schema: zodSchema.shape,
+  schema: zodSchema,
   handler,
 };

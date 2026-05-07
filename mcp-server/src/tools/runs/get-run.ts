@@ -30,6 +30,6 @@ const handler = async ({ runId }: z.infer<typeof zodSchema>) => {
 };
 
 export const getRunDetailsTool = {
-  schema: zodSchema.shape,
+  schema: zodSchema,
   handler,
 };

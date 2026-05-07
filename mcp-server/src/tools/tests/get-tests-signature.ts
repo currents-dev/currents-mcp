@@ -69,6 +69,6 @@ const handler = async ({
 };
 
 export const getTestSignatureTool = {
-  schema: zodSchema.shape,
+  schema: zodSchema,
   handler,
 };

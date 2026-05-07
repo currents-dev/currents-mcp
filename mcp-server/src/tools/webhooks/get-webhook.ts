@@ -37,6 +37,6 @@ const handler = async ({
 };
 
 export const getWebhookTool = {
-  schema: zodSchema.shape,
+  schema: zodSchema,
   handler,
 };

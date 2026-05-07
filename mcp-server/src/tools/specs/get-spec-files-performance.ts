@@ -153,6 +153,6 @@ const handler = async ({
 };
 
 export const getSpecFilesPerformanceTool = {
-  schema: zodSchema.shape,
+  schema: zodSchema,
   handler,
 };

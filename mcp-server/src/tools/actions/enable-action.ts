@@ -33,6 +33,6 @@ const handler = async ({ actionId }: z.infer<typeof zodSchema>) => {
 };
 
 export const enableActionTool = {
-  schema: zodSchema.shape,
+  schema: zodSchema,
   handler,
 };
