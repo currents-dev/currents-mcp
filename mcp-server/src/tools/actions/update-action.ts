@@ -132,7 +132,7 @@ const handler = async ({
   }
 
   const body: UpdateActionRequest = {};
-  
+
   if (name !== undefined) body.name = name;
   if (description !== undefined) body.description = description;
   if (action !== undefined) body.action = action;

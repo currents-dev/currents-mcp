@@ -55,6 +55,17 @@ const handler = async ({
     body.label = label;
   }
 
+  if (Object.keys(body).length === 0) {
+    return {
+      content: [
+        {
+          type: "text" as const,
+          text: "Error: At least one field to update must be provided (url, headers, hookEvents, or label).",
+        },
+      ],
+    };
+  }
+
   logger.info(`Updating webhook ${hookId}`);
 
   const data = await putApi(`/webhooks/${hookId}`, body);

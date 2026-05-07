@@ -30,8 +30,10 @@ jobs:
         working-directory: ./mcp-server
         run: npm ci
 
-      # Includes package-environments.integration.test.ts (workspace ESM/CJS),
-      # package-published-esm.integration.test.ts (npm pack + import "@currents/mcp").
-      - name: Build and run tests
+      - name: Build
+        working-directory: ./mcp-server
+        run: npm run build
+
+      - name: Run tests
         working-directory: ./mcp-server
         run: npm run test:run
