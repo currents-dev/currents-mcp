@@ -31,6 +31,8 @@
     "publish:npm": "npm run rm  && npm run build && ./publish.cjs",
     "start": "node build/index.js",
     "rm": "rimraf dist",
+    "prepare": "git config core.hooksPath mcp-server/scripts/hooks",
+    "sync-readme": "node scripts/sync-readme-tools.mjs",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "npm run build && vitest run",
@@ -56,9 +58,9 @@
     "zod": "^4.3.5"
   },
   "devDependencies": {
+    "@release-it/conventional-changelog": "^11.0.0",
     "@types/node": "^20.19.0",
-    "@release-it/conventional-changelog": "^10.0.0",
-    "release-it": "^19.0.3",
+    "release-it": "^20.0.1",
     "rimraf": "^6.0.1",
     "typescript": "^5.9.3",
     "vitest": "^4.0.18"
