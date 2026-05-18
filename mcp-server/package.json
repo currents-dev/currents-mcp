@@ -31,6 +31,8 @@
     "publish:npm": "npm run rm  && npm run build && ./publish.cjs",
     "start": "node build/index.js",
     "rm": "rimraf dist",
+    "prepare": "git config core.hooksPath mcp-server/scripts/hooks",
+    "sync-readme": "node scripts/sync-readme-tools.mjs",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "npm run build && vitest run",
