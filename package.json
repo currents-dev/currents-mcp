@@ -1,6 +1,0 @@
-{
-  "devDependencies": {
-    "oxfmt": "^0.50.0",
-    "oxlint": "^1.65.0"
-  }
-}
