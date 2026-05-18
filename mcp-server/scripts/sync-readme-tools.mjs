@@ -86,6 +86,17 @@ const table = [header, separator, ...rows].join("\n");
 // ── Splice the table into README.md ─────────────────────────────
 const readme = readFileSync(readmePath, "utf-8");
 const tableStart = readme.indexOf("| Tool");
+
+if (tableStart === -1) {
+  const msg = 'Cannot find tools table anchor ("| Tool") in README.md';
+  if (checkOnly) {
+    console.error(`${msg} — cannot verify table freshness.`);
+  } else {
+    console.error(`${msg} — cannot update.`);
+  }
+  process.exit(1);
+}
+
 const tableEndMarker = readme.indexOf("\n\n", tableStart);
 const tableEnd = tableEndMarker === -1 ? readme.length : tableEndMarker;
 
