@@ -141,7 +141,7 @@ server.registerTool(
 );
 
 server.registerTool(
-  "currents-get-affected-test-executions-by-action",
+  "currents-get-affected-executions",
   {
     description:
       "List test executions where a specific action/rule was applied, within a date range. Uses cursor-based pagination. Requires actionId, date_start, and date_end.",

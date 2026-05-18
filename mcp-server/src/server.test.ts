@@ -30,6 +30,10 @@ const TOOL_NAME_MAX_LENGTH = 64;
 const TOOL_NAME_PATTERN = /^[a-zA-Z0-9_\-./]+$/;
 // No hard spec limit; 1024 is the practical ceiling across major LLM providers
 const TOOL_DESCRIPTION_MAX_LENGTH = 1024;
+// Cursor IDE prefixes tool names with "extension-<server>:" when displaying them.
+// Combined length must stay ≤ 60 to avoid filtering warnings.
+const CURSOR_SERVER_PREFIX = "extension-currents:";
+const CURSOR_COMBINED_MAX_LENGTH = 60;
 
 describe("MCP tool best practices", () => {
   it("has at least one registered tool", () => {
@@ -57,6 +61,14 @@ describe("MCP tool best practices", () => {
 
     it("name is not empty", () => {
       expect(name.length).toBeGreaterThan(0);
+    });
+
+    it(`combined Cursor name length ≤ ${CURSOR_COMBINED_MAX_LENGTH}`, () => {
+      const combined = `${CURSOR_SERVER_PREFIX}${name}`;
+      expect(
+        combined.length,
+        `"${combined}" is ${combined.length} chars`
+      ).toBeLessThanOrEqual(CURSOR_COMBINED_MAX_LENGTH);
     });
 
     // ── description constraints ─────────────────────────────────
