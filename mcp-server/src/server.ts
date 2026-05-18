@@ -124,7 +124,7 @@ server.registerTool(
   "currents-list-affected-tests",
   {
     description:
-      "List tests affected by actions (quarantine, skip, tag) for a project within a date range. Returns aggregated data grouped by test signature. Supports filtering by action types, action ID, status, and search. Requires projectId, date_start, and date_end. (Preview endpoint: fields and path may change.)",
+      "List tests affected by actions (quarantine, skip, tag) for a project within a date range. Returns aggregated data grouped by test signature. Supports filtering by action types, action ID, status, and search. Requires projectId, date_start, and date_end. Preview endpoint: fields and path may change.",
     inputSchema: listAffectedTestsTool.schema,
   },
   listAffectedTestsTool.handler
