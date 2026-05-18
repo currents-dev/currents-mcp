@@ -41,7 +41,7 @@ const buildIndex = path.join(root, "build", "index.js");
 /** Run `npm pack` from the package root and return the path to the single `.tgz` in `packDest`. */
 function packTarball(packDest: string): string {
   // Respect `files` and standard pack rules; do not mutate package.json (unlike release `publish.cjs`).
-  execFileSync("npm", ["pack", "--pack-destination", packDest], {
+  execFileSync("npm", ["pack", "--ignore-scripts", "--pack-destination", packDest], {
     cwd: root,
     stdio: ["ignore", "pipe", "pipe"],
   });

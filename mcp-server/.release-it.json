@@ -3,7 +3,7 @@
     "commitMessage": "chore: release v${version}",
     "tagName": "v${version}",
     "requireCleanWorkingDir": true,
-    "requireBranch": "main"
+    "requireBranch": ["main", "release/*"]
   },
   "github": {
     "release": true,
