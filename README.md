@@ -2,7 +2,12 @@
 
 ![Unit Tests](https://github.com/currents-dev/currents-mcp/actions/workflows/test.yml/badge.svg)
 
-This is a MCP server that allows you to provide test results context to your AI agents by connecting them to Currents. Useful for asking AI to fix or optimize tests failing in CI.
+Give your AI coding agents full visibility into your CI test results. The Currents MCP Server connects tools like Cursor and Claude directly to your [Currents](https://currents.dev) dashboard, so agents can diagnose flaky tests, pinpoint failures, and act on real execution data -- without leaving your editor.
+
+- Query runs, spec files, and individual test results from CI
+- Surface error trends and performance metrics across your test suite
+- Manage quarantine rules, webhooks, and project settings programmatically
+- Let agents fix what's broken using actual test output, not guesswork
 
 [![Install MCP Server](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=currents&config=eyJjb21tYW5kIjoibnB4IC15IEBjdXJyZW50cy9tY3AiLCJlbnYiOnsiQ1VSUkVOVFNfQVBJX0tFWSI6InlvdXItYXBpLWtleSJ9fQ%3D%3D)
 
