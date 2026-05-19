@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.1-beta.0](https://github.com/currents-dev/currents-mcp/compare/v2.3.0...v2.3.1-beta.0) (2026-05-19)
+
+
+### Bug Fixes
+
+* define __LOGO_BASE64__ and __VERSION__ in vitest config ([5b4a31c](https://github.com/currents-dev/currents-mcp/commit/5b4a31c1db23d3d106e12e19bb58e3a76e09c790))
+
 # [2.3.0](https://github.com/currents-dev/currents-mcp/compare/v2.2.4...v2.3.0) (2026-05-18)
 
 
