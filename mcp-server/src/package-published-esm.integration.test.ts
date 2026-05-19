@@ -4,16 +4,16 @@
  * tarball (same shape users get from the registry).
  *
  * Why a separate file from `package-environments.integration.test.ts`:
- * workspace tests import `build/*.js` via relative paths; they never ask Node
+ * workspace tests import `dist/*` via relative paths; they never ask Node
  * to apply `"exports"` for the scoped name. This suite closes that gap.
  *
  * Flow (`it`):
- * 1. Prerequisite: `build/index.js` exists (`test:run` runs `build` first).
+ * 1. Prerequisite: `dist/index.mjs` exists (`test:run` runs `build` first).
  *    If missing, the suite is skipped (same gate as CLI pack tests).
  * 2. `packTarball`: run `npm pack` with `cwd` = package root. npm creates a
  *    `.tgz` containing exactly what publishing would ship (`package.json`
- *    `files`, plus auto-included `package.json`). That includes `build/` and
- *    the `exports` map pointing `"import"` → `./build/api.js`.
+ *    `files`, plus auto-included `package.json`). That includes `dist/` and
+ *    the `exports` map pointing `"import"` → `./dist/api.mjs`.
  * 3. Create two temp dirs: one receives the `.tgz`, one is a minimal consumer
  *    project (`npm init -y`, then `npm install <path-to.tgz>`). npm unpacks into
  *    `<installDir>/node_modules/@currents/mcp`.
@@ -25,7 +25,7 @@
  * 5. Run `node run-published-esm.mjs` with `cwd = installDir`. Node loads the
  *    ESM entry via the `"import"` condition and must find `startMcpServer`.
  * 6. Assert stdout `published-esm-ok`. Failures here typically mean broken
- *    `exports`, missing files from the packed `build/`, or a bad dual-package
+ *    `exports`, missing files from the packed `dist/`, or a bad dual-package
  *    layout.
  * */
 import { execFileSync } from "node:child_process";
@@ -36,7 +36,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
-const buildIndex = path.join(root, "build", "index.js");
+const buildIndex = path.join(root, "dist", "index.mjs");
 
 /** Run `npm pack` from the package root and return the path to the single `.tgz` in `packDest`. */
 function packTarball(packDest: string): string {

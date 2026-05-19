@@ -4,7 +4,7 @@
  * `package-published-esm.integration.test.ts` for `import "@currents/mcp"`).
  *
 
- * 1. Prerequisite: `build/index.js` exists (`npm run test:run` runs `build`
+ * 1. Prerequisite: `dist/index.mjs` exists (`npm run test:run` runs `build`
  *    first). If missing, the suite is skipped so `vitest` without a prior
  *    build does not fail noisily.
  * 2. `packTarball`: `npm pack` from the package root → one `.tgz` under a
@@ -20,7 +20,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
-const buildIndex = path.join(root, "build", "index.js");
+const buildIndex = path.join(root, "dist", "index.mjs");
 
 function packTarball(packDest: string): string {
   // Respect `files` and standard pack rules; do not mutate package.json (unlike release `publish.cjs`).
@@ -74,7 +74,7 @@ describe.skipIf(!existsSync(buildIndex))(
      * - `npm init -y` and `npm install <tgz>` in a fresh temp project. npm links
      *    `node_modules/.bin/mcp` (or `mcp.cmd` on Windows) to the packed CLI.
      * - Assert the shim exists. This catches broken `bin`, wrong `files` (missing
-     *    `build/index.js`), or install layout issues without spawning the server.
+     *    `dist/index.mjs`), or install layout issues without spawning the server.
      * */
     it("exposes mcp bin after npm install from tarball", () => {
       const packDir = mkdtempSync(path.join(tmpdir(), "mcp-pack-"));
