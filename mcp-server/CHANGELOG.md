@@ -1,5 +1,7 @@
 # Changelog
 
+## [2.3.1](https://github.com/currents-dev/currents-mcp/compare/v2.3.1-beta.0...v2.3.1) (2026-05-19)
+
 ## [2.3.1-beta.0](https://github.com/currents-dev/currents-mcp/compare/v2.3.0...v2.3.1-beta.0) (2026-05-19)
 
 
