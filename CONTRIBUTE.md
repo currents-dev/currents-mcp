@@ -45,7 +45,7 @@ You should see: `Currents MCP Server running on stdio`.
 To test with a local MCP client (e.g., Cursor or Claude Desktop), point the client to your built server:
 
 - Command: `node`
-- Args: `./mcp-server/build/index.js`
+- Args: `./mcp-server/dist/index.mjs`
 - Env: set `CURRENTS_API_KEY` to a valid key
 
 Example snippet for a client config:
@@ -55,7 +55,7 @@ Example snippet for a client config:
   "mcpServers": {
     "currents": {
       "command": "node",
-      "args": ["./mcp-server/build/index.js"],
+      "args": ["./mcp-server/dist/index.mjs"],
       "env": {
         "CURRENTS_API_KEY": "your-api-key"
       }

@@ -2,7 +2,8 @@
   "name": "@currents/mcp",
   "type": "module",
   "files": [
-    "build",
+    "dist",
+    "assets",
     "README.md"
   ],
   "keywords": [
@@ -12,25 +13,25 @@
     "dashboard",
     "reporting"
   ],
-  "bin": "./build/index.js",
+  "bin": "./dist/index.mjs",
   "version": "2.3.0",
   "description": "Currents MCP server",
-  "main": "./build/cjs/api.js",
-  "module": "./build/api.js",
-  "types": "./build/api.d.ts",
+  "main": "./dist/api.cjs",
+  "module": "./dist/api.mjs",
+  "types": "./dist/api.d.ts",
   "exports": {
     ".": {
-      "types": "./build/api.d.ts",
-      "import": "./build/api.js",
-      "require": "./build/cjs/api.js"
+      "types": "./dist/api.d.ts",
+      "import": "./dist/api.mjs",
+      "require": "./dist/api.cjs"
     }
   },
   "scripts": {
-    "build": "tsc && tsc -p tsconfig.cjs.json && node ./scripts/write-cjs-package-json.mjs && chmod 755 build/index.js",
+    "build": "tsdown && chmod 755 dist/index.mjs",
     "publish:mcp": "npm run publish:npm",
-    "publish:npm": "npm run rm  && npm run build && ./publish.cjs",
-    "start": "node build/index.js",
-    "rm": "rimraf dist",
+    "publish:npm": "npm run rm && npm run build && ./publish.cjs",
+    "start": "node dist/index.mjs",
+    "rm": "rm -rf dist",
     "prepare": "git config core.hooksPath mcp-server/scripts/hooks",
     "sync-readme": "node scripts/sync-readme-tools.mjs",
     "test": "vitest",
@@ -61,7 +62,7 @@
     "@release-it/conventional-changelog": "^11.0.0",
     "@types/node": "^20.19.0",
     "release-it": "^20.0.1",
-    "rimraf": "^6.0.1",
+    "tsdown": "^0.21.0",
     "typescript": "^5.9.3",
     "vitest": "^4.0.18"
   }

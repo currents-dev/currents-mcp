@@ -25,7 +25,7 @@ const origResolve = await (async () => {
   // then patch globalThis so the built server.js picks it up.
 
   // Dynamically import the built server module after shimming the dep.
-  // The built output lives at build/server.js and uses:
+  // The built output lives at dist/ and uses:
   //   import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
   //   import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
   //

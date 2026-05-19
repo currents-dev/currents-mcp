@@ -1,6 +1,6 @@
 const assert = require("node:assert");
 
-import("../../build/api.js")
+import("../../dist/api.mjs")
   .then(({ startMcpServer }) => {
     assert.strictEqual(typeof startMcpServer, "function");
     console.log("cjs-dynamic-import-ok");
