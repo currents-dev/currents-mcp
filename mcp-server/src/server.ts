@@ -16,10 +16,18 @@ import { getAffectedTestExecutionsTool } from "./tools/actions/get-affected-test
 import { listActionsTool } from "./tools/actions/list-actions.js";
 import { listAffectedTestsTool } from "./tools/actions/list-affected-tests.js";
 import { updateActionTool } from "./tools/actions/update-action.js";
+// Context tools
+import { getContextTool } from "./tools/context/get-context.js";
+// Integrations tools
+import { createJiraIssueFromRunTestTool } from "./tools/integrations/create-jira-issue.js";
+import { listJiraIssueTypesTool } from "./tools/integrations/list-jira-issue-types.js";
+import { listJiraProjectsTool } from "./tools/integrations/list-jira-projects.js";
 // Projects tools
 import { getProjectInsightsTool } from "./tools/projects/get-project-insights.js";
 import { getProjectTool } from "./tools/projects/get-project.js";
 import { getProjectsTool } from "./tools/projects/get-projects.js";
+import { listProjectPullRequestsTool } from "./tools/projects/list-project-pull-requests.js";
+import { listProjectTermsTool } from "./tools/projects/list-project-terms.js";
 // Runs tools
 import { cancelRunByGithubCITool } from "./tools/runs/cancel-run-github-ci.js";
 import { cancelRunTool } from "./tools/runs/cancel-run.js";
@@ -194,6 +202,57 @@ server.registerTool(
   getProjectInsightsTool.handler,
 );
 
+
+server.registerTool(
+  "currents-list-pull-requests",
+  {
+    description:
+      "List pull-request cards for a project (runs grouped by meta.pr.id). Supports cursor pagination, runs_per_pr preview count, and filters by tags, branches, authors, and latest-run status. Requires projectId.",
+    inputSchema: listProjectPullRequestsTool.schema,
+  },
+  listProjectPullRequestsTool.handler,
+);
+
+server.registerTool(
+  "currents-list-project-terms",
+  {
+    description:
+      "List cursor-paginated project terms for one type (tag, branch, authorName, etc.). Supports search, sort direction, and starting_after or ending_before cursors. Requires projectId and termType.",
+    inputSchema: listProjectTermsTool.schema,
+  },
+  listProjectTermsTool.handler,
+);
+
+server.registerTool(
+  "currents-create-jira-issue",
+  {
+    description:
+      "Create a Jira issue from a run test using the organization Jira integration. Requires projectId, runId, testId, jiraInstallationId, jiraProjectId, and jiraIssueType. Optional customFields array.",
+    inputSchema: createJiraIssueFromRunTestTool.schema,
+  },
+  createJiraIssueFromRunTestTool.handler,
+);
+
+server.registerTool(
+  "currents-list-jira-projects",
+  {
+    description:
+      "List Jira projects available for the organization integration. Use returned project IDs as jiraProjectId when creating issues. Requires jira_installation_id.",
+    inputSchema: listJiraProjectsTool.schema,
+  },
+  listJiraProjectsTool.handler,
+);
+
+server.registerTool(
+  "currents-list-jira-issue-types",
+  {
+    description:
+      "List Jira issue types and custom fields for a Jira project. Requires jiraProjectId and jira_installation_id.",
+    inputSchema: listJiraIssueTypesTool.schema,
+  },
+  listJiraIssueTypesTool.handler,
+);
+
 // Runs API tools
 server.registerTool(
   "currents-get-runs",
@@ -315,6 +374,18 @@ server.registerTool(
     inputSchema: getTestResultsTool.schema,
   },
   getTestResultsTool.handler,
+);
+
+
+// Context API tools
+server.registerTool(
+  "currents-get-context",
+  {
+    description:
+      "Get test failure context for AI debugging at run, instance, or test level. Supports json or md format, detail level, and pagination for failed tests. Requires run_id for run-level, or instance_id with optional test_id.",
+    inputSchema: getContextTool.schema,
+  },
+  getContextTool.handler,
 );
 
 // Errors API tools
