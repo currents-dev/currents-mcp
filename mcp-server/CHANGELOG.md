@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased (2026-05-27)
+
+### Added
+
+- MCP tool `currents-get-context` for `GET /context` (registered; failure context for AI debugging).
+- MCP tool `currents-list-pull-requests` for `GET /projects/{projectId}/pull-requests`.
+- MCP tool `currents-list-project-terms` for `GET /projects/{projectId}/terms/{termType}`.
+- MCP tool `currents-create-jira-issue` for `POST /projects/{projectId}/jira/issues`.
+- MCP tool `currents-list-jira-projects` for `GET /integrations/jira/projects`.
+- MCP tool `currents-list-jira-issue-types` for `GET /integrations/jira/projects/{jiraProjectId}/issue-types`.
+
+### Fixed
+
+- `currents-get-context`: export full Zod schema (preserves superRefine validation) for MCP registration.
+
 ## [2.3.1](https://github.com/currents-dev/currents-mcp/compare/v2.3.1-beta.0...v2.3.1) (2026-05-19)
 
 - build process improvements, no user-facing changes

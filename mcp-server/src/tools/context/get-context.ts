@@ -200,6 +200,6 @@ const handler = async (args: z.infer<typeof zodSchema>) => {
 };
 
 export const getContextTool = {
-  schema: zodSchema.shape,
+  schema: zodSchema,
   handler,
 };
