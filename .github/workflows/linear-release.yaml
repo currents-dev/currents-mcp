@@ -1,0 +1,34 @@
+name: Linear Release
+
+on:
+  push:
+    branches:
+      - main
+      - "release/**"
+
+jobs:
+  linear-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Main branch: sync without --release-version (targets current started release)
+      - uses: linear/linear-release-action@v0
+        if: github.event_name == 'push' && !startsWith(github.ref_name, 'release/')
+        with:
+          access_key: ${{ secrets.LINEAR_ACCESS_KEY }}
+
+      # Release branch: derive version from branch name
+      - name: Set release version
+        if: github.event_name == 'push' && startsWith(github.ref_name, 'release/')
+        run: echo "RELEASE_VERSION=${GITHUB_REF_NAME#release/}" >> "$GITHUB_ENV"
+
+      # Release branch: sync with explicit version
+      - uses: linear/linear-release-action@v0
+        if: github.event_name == 'push' && startsWith(github.ref_name, 'release/')
+        with:
+          access_key: ${{ secrets.LINEAR_ACCESS_KEY }}
+          version: ${{ env.RELEASE_VERSION }}
+
