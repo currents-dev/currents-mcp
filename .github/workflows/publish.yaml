@@ -53,6 +53,7 @@ jobs:
           npm run publish:mcp -- -- --tag ${{ github.event.inputs.channel }}
 
       - name: Mark Linear release as complete
+        id: release
         if: success() && github.event.inputs.channel == 'latest'
         uses: linear/linear-release-action@v0
         with:
@@ -60,4 +61,22 @@ jobs:
           command: complete
           version: ${{ steps.extract_version.outputs.package_version }}
 
+      - name: Post to Slack
+        if: success() && github.event.inputs.channel == 'latest' && steps.release.outputs.release-url
+        uses: slackapi/slack-github-action@v2
+        with:
+          webhook-url: ${{ secrets.SLACK_RELEASE_WEBHOOK_URL }}
+          payload: |
+            {
+              "text": "🚀 Release: @currents/mcp@${{ steps.extract_version.outputs.package_version }}",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Release: ${{ steps.extract_version.outputs.package_version }}* has been marked as complete in Linear.\n\n<${{ steps.release.outputs.release-url }}|View Release Notes>"
+                  }
+                }
+              ]
+            }
 

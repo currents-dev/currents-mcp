@@ -116,9 +116,14 @@ The repository follows a branch-cut release model with Linear Releases integrati
 2. **Release branch creation** — when a `release/*` branch is pushed, it automatically:
    - Syncs with Linear Release
 3. **Stabilization** — only bug fixes and critical changes are allowed on the release branch
-4. **Publishing** — when publishing to npm via the "Publish NPM Package" workflow with `latest` channel, the release is automatically marked as completed in Linear
+4. **Publishing** — when publishing to npm via the "Publish NPM Package" workflow with `latest` channel, the release is automatically marked as completed in Linear and posted to Slack
 
 The workflow is defined in `.github/workflows/linear-release.yaml` and syncs the release state between Git branches and Linear Releases.
+
+**Required secrets:**
+
+- `LINEAR_ACCESS_KEY` — pipeline-scoped access key (generated from Linear pipeline settings)
+- `SLACK_RELEASE_WEBHOOK_URL` — Slack incoming webhook for posting messages
 
 ## Local Development
 
