@@ -65,7 +65,8 @@ jobs:
         if: success() && github.event.inputs.channel == 'latest' && steps.release.outputs.release-url
         uses: slackapi/slack-github-action@v2
         with:
-          webhook-url: ${{ secrets.SLACK_RELEASE_WEBHOOK_URL }}
+          webhook: ${{ secrets.SLACK_RELEASE_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
           payload: |
             {
               "text": "🚀 Release: @currents/mcp@${{ steps.extract_version.outputs.package_version }}",
