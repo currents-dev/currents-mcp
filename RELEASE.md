@@ -20,6 +20,13 @@ This separation allows for testing releases before publishing and supports multi
 
 Releases are created via GitHub Actions or locally using [release-it](https://github.com/release-it/release-it) with conventional commits.
 
+Before starting the release process, create a release branch following the `release/VERSION` convention. For example, if you're releasing version 2.3.0, create a branch named `release/2.3.0`. This branch will automatically trigger the Linear Release workflow.
+
+```bash
+git checkout -b release/2.3.0
+git push -u origin release/2.3.0
+```
+
 ### Steps
 
 1. Go to **Actions** → **Create Release**
@@ -100,6 +107,23 @@ The workflow will:
 2. Remove the `beta` dist-tag from that version
 
 This is useful when you've tested a beta release and want to make it the default install without rebuilding.
+
+## Linear Release
+
+The repository follows a branch-cut release model with Linear Releases integration:
+
+1. **Main branch** — collects new features and changes
+2. **Release branch creation** — when a `release/*` branch is pushed, it automatically:
+   - Syncs with Linear Release
+3. **Stabilization** — only bug fixes and critical changes are allowed on the release branch
+4. **Publishing** — when publishing to npm via the "Publish NPM Package" workflow with `latest` channel, the release is automatically marked as completed in Linear and posted to Slack
+
+The workflow is defined in `.github/workflows/linear-release.yaml` and syncs the release state between Git branches and Linear Releases.
+
+**Required secrets:**
+
+- `LINEAR_ACCESS_KEY` — pipeline-scoped access key (generated from Linear pipeline settings)
+- `SLACK_RELEASE_WEBHOOK_URL` — Slack incoming webhook for posting messages
 
 ## Local Development
 

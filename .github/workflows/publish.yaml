@@ -36,6 +36,12 @@ jobs:
           node-version: "24.x"
           registry-url: "https://registry.npmjs.org"
 
+      - name: Extract package version
+        id: extract_version
+        run: |
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+          echo "package_version=$PACKAGE_VERSION" >> $GITHUB_OUTPUT
+
       - name: Update npm to support Trusted Publishing
         run: npm install -g npm@latest
 
@@ -46,4 +52,32 @@ jobs:
           git config user.email "npm@currents.dev"
           npm run publish:mcp -- -- --tag ${{ github.event.inputs.channel }}
 
+      - name: Mark Linear release as complete
+        id: release
+        if: success() && github.event.inputs.channel == 'latest'
+        uses: linear/linear-release-action@v0
+        with:
+          access_key: ${{ secrets.LINEAR_ACCESS_KEY }}
+          command: complete
+          version: ${{ steps.extract_version.outputs.package_version }}
+
+      - name: Post to Slack
+        if: success() && github.event.inputs.channel == 'latest' && steps.release.outputs.release-url
+        uses: slackapi/slack-github-action@v2
+        with:
+          webhook: ${{ secrets.SLACK_RELEASE_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload: |
+            {
+              "text": "🚀 Release: @currents/mcp@${{ steps.extract_version.outputs.package_version }}",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Release: ${{ steps.extract_version.outputs.package_version }}* has been marked as complete in Linear.\n\n<${{ steps.release.outputs.release-url }}|View Release Notes>"
+                  }
+                }
+              ]
+            }
 
