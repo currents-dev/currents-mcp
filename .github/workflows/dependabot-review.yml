@@ -54,7 +54,7 @@ jobs:
 
           Verify the package can start without runtime errors:
           ```
-          cd mcp-server && timeout 10 node build/index.js --help || true
+          cd mcp-server && timeout 10 node dist/index.mjs --help || true
           ```
           If a `--help` flag is not available, start the process and kill it after a few seconds to confirm it boots.
 

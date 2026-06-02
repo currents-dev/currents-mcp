@@ -92,6 +92,6 @@ const handler = async ({
 };
 
 export const updateWebhookTool = {
-  schema: zodSchema.shape,
+  schema: zodSchema,
   handler,
 };

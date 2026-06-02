@@ -1,5 +1,5 @@
 # Build output
-build/
+dist/
 
 # README is copied from root during publish
 README.md

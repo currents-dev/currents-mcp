@@ -1,0 +1,8 @@
+#!/bin/sh
+set -e
+
+# Auto-sync README tools table when server.ts changes
+if git diff --cached --name-only | grep -q 'mcp-server/src/server\.ts'; then
+  node mcp-server/scripts/sync-readme-tools.mjs
+  git add README.md
+fi

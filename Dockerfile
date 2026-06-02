@@ -2,7 +2,7 @@
 # syntax=docker/dockerfile:1
 
 # Build stage
-FROM node:lts-alpine AS build
+FROM node:24-alpine AS build
 WORKDIR /app
 
 # Install dependencies
@@ -10,21 +10,24 @@ COPY mcp-server/package.json mcp-server/package-lock.json ./
 RUN npm ci --production=false
 
 # Copy source code
-COPY mcp-server/tsconfig.json ./tsconfig.json
+COPY mcp-server/tsconfig.json mcp-server/tsdown.config.ts ./
+COPY mcp-server/assets ./assets
 COPY mcp-server/src ./src
 
 # Build the project
 RUN npm run build
 
 # Runtime stage
-FROM node:lts-alpine AS runtime
+FROM node:20-alpine AS runtime
 WORKDIR /app
 
 # Copy build artifacts and dependencies
-COPY --from=build /app/build ./build
+COPY --from=build /app/dist ./dist
+COPY --from=build /app/assets ./assets
+COPY --from=build /app/package.json ./package.json
 COPY --from=build /app/node_modules ./node_modules
 
 # Default API URL environment variable
 ENV CURRENTS_API_URL=https://api.currents.dev
 
-ENTRYPOINT ["node", "build/index.js"]
+ENTRYPOINT ["node", "dist/index.mjs"]

@@ -82,6 +82,6 @@ const handler = async ({
 };
 
 export const cancelRunByGithubCITool = {
-  schema: zodSchema.shape,
+  schema: zodSchema,
   handler,
 };
