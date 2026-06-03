@@ -84,7 +84,7 @@ jobs:
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "*Release: ${{ steps.extract_version.outputs.package_version }}* has been marked as complete in Linear.\n\n<${{ steps.release.outputs.release-url }}|View Release Notes>"
+                    "text": "*🚀Release: @currents/mcp@${{ steps.extract_version.outputs.package_version }}* has been marked as complete in Linear.\n\n<${{ steps.release.outputs.release-url }}|View Release Notes>"
                   }
                 }
               ]
