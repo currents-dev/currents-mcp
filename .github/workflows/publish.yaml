@@ -26,6 +26,15 @@ jobs:
         working-directory: ./mcp-server
 
     steps:
+      - name: Validate release branch for latest channel
+        if: github.event.inputs.channel == 'latest'
+        run: |
+          if [[ ! "${{ github.ref }}" =~ ^refs/(heads|tags)/release/ ]]; then
+            echo "Error: Publishing to 'latest' channel requires a release/* branch or tag"
+            echo "Current ref: ${{ github.ref }}"
+            exit 1
+          fi
+
       - uses: actions/checkout@v4
         with:
           # PR context: build from PR head; workflow_dispatch: build from triggered ref (e.g. release/x.y.z)
@@ -75,7 +84,7 @@ jobs:
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "*Release: ${{ steps.extract_version.outputs.package_version }}* has been marked as complete in Linear.\n\n<${{ steps.release.outputs.release-url }}|View Release Notes>"
+                    "text": "*🚀Release: @currents/mcp@${{ steps.extract_version.outputs.package_version }}* has been marked as complete in Linear.\n\n<${{ steps.release.outputs.release-url }}|View Release Notes>"
                   }
                 }
               ]
