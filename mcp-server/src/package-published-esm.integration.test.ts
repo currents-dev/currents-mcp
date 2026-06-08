@@ -37,14 +37,20 @@ import { describe, expect, it } from "vitest";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const buildIndex = path.join(root, "dist", "index.mjs");
+const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
 
 /** Run `npm pack` from the package root and return the path to the single `.tgz` in `packDest`. */
 function packTarball(packDest: string): string {
   // Respect `files` and standard pack rules; do not mutate package.json (unlike release `publish.cjs`).
-  execFileSync("npm", ["pack", "--ignore-scripts", "--pack-destination", packDest], {
-    cwd: root,
-    stdio: ["ignore", "pipe", "pipe"],
-  });
+  execFileSync(
+    npmCommand,
+    ["pack", "--ignore-scripts", "--pack-destination", packDest],
+    {
+      cwd: root,
+      shell: process.platform === "win32",
+      stdio: ["ignore", "pipe", "pipe"],
+    },
+  );
   const tgz = readdirSync(packDest).filter((f) => f.endsWith(".tgz"));
   if (tgz.length !== 1) {
     throw new Error(`expected one .tgz in ${packDest}, got: ${tgz.join(", ")}`);
@@ -62,12 +68,14 @@ describe.skipIf(!existsSync(buildIndex))(
         path.join(tmpdir(), "mcp-install-published-")
       );
       const tarball = packTarball(packDir);
-      execFileSync("npm", ["init", "-y"], {
+      execFileSync(npmCommand, ["init", "-y"], {
         cwd: installDir,
+        shell: process.platform === "win32",
         stdio: "ignore",
       });
-      execFileSync("npm", ["install", tarball], {
+      execFileSync(npmCommand, ["install", tarball], {
         cwd: installDir,
+        shell: process.platform === "win32",
         stdio: "ignore",
       });
       const fixture = path.join(

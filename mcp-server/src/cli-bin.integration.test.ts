@@ -1,17 +1,3 @@
-/**
- * Packaged **CLI** integration tests: the `bin` field and `npx` behavior for a
- * tarball shaped like a publish (not the programmatic `exports` entry; see
- * `package-published-esm.integration.test.ts` for `import "@currents/mcp"`).
- *
-
- * 1. Prerequisite: `dist/index.mjs` exists (`npm run test:run` runs `build`
- *    first). If missing, the suite is skipped so `vitest` without a prior
- *    build does not fail noisily.
- * 2. `packTarball`: `npm pack` from the package root → one `.tgz` under a
- *    temp dir. Contents follow `package.json` `files` and npm’s pack rules
- *    (same artifact shape as registry install, minus release-only publish.cjs
- *    mutations).
- */
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -21,13 +7,19 @@ import { describe, expect, it } from "vitest";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const buildIndex = path.join(root, "dist", "index.mjs");
+const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
+const npxCommand = process.platform === "win32" ? "npx.cmd" : "npx";
 
 function packTarball(packDest: string): string {
-  // Respect `files` and standard pack rules; do not mutate package.json (unlike release `publish.cjs`).
-  execFileSync("npm", ["pack", "--ignore-scripts", "--pack-destination", packDest], {
-    cwd: root,
-    stdio: ["ignore", "pipe", "pipe"],
-  });
+  execFileSync(
+    npmCommand,
+    ["pack", "--ignore-scripts", "--pack-destination", packDest],
+    {
+      cwd: root,
+      shell: process.platform === "win32",
+      stdio: ["ignore", "pipe", "pipe"],
+    },
+  );
   const tgz = readdirSync(packDest).filter((f) => f.endsWith(".tgz"));
   if (tgz.length !== 1) {
     throw new Error(`expected one .tgz in ${packDest}, got: ${tgz.join(", ")}`);
@@ -35,29 +27,36 @@ function packTarball(packDest: string): string {
   return path.join(packDest, tgz[0]);
 }
 
+function npmBinPath(installDir: string, name: string): string {
+  return path.join(
+    installDir,
+    "node_modules",
+    ".bin",
+    process.platform === "win32" ? `${name}.cmd` : name,
+  );
+}
+
+function cliEnv(): NodeJS.ProcessEnv {
+  const env = { ...process.env };
+  delete env.CURRENTS_API_KEY;
+  return env;
+}
+
 describe.skipIf(!existsSync(buildIndex))(
   "packaged CLI (npx / bin)",
   { timeout: 60_000 },
   () => {
-    /**
-     * `npx -y --package <abs-path-to.tgz> mcp`: npm treats the tarball as the
-     *    package to install transiently; `mcp` is the bin name from that package’s
-     *    `package.json` `bin` map (not the scoped package name). The child should
-     *    start the MCP server and log the “live” line (stdio MCP servers run until
-     *    stdin closes; we cap wall time with `spawnSync` timeout). Accept either
-     *    that log line or process timeout as success so slow CI still passes.
-     *  */
     it("starts via npx --package tarball mcp", () => {
       const packDir = mkdtempSync(path.join(tmpdir(), "mcp-pack-"));
       const tarball = packTarball(packDir);
-      const r = spawnSync("npx", ["-y", "--package", tarball, "mcp"], {
+      const r = spawnSync(npxCommand, ["-y", "--package", tarball, "mcp"], {
         cwd: packDir,
         timeout: 45_000,
         encoding: "utf-8",
+        shell: process.platform === "win32",
         stdio: ["pipe", "pipe", "pipe"],
         env: {
           ...process.env,
-          // Required for server startup; value is unused in this smoke test.
           CURRENTS_API_KEY: "vitest-cli-pack-smoke",
         },
       });
@@ -65,27 +64,22 @@ describe.skipIf(!existsSync(buildIndex))(
       const timedOut =
         r.error != null && "code" in r.error && r.error.code === "ETIMEDOUT";
       expect(combined.includes("Currents MCP Server is live") || timedOut).toBe(
-        true
+        true,
       );
     });
 
-    /*
-     * Second `it` — consumer project + `node_modules/.bin`:
-     * - `npm init -y` and `npm install <tgz>` in a fresh temp project. npm links
-     *    `node_modules/.bin/mcp` (or `mcp.cmd` on Windows) to the packed CLI.
-     * - Assert the shim exists. This catches broken `bin`, wrong `files` (missing
-     *    `dist/index.mjs`), or install layout issues without spawning the server.
-     * */
     it("exposes mcp bin after npm install from tarball", () => {
       const packDir = mkdtempSync(path.join(tmpdir(), "mcp-pack-"));
       const installDir = mkdtempSync(path.join(tmpdir(), "mcp-install-"));
       const tarball = packTarball(packDir);
-      execFileSync("npm", ["init", "-y"], {
+      execFileSync(npmCommand, ["init", "-y"], {
         cwd: installDir,
+        shell: process.platform === "win32",
         stdio: "ignore",
       });
-      execFileSync("npm", ["install", tarball], {
+      execFileSync(npmCommand, ["install", tarball], {
         cwd: installDir,
+        shell: process.platform === "win32",
         stdio: "ignore",
       });
       const binDir = path.join(installDir, "node_modules", ".bin");
@@ -94,5 +88,36 @@ describe.skipIf(!existsSync(buildIndex))(
         existsSync(path.join(binDir, "mcp.cmd"));
       expect(hasMcp).toBe(true);
     });
-  }
+
+    it.each([
+      ["--help", "Usage: mcp [options]"],
+      ["--version", "2.3.2"],
+    ])("handles %s without CURRENTS_API_KEY", (flag, expected) => {
+      const packDir = mkdtempSync(path.join(tmpdir(), "mcp-pack-"));
+      const installDir = mkdtempSync(path.join(tmpdir(), "mcp-install-"));
+      const tarball = packTarball(packDir);
+      execFileSync(npmCommand, ["init", "-y"], {
+        cwd: installDir,
+        shell: process.platform === "win32",
+        stdio: "ignore",
+      });
+      execFileSync(npmCommand, ["install", tarball], {
+        cwd: installDir,
+        shell: process.platform === "win32",
+        stdio: "ignore",
+      });
+
+      const r = spawnSync(npmBinPath(installDir, "mcp"), [flag], {
+        cwd: installDir,
+        encoding: "utf-8",
+        env: cliEnv(),
+        shell: process.platform === "win32",
+      });
+      const combined = `${r.stdout ?? ""}${r.stderr ?? ""}`;
+
+      expect(r.status).toBe(0);
+      expect(combined).toContain(expected);
+      expect(combined).not.toContain("CURRENTS_API_KEY");
+    });
+  },
 );
