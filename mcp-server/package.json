@@ -18,10 +18,10 @@
   "description": "Currents MCP server",
   "main": "./dist/api.cjs",
   "module": "./dist/api.mjs",
-  "types": "./dist/api.d.ts",
+  "types": "./dist/api.d.mts",
   "exports": {
     ".": {
-      "types": "./dist/api.d.ts",
+      "types": "./dist/api.d.mts",
       "import": "./dist/api.mjs",
       "require": "./dist/api.cjs"
     }
