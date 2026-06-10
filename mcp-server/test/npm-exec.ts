@@ -9,7 +9,7 @@ export function execNpm(
   args: string[],
   options: Parameters<typeof execFileSync>[2]
 ) {
-  if (npmCli) {
+  if (npmCli && existsSync(npmCli)) {
     return execFileSync(process.execPath, [npmCli, ...args], options);
   }
   return execFileSync("npm", args, options);
