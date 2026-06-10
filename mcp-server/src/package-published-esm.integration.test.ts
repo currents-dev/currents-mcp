@@ -29,11 +29,18 @@
  *    layout.
  * */
 import { execFileSync } from "node:child_process";
-import { copyFileSync, existsSync, mkdtempSync, readdirSync } from "node:fs";
+import {
+  copyFileSync,
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { execNpm } from "../test/npm-exec.js";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const buildIndex = path.join(root, "dist", "index.mjs");
@@ -41,7 +48,7 @@ const buildIndex = path.join(root, "dist", "index.mjs");
 /** Run `npm pack` from the package root and return the path to the single `.tgz` in `packDest`. */
 function packTarball(packDest: string): string {
   // Respect `files` and standard pack rules; do not mutate package.json (unlike release `publish.cjs`).
-  execFileSync("npm", ["pack", "--ignore-scripts", "--pack-destination", packDest], {
+  execNpm(["pack", "--ignore-scripts", "--pack-destination", packDest], {
     cwd: root,
     stdio: ["ignore", "pipe", "pipe"],
   });
@@ -62,11 +69,11 @@ describe.skipIf(!existsSync(buildIndex))(
         path.join(tmpdir(), "mcp-install-published-")
       );
       const tarball = packTarball(packDir);
-      execFileSync("npm", ["init", "-y"], {
+      execNpm(["init", "-y"], {
         cwd: installDir,
         stdio: "ignore",
       });
-      execFileSync("npm", ["install", tarball], {
+      execNpm(["install", tarball], {
         cwd: installDir,
         stdio: "ignore",
       });
@@ -83,6 +90,33 @@ describe.skipIf(!existsSync(buildIndex))(
         encoding: "utf-8",
       });
       expect(out.trim()).toBe("published-esm-ok");
+    });
+
+    it("ships package metadata that points at existing declaration files", () => {
+      const packDir = mkdtempSync(path.join(tmpdir(), "mcp-pack-types-"));
+      const installDir = mkdtempSync(path.join(tmpdir(), "mcp-install-types-"));
+      const tarball = packTarball(packDir);
+      execNpm(["init", "-y"], {
+        cwd: installDir,
+        stdio: "ignore",
+      });
+      execNpm(["install", tarball], {
+        cwd: installDir,
+        stdio: "ignore",
+      });
+      const installedRoot = path.join(
+        installDir,
+        "node_modules",
+        "@currents",
+        "mcp"
+      );
+      const pkg = JSON.parse(
+        readFileSync(path.join(installedRoot, "package.json"), "utf-8")
+      );
+      expect(existsSync(path.join(installedRoot, pkg.types))).toBe(true);
+      expect(existsSync(path.join(installedRoot, pkg.exports["."].types))).toBe(
+        true
+      );
     });
   }
 );
