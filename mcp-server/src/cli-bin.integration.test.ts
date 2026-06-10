@@ -12,19 +12,19 @@
  *    (same artifact shape as registry install, minus release-only publish.cjs
  *    mutations).
  */
+import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { execNpm, spawnNpx } from "../test/npm-exec.js";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const buildIndex = path.join(root, "dist", "index.mjs");
 
 function packTarball(packDest: string): string {
   // Respect `files` and standard pack rules; do not mutate package.json (unlike release `publish.cjs`).
-  execNpm(["pack", "--ignore-scripts", "--pack-destination", packDest], {
+  execFileSync("npm", ["pack", "--ignore-scripts", "--pack-destination", packDest], {
     cwd: root,
     stdio: ["ignore", "pipe", "pipe"],
   });
@@ -50,7 +50,7 @@ describe.skipIf(!existsSync(buildIndex))(
     it("starts via npx --package tarball mcp", () => {
       const packDir = mkdtempSync(path.join(tmpdir(), "mcp-pack-"));
       const tarball = packTarball(packDir);
-      const r = spawnNpx(["-y", "--package", tarball, "mcp"], {
+      const r = spawnSync("npx", ["-y", "--package", tarball, "mcp"], {
         cwd: packDir,
         timeout: 45_000,
         encoding: "utf-8",
@@ -80,11 +80,11 @@ describe.skipIf(!existsSync(buildIndex))(
       const packDir = mkdtempSync(path.join(tmpdir(), "mcp-pack-"));
       const installDir = mkdtempSync(path.join(tmpdir(), "mcp-install-"));
       const tarball = packTarball(packDir);
-      execNpm(["init", "-y"], {
+      execFileSync("npm", ["init", "-y"], {
         cwd: installDir,
         stdio: "ignore",
       });
-      execNpm(["install", tarball], {
+      execFileSync("npm", ["install", tarball], {
         cwd: installDir,
         stdio: "ignore",
       });
