@@ -20,6 +20,7 @@ import { updateActionTool } from "./tools/actions/update-action.js";
 import { getContextTool } from "./tools/context/get-context.js";
 // Integrations tools
 import { createJiraIssueFromRunTestTool } from "./tools/integrations/create-jira-issue.js";
+import { linkJiraIssueFromRunTestTool } from "./tools/integrations/link-jira-issue.js";
 import { listJiraIssueTypesTool } from "./tools/integrations/list-jira-issue-types.js";
 import { listJiraProjectsTool } from "./tools/integrations/list-jira-projects.js";
 // Projects tools
@@ -231,6 +232,16 @@ server.registerTool(
     inputSchema: createJiraIssueFromRunTestTool.schema,
   },
   createJiraIssueFromRunTestTool.handler,
+);
+
+server.registerTool(
+  "currents-link-jira-issue",
+  {
+    description:
+      "Link an existing Jira issue to a run test using the organization Jira integration. Requires projectId, jiraIssueKey, runId, testId, jiraInstallationId, jiraProjectId, and jiraIssueType. Optional comment and includeContextInComment.",
+    inputSchema: linkJiraIssueFromRunTestTool.schema,
+  },
+  linkJiraIssueFromRunTestTool.handler,
 );
 
 server.registerTool(

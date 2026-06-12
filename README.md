@@ -31,6 +31,7 @@ Give your AI coding agents full visibility into your CI test results. The Curren
 | `currents-list-pull-requests`           | List pull-request cards for a project (runs grouped by meta.pr.id).                       |
 | `currents-list-project-terms`           | List cursor-paginated project terms for one type (tag, branch, authorName, etc.).         |
 | `currents-create-jira-issue`            | Create a Jira issue from a run test using the organization Jira integration.              |
+| `currents-link-jira-issue`              | Link an existing Jira issue to a run test using the organization Jira integration.        |
 | `currents-list-jira-projects`           | List Jira projects available for the organization integration.                            |
 | `currents-list-jira-issue-types`        | List Jira issue types and custom fields for a Jira project.                               |
 | `currents-get-runs`                     | Retrieves a list of runs for a specific project with optional filtering.                  |
