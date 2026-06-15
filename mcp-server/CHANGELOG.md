@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased (2026-06-12)
+
+### Added
+
+- MCP tool `currents-link-jira-issue` for `POST /projects/{projectId}/jira/issues/{jiraIssueKey}/link` (link an existing Jira issue to a run test).
+
 ## Unreleased (2026-05-27)
 
 ### Added
