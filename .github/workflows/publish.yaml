@@ -26,6 +26,11 @@ jobs:
         working-directory: ./mcp-server
 
     steps:
+      - uses: actions/checkout@v4
+        with:
+          # PR context: build from PR head; workflow_dispatch: build from triggered ref (e.g. release/x.y.z)
+          ref: ${{ github.event.pull_request.head.sha || github.ref }}
+
       - name: Validate release branch for latest channel
         if: github.event.inputs.channel == 'latest'
         run: |
@@ -34,11 +39,6 @@ jobs:
             echo "Current ref: ${{ github.ref }}"
             exit 1
           fi
-
-      - uses: actions/checkout@v4
-        with:
-          # PR context: build from PR head; workflow_dispatch: build from triggered ref (e.g. release/x.y.z)
-          ref: ${{ github.event.pull_request.head.sha || github.ref }}
 
       - uses: actions/setup-node@v4
         with:
