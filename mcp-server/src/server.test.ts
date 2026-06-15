@@ -22,8 +22,10 @@ vi.mock("@modelcontextprotocol/sdk/server/stdio.js", () => ({
   StdioServerTransport: class {},
 }));
 
-// Triggers all registerTool calls at module scope
-import "./server.js";
+// Building the server triggers all registerTool calls
+import { createMcpServer } from "./server.js";
+
+createMcpServer();
 
 // SEP-986 (Final): tool names SHOULD be 1–64 characters
 const TOOL_NAME_MAX_LENGTH = 64;

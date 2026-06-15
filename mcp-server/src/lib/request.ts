@@ -1,4 +1,5 @@
-import { CURRENTS_API_KEY, CURRENTS_API_URL } from "./env.js";
+import { getApiKey } from "./context.js";
+import { CURRENTS_API_URL } from "./env.js";
 import { logger } from "./logger.js";
 
 const USER_AGENT = "currents-app/1.0";
@@ -13,7 +14,7 @@ export async function fetchApi<T>(path: string): Promise<T | null> {
   const headers = {
     "User-Agent": USER_AGENT,
     Accept: "application/json",
-    Authorization: "Bearer " + CURRENTS_API_KEY,
+    Authorization: "Bearer " + getApiKey(),
   };
 
   try {
@@ -35,7 +36,7 @@ export async function postApi<T, B>(path: string, body: B): Promise<T | null> {
     "User-Agent": USER_AGENT,
     Accept: "application/json",
     "Content-Type": "application/json",
-    Authorization: "Bearer " + CURRENTS_API_KEY,
+    Authorization: "Bearer " + getApiKey(),
   };
 
   try {
@@ -68,7 +69,7 @@ export async function putApi<T, B>(path: string, body?: B): Promise<T | null> {
     "User-Agent": USER_AGENT,
     Accept: "application/json",
     "Content-Type": "application/json",
-    Authorization: "Bearer " + CURRENTS_API_KEY,
+    Authorization: "Bearer " + getApiKey(),
   };
 
   try {
@@ -93,7 +94,7 @@ export async function deleteApi<T>(path: string): Promise<T | null> {
   const headers = {
     "User-Agent": USER_AGENT,
     Accept: "application/json",
-    Authorization: "Bearer " + CURRENTS_API_KEY,
+    Authorization: "Bearer " + getApiKey(),
   };
 
   try {
