@@ -17,6 +17,7 @@ permissions:
   id-token: write
   contents: write
   pull-requests: write
+  packages: write
 
 jobs:
   publish:
@@ -89,4 +90,84 @@ jobs:
                 }
               ]
             }
+
+  publish-image:
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.ref }}
+
+      - name: Extract package version
+        id: extract_version
+        run: |
+          PACKAGE_VERSION=$(node -p "require('./mcp-server/package.json').version")
+          echo "package_version=$PACKAGE_VERSION" >> $GITHUB_OUTPUT
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=raw,value=${{ steps.extract_version.outputs.package_version }}
+            type=raw,value=${{ github.event.inputs.channel }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Notify private MCP deploy pipeline
+        if: github.event.inputs.channel == 'latest' || github.event.inputs.channel == 'beta'
+        env:
+          DISPATCH_TOKEN: ${{ secrets.DISPATCH_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          TAG="${{ github.event.inputs.channel }}"
+
+          # Resolve manifest digest from GHCR (public package — anonymous token works)
+          TOKEN=$(curl -fsSL "https://ghcr.io/token?scope=repository:currents-dev/currents-mcp:pull" | jq -r '.token')
+          DIGEST=$(curl -fsSI \
+            -H "Authorization: Bearer ${TOKEN}" \
+            -H "Accept: application/vnd.docker.distribution.manifest.v2+json" \
+            "https://ghcr.io/v2/currents-dev/currents-mcp/manifests/${TAG}" \
+            | grep -i docker-content-digest | awk '{print $2}' | tr -d $'\r')
+
+          if [ -z "${DIGEST}" ]; then
+            echo "Failed to resolve GHCR digest for tag ${TAG}"
+            exit 1
+          fi
+
+          HTTP_STATUS=$(curl -sS -o /tmp/dispatch-response.json -w "%{http_code}" -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${DISPATCH_TOKEN}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/currents-dev/currents/dispatches" \
+            -d "{\"event_type\":\"mcp-image-published\",\"client_payload\":{\"tag\":\"${TAG}\",\"digest\":\"${DIGEST}\"}}")
+
+          if [ "${HTTP_STATUS}" -lt 200 ] || [ "${HTTP_STATUS}" -ge 300 ]; then
+            echo "repository_dispatch failed (HTTP ${HTTP_STATUS}):"
+            cat /tmp/dispatch-response.json
+            exit 1
+          fi
+
+          echo "Dispatched mcp-image-published for tag=${TAG} digest=${DIGEST}"
 
