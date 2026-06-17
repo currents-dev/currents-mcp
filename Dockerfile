@@ -7,7 +7,8 @@ WORKDIR /app
 
 # Install dependencies
 COPY mcp-server/package.json mcp-server/package-lock.json ./
-RUN npm ci --production=false
+# prepare runs `git config` for local hooks; skip in image (no git in alpine).
+RUN npm ci --production=false --ignore-scripts
 
 # Copy source code
 COPY mcp-server/tsconfig.json mcp-server/tsdown.config.ts ./
