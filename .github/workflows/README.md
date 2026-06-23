@@ -39,6 +39,37 @@ Creates a new release with changelog, git tag, and GitHub release.
 
 ---
 
+### `publish.yaml` - Publish NPM Package and Container Image
+
+Publishes the `@currents/mcp` npm package and a public container image to GitHub Container Registry (GHCR) in the same workflow run.
+
+**Triggers:**
+
+- Manual dispatch only (workflow_dispatch)
+
+**Inputs:**
+
+- `channel` (choice): NPM distribution tag — `alpha`, `beta`, `latest`, or `oldversion`
+
+**What it does:**
+
+1. Validates that `latest` channel publishes only from a `release/*` branch or tag
+2. Builds and publishes `@currents/mcp` to npm with the selected channel tag
+3. On success, builds the root [Dockerfile](../../Dockerfile) and pushes the image to GHCR
+
+**Container image tags** (both applied to the same build):
+
+- `ghcr.io/<org>/currents-mcp:<version>` — immutable semver (e.g. `2.3.3`)
+- `ghcr.io/<org>/currents-mcp:<channel>` — moves with the npm dist-tag (`latest`, `beta`, `alpha`, `oldversion`)
+
+**Usage:**
+
+1. Go to Actions → "Publish NPM Package"
+2. Select the NPM channel
+3. Run workflow from the appropriate branch (e.g. `release/x.y.z` for `latest`)
+
+---
+
 ### `test.yml` - Unit Tests
 
 Runs the unit test suite on every push and pull request.

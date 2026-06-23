@@ -103,6 +103,47 @@ Add the following to enable Currents MCP on Claude Desktop (edit `claude_desktop
 }
 ```
 
+### Remote (hosted) MCP endpoint
+
+In addition to the local stdio transport above, the same server can run as a hosted
+Streamable HTTP endpoint (e.g. `https://mcp.currents.dev/mcp`) for use with remote
+connectors such as the Claude web/mobile apps.
+
+The hosted server performs **no authentication of its own**. Each request must carry
+your Currents API key as a Bearer token, which is passed through to the Currents API:
+
+```
+Authorization: Bearer <your-currents-api-key>
+```
+
+Example client config (remote connector):
+
+```json
+{
+  "mcpServers": {
+    "currents": {
+      "url": "https://mcp.currents.dev/mcp",
+      "headers": {
+        "Authorization": "Bearer your-api-key"
+      }
+    }
+  }
+}
+```
+
+Running the HTTP server yourself:
+
+```bash
+# from the mcp-server package
+npm run build && PORT=3000 npm run start:http
+# or via Docker (serves /mcp, exposes the configured PORT)
+docker build -t currents-mcp . && docker run -p 3000:3000 currents-mcp
+```
+
+The Node server speaks plain HTTP; TLS and the public domain terminate at the
+reverse proxy / load balancer in front of the container. A `GET /healthz` endpoint
+is provided for liveness checks.
+
 ### ⚠️ Notice
 
 By connecting AI tools (e.g., via MCP) to Currents, you are granting them access to your API key, test results and CI metadata. It is your responsibility to vet any AI agents or services you use, and to ensure they handle your data securely.
