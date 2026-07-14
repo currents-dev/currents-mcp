@@ -13,7 +13,10 @@
     "dashboard",
     "reporting"
   ],
-  "bin": "./dist/index.mjs",
+  "bin": {
+    "mcp": "./dist/index.mjs",
+    "currents-mcp-http": "./dist/http.mjs"
+  },
   "version": "2.3.3",
   "description": "Currents MCP server",
   "main": "./dist/api.cjs",
@@ -27,10 +30,11 @@
     }
   },
   "scripts": {
-    "build": "tsdown && chmod 755 dist/index.mjs",
+    "build": "tsdown && chmod 755 dist/index.mjs dist/http.mjs",
     "publish:mcp": "npm run publish:npm",
     "publish:npm": "npm run rm && npm run build && ./publish.cjs",
     "start": "node dist/index.mjs",
+    "start:http": "node dist/http.mjs",
     "rm": "rm -rf dist",
     "prepare": "git config core.hooksPath mcp-server/scripts/hooks",
     "sync-readme": "node scripts/sync-readme-tools.mjs",

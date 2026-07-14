@@ -7,7 +7,8 @@ WORKDIR /app
 
 # Install dependencies
 COPY mcp-server/package.json mcp-server/package-lock.json ./
-RUN npm ci --production=false
+# prepare runs `git config` for local hooks; skip in image (no git in alpine).
+RUN npm ci --production=false --ignore-scripts
 
 # Copy source code
 COPY mcp-server/tsconfig.json mcp-server/tsdown.config.ts ./
@@ -27,7 +28,15 @@ COPY --from=build /app/assets ./assets
 COPY --from=build /app/package.json ./package.json
 COPY --from=build /app/node_modules ./node_modules
 
-# Default API URL environment variable
-ENV CURRENTS_API_URL=https://api.currents.dev
+# Default API URL environment variable (must include the /v1 path segment)
+ENV CURRENTS_API_URL=https://api.currents.dev/v1
 
-ENTRYPOINT ["node", "dist/index.mjs"]
+# Port the Streamable HTTP server listens on (TLS terminates at the proxy in front).
+ENV PORT=3000
+EXPOSE 3000
+
+# This image serves the hosted remote MCP endpoint (Streamable HTTP) at /mcp.
+# No API key is baked in: callers pass their Currents API key as a Bearer token
+# per request. The stdio transport remains available via the npm package bin
+# (node dist/index.mjs) for local Claude Desktop usage.
+ENTRYPOINT ["node", "dist/http.mjs"]

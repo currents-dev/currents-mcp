@@ -59,20 +59,28 @@ declare const __VERSION__: string;
 const logoBase64 = __LOGO_BASE64__;
 const version = __VERSION__;
 
-const server = new McpServer({
-  name: "currents",
-  version,
-  icons: [
-    {
-      src: `data:image/png;base64,${logoBase64}`,
-      mimeType: "image/png",
-      sizes: ["256x256", "128x128", "64x64", "32x32", "16x16"],
-    },
-  ],
-});
+/**
+ * Builds a fully configured MCP server with all Currents tools registered.
+ *
+ * A factory (rather than a shared singleton) lets the stdio transport create
+ * one instance and the stateless HTTP transport create a fresh instance per
+ * request, keeping the tool/api layer identical across both.
+ */
+export function createMcpServer(): McpServer {
+  const server = new McpServer({
+    name: "currents",
+    version,
+    icons: [
+      {
+        src: `data:image/png;base64,${logoBase64}`,
+        mimeType: "image/png",
+        sizes: ["256x256", "128x128", "64x64", "32x32", "16x16"],
+      },
+    ],
+  });
 
-// Actions API tools
-server.registerTool(
+  // Actions API tools
+  server.registerTool(
   "currents-list-actions",
   {
     description:
@@ -461,12 +469,16 @@ server.registerTool(
   deleteWebhookTool.handler,
 );
 
+  return server;
+}
+
 /** Starts the MCP server over stdio (used by the CLI and programmatic embedders). */
 export async function startMcpServer(): Promise<void> {
   if (!CURRENTS_API_KEY) {
     throw new Error(MISSING_CURRENTS_API_KEY_MESSAGE);
   }
 
+  const server = createMcpServer();
   const transport = new StdioServerTransport();
   await server.connect(transport);
   logger.debug("🚀 Currents MCP Server is live");

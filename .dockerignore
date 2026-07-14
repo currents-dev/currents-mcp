@@ -1,0 +1,22 @@
+# Dependencies and build output
+**/node_modules
+**/dist
+**/coverage
+
+# Version control and editor
+.git
+.gitignore
+.cursor
+.vscode
+
+# Logs and local artifacts
+**/*.log
+npm-debug.log*
+
+# CI and docs not needed in the image
+.github
+**/*.md
+!mcp-server/README.md
+
+# Test fixtures
+mcp-server/test

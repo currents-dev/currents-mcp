@@ -7,6 +7,7 @@ const { version } = JSON.parse(readFileSync("./package.json", "utf-8"));
 export default defineConfig({
   entry: {
     index: "./src/index.ts",
+    http: "./src/http.ts",
     api: "./src/api.ts",
   },
   format: ["esm", "cjs"],
