@@ -15,6 +15,17 @@ const PORT = Number(process.env.PORT ?? 3000);
 const MCP_PATH = "/mcp";
 
 /**
+ * JSON-RPC 2.0 error codes used by the MCP HTTP transport.
+ * MCP over HTTP speaks JSON-RPC, so parse failures, internal errors, and
+ * unsupported methods are reported with standard JSON-RPC error codes.
+ */
+const JSON_RPC_ERROR = {
+  PARSE_ERROR: -32700,
+  INTERNAL_ERROR: -32603,
+  SERVER_ERROR: -32000,
+} as const;
+
+/**
  * Pulls the caller's Currents API key out of the inbound Authorization header.
  *
  * The MCP server performs no authentication itself: whatever token arrives is
@@ -64,7 +75,7 @@ async function handleMcpPost(
   try {
     body = await readJsonBody(req);
   } catch {
-    sendJson(res, 400, jsonRpcError(-32700, "Parse error"));
+    sendJson(res, 400, jsonRpcError(JSON_RPC_ERROR.PARSE_ERROR, "Parse error"));
     return;
   }
 
@@ -87,7 +98,7 @@ async function handleMcpPost(
   } catch (error) {
     logger.error({ err: error }, "Error handling MCP request");
     if (!res.headersSent) {
-      sendJson(res, 500, jsonRpcError(-32603, "Internal server error"));
+      sendJson(res, 500, jsonRpcError(JSON_RPC_ERROR.INTERNAL_ERROR, "Internal server error"));
     }
   }
 }
@@ -111,7 +122,7 @@ export function createHttpServer(): Server {
       }
       // Stateless: no standalone SSE stream (GET) or session teardown (DELETE).
       res.writeHead(405, { Allow: "POST", "Content-Type": "application/json" });
-      res.end(JSON.stringify(jsonRpcError(-32000, "Method not allowed")));
+      res.end(JSON.stringify(jsonRpcError(JSON_RPC_ERROR.SERVER_ERROR, "Method not allowed")));
       return;
     }
 
