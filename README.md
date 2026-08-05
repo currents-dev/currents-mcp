@@ -1,5 +1,7 @@
 # Currents MCP Server
 
+[![MCP Toplist](https://mcptoplist.com/badge/glama%2Fcurrents-dev%2Fcurrents-mcp.svg)](https://mcptoplist.com/server/glama%2Fcurrents-dev%2Fcurrents-mcp)
+
 ![Unit Tests](https://github.com/currents-dev/currents-mcp/actions/workflows/test.yml/badge.svg)
 
 Give your AI coding agents full visibility into your CI test results. The Currents MCP Server connects tools like Cursor and Claude directly to your [Currents](https://currents.dev) dashboard, so agents can diagnose flaky tests, pinpoint failures, and act on real execution data -- without leaving your editor.
