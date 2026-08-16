@@ -38,8 +38,8 @@ describe("skills manifest", () => {
 
 describe("skill resource URIs", () => {
   it("builds a skill:// URI per file", () => {
-    expect(skillFileUri("collect-ci-evidence", "SKILL.md")).toBe(
-      "skill://currents/collect-ci-evidence/SKILL.md"
+    expect(skillFileUri("collect-evidence", "SKILL.md")).toBe(
+      "skill://currents/collect-evidence/SKILL.md"
     );
   });
 });

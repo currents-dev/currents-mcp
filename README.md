@@ -59,16 +59,16 @@ Give your AI coding agents full visibility into your CI test results. The Curren
 
 Agent skills that teach AI agents multi-step Currents workflows.
 
-| Skill                                              | Description                                                                                                                        |
-| -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| [`collect-ci-evidence`](skills/collect-ci-evidence) | Collect evidence or a demo of an implemented feature from CI test runs — before/after screenshots, text attachments, videos, traces. |
+| Skill                                        | Description                                                                                                                     |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| [`collect-evidence`](skills/collect-evidence) | Show that implemented work works, or demo it, using CI test artifacts — before/after screenshots, text attachments, videos, traces. |
 
 The server publishes every skill as an MCP resource, so a connected agent can
 list and read them without a local copy:
 
 ```
-skill://currents/collect-ci-evidence/SKILL.md
-skill://currents/collect-ci-evidence/references/instrumentation.md
+skill://currents/collect-evidence/SKILL.md
+skill://currents/collect-evidence/references/instrumentation.md
 ```
 
 Agents that load skills only from disk still need a copy — put the skill

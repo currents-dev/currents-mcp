@@ -1,11 +1,15 @@
 ---
-name: collect-ci-evidence
-description: Collect evidence or a demo of an implemented feature from CI test runs via Currents — before/after screenshots, text output stored as test attachments, Playwright videos, traces, and GIFs. Use when asked to "collect evidence", "show proof", "demo the feature", "capture a before/after comparison", or to attach CI test artifacts to a PR, issue, or report. The evidence comes from tests running in CI (retrieved through the Currents MCP tools or REST API), not from local runs.
+name: collect-evidence
+description: Show that work you implemented actually works, or demo it, using artifacts from tests running in CI via Currents — before/after screenshots, text and JSON attachments, videos, traces, and GIFs. Use when asked to "collect evidence", "prove it works", "show me it works", "demo the feature", "capture a before/after", or to attach proof of a change to a PR, issue, ticket, or status update. Evidence comes from CI runs retrieved through the Currents MCP tools or REST API, not from a local run.
 ---
 
-# Collect CI Evidence
+# Collect Evidence
 
-Produce verifiable evidence (or a demo) that a feature works by capturing artifacts in CI tests and retrieving them from Currents. Do not capture evidence locally: CI runs in a clean, reproducible environment, artifacts are stored and shareable, and this works even without a local browser.
+Show that a change you implemented works, or demo it, by capturing artifacts in CI tests and retrieving them from Currents. The output is a screenshot, video, trace, or attachment to put in a PR, ticket, or status update, plus a dashboard link that does not expire.
+
+Use this when the work is done and someone needs to see it. To debug a test that is failing, use `currents-get-context` instead.
+
+Do not capture evidence locally: CI runs in a clean, reproducible environment, artifacts are stored and shareable, and this works even without a local browser.
 
 Evidence types and when to use each:
 
@@ -26,7 +30,7 @@ Evidence types and when to use each:
 
 ### 1. Instrument a test to capture the evidence
 
-Write or extend a test that exercises the feature and captures the artifact at the decisive moment. See [references/instrumentation.md](references/instrumentation.md) for Playwright and Cypress snippets and reporter configuration.
+Write or extend a test that exercises the change you implemented and captures the artifact at the moment it is visible. See [references/instrumentation.md](references/instrumentation.md) for Playwright and Cypress snippets and reporter configuration.
 
 Rules that make retrieval and pairing work later:
 
