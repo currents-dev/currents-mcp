@@ -69,8 +69,15 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_BRANCH: ${{ github.ref_name }}
+          RELEASE_REF_TYPE: ${{ github.ref_type }}
         run: |
           set -euo pipefail
+
+          # A tag can be named release/x.y.z and would pass the branch check.
+          if [ "$RELEASE_REF_TYPE" != "branch" ]; then
+            echo "Dispatched from a $RELEASE_REF_TYPE, skipping sync PR."
+            exit 0
+          fi
 
           # Read the ref as data, never as shell source: a branch name is
           # attacker-controlled by anyone with write access.
@@ -84,6 +91,14 @@ jobs:
           # Nothing to sync unless release-it actually made the release commit.
           if [ "$(git log -1 --pretty=%s)" != "chore: release v$VERSION" ]; then
             echo "No release commit on HEAD, skipping sync PR."
+            exit 0
+          fi
+
+          # release-it commits before it pushes. If the push failed, the commit
+          # exists only on the runner and a PR would not contain it.
+          REMOTE_HEAD=$(git ls-remote origin "refs/heads/$RELEASE_BRANCH" | cut -f1 || true)
+          if [ "$REMOTE_HEAD" != "$(git rev-parse HEAD)" ]; then
+            echo "Release commit is not on origin/$RELEASE_BRANCH, skipping sync PR."
             exit 0
           fi
 
