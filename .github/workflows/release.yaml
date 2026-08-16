@@ -21,19 +21,12 @@ jobs:
   release:
     runs-on: ubuntu-latest
 
-    # The sync PR is opened with a list-then-create pair, which is not atomic.
-    # Serializing runs per ref keeps two of them from opening duplicates.
-    concurrency:
-      group: release-sync-${{ github.ref }}
-      cancel-in-progress: false
-
     defaults:
       run:
         working-directory: ./mcp-server
 
     permissions:
       contents: write
-      pull-requests: write
 
     steps:
       - uses: actions/checkout@v4
@@ -57,15 +50,37 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # The release commit (version bump + changelog) is made on the release
-      # branch. Until it reaches main, main's newest reachable tag is the
-      # previous release, and the next release computes a version that already
-      # exists.
+  # The release commit (version bump + changelog) is made on the release
+  # branch. Until it reaches main, main's newest reachable tag is the previous
+  # release, and the next release computes a version that already exists.
+  #
+  # Separate job on purpose: `pull-requests: write` must not be in scope while
+  # release-it runs the repository's own test suite through its before:init
+  # hook. Nothing here executes repository code.
+  sync-pr:
+    needs: release
+    # Also runs when the release job failed: release-it pushes the commit and
+    # tag before it creates the GitHub release, so a late failure still leaves
+    # a release commit that main needs.
+    if: ${{ !cancelled() && !inputs.dry_run }}
+    runs-on: ubuntu-latest
+
+    # The sync PR is opened with a list-then-create pair, which is not atomic.
+    # Serializing runs per ref keeps two of them from opening duplicates.
+    concurrency:
+      group: release-sync-${{ github.ref }}
+      cancel-in-progress: false
+
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Open sync PR to main
-        # Also runs when the release step failed: release-it pushes the commit
-        # and tag before it creates the GitHub release, so a late failure still
-        # leaves a release commit that main needs.
-        if: ${{ !cancelled() && !inputs.dry_run }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_BRANCH: ${{ github.ref_name }}
@@ -99,7 +114,14 @@ jobs:
           fi
 
           git fetch --quiet --tags origin "$RELEASE_BRANCH"
-          VERSION=$(git show "$REMOTE_TIP:mcp-server/package.json" | jq -r .version)
+          VERSION=$(git show "$REMOTE_TIP:mcp-server/package.json" | jq -r '.version // ""')
+
+          # jq yields "null" for a missing or non-string version, which would
+          # otherwise reach the tag ref and the PR body.
+          if ! printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+([-+][0-9A-Za-z.-]+)*$'; then
+            echo "Unexpected version at the branch tip, skipping sync PR."
+            exit 0
+          fi
 
           # The release is only real once its tag is pushed and contained in
           # the branch. Ancestry, not equality: the branch may have moved on.
