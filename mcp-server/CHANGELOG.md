@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.4.1](https://github.com/currents-dev/currents-mcp/compare/v2.4.0...v2.4.1) (2026-08-16)
+
+### Bug Fixes
+
+* build the skills into the docker image ([58a58b6](https://github.com/currents-dev/currents-mcp/commit/58a58b65a669e22f95c9ffbc70584bbd4334b747))
+
+### Features
+
+* serve agent skills as MCP resources ([adf1e00](https://github.com/currents-dev/currents-mcp/commit/adf1e00808404a03b5bdb1addd6cfe6320b182cd))
+
 # [2.4.0](https://github.com/currents-dev/currents-mcp/compare/v2.3.3...v2.4.0) (2026-08-16)
 
 ### Bug Fixes
