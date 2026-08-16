@@ -172,7 +172,7 @@ const handler = async ({
     const queryParams = new URLSearchParams();
     queryParams.append("projectId", projectId as string);
     if (ciBuildId) queryParams.append("ciBuildId", ciBuildId);
-    if (branch) queryParams.append("branch", branch);
+    else if (branch) queryParams.append("branch", branch);
     const found = await fetchApi<{ data?: { runId?: string } }>(
       `/runs/find?${queryParams.toString()}`
     );

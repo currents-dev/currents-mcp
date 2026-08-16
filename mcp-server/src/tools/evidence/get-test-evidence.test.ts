@@ -109,6 +109,25 @@ describe("getTestEvidenceTool", () => {
     expect(manifest.run.dashboardUrl).toBe("https://app.currents.dev/run/run-1");
   });
 
+  it("omits branch from /runs/find when ciBuildId is given", async () => {
+    vi.mocked(request.fetchApi).mockImplementation(async (path: string) => {
+      if (path.startsWith("/runs/find")) return { data: { runId: "run-1" } };
+      if (path === "/runs/run-1") return runPayload;
+      if (path.startsWith("/instances/")) return instancePayload;
+      return null;
+    });
+
+    await getTestEvidenceTool.handler({
+      projectId: "p1",
+      ciBuildId: "build-42",
+      branch: "feature-x",
+    });
+
+    const findUrl = vi.mocked(request.fetchApi).mock.calls[0][0] as string;
+    expect(findUrl).toContain("ciBuildId=build-42");
+    expect(findUrl).not.toContain("branch");
+  });
+
   it("groups artifacts by test and separates spec-level evidence", async () => {
     vi.mocked(request.fetchApi).mockImplementation(async (path: string) => {
       if (path === "/runs/run-1") return runPayload;

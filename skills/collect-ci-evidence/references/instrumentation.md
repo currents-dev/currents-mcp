@@ -71,6 +71,8 @@ failures; demo evidence usually comes from passing tests, so scope an
 always-on policy to the evidence tests with a dedicated project:
 
 ```ts
+import { defineConfig } from "@playwright/test";
+
 export default defineConfig({
   use: {
     viewport: { width: 1280, height: 720 },
