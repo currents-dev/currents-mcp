@@ -7,6 +7,15 @@ on:
         description: "Dry run (no actual release)"
         type: boolean
         default: false
+      increment:
+        description: "Version increment. auto derives it from the conventional commits since the last tag."
+        type: choice
+        default: auto
+        options:
+          - auto
+          - patch
+          - minor
+          - major
 
 jobs:
   release:
@@ -36,6 +45,6 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Release
-        run: npx release-it --ci ${{ inputs.dry_run && '--dry-run' || '' }}
+        run: npx release-it ${{ inputs.increment != 'auto' && inputs.increment || '' }} --ci ${{ inputs.dry_run && '--dry-run' || '' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
