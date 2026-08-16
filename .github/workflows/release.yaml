@@ -26,6 +26,7 @@ jobs:
 
     permissions:
       contents: write
+      pull-requests: write
 
     steps:
       - uses: actions/checkout@v4
@@ -48,3 +49,32 @@ jobs:
         run: npx release-it ${{ inputs.increment != 'auto' && inputs.increment || '' }} --ci ${{ inputs.dry_run && '--dry-run' || '' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # The release commit (version bump + changelog) is made on the release
+      # branch. Until it reaches main, main's newest reachable tag is the
+      # previous release, and the next release computes a version that already
+      # exists.
+      - name: Open sync PR to main
+        if: ${{ !inputs.dry_run }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          BRANCH="${{ github.ref_name }}"
+          VERSION=$(node -p "require('./package.json').version")
+
+          EXISTING=$(gh pr list --head "$BRANCH" --base main --state open --json number --jq '.[0].number // empty')
+          if [ -n "$EXISTING" ]; then
+            echo "Sync PR already open for $BRANCH: #$EXISTING"
+            exit 0
+          fi
+
+          gh pr create --base main --head "$BRANCH" \
+            --title "chore: sync release $VERSION back to main" \
+            --body "$(printf '%s\n' \
+              "Merges the \`chore: release v$VERSION\` commit (version bump + changelog) back into \`main\`." \
+              "" \
+              "Opened automatically by the Create Release workflow. Without it, \`main\` keeps the previous version and the next release branch computes a version that already exists." \
+              "" \
+              "No code changes - release bookkeeping only.")"
