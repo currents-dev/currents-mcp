@@ -20,6 +20,13 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
+
+    # The sync PR is opened with a list-then-create pair, which is not atomic.
+    # Serializing runs per ref keeps two of them from opening duplicates.
+    concurrency:
+      group: release-sync-${{ github.ref }}
+      cancel-in-progress: false
+
     defaults:
       run:
         working-directory: ./mcp-server
@@ -55,22 +62,38 @@ jobs:
       # previous release, and the next release computes a version that already
       # exists.
       - name: Open sync PR to main
-        if: ${{ !inputs.dry_run }}
+        # Also runs when the release step failed: release-it pushes the commit
+        # and tag before it creates the GitHub release, so a late failure still
+        # leaves a release commit that main needs.
+        if: ${{ !cancelled() && !inputs.dry_run }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_BRANCH: ${{ github.ref_name }}
         run: |
           set -euo pipefail
 
-          BRANCH="${{ github.ref_name }}"
-          VERSION=$(node -p "require('./package.json').version")
-
-          EXISTING=$(gh pr list --head "$BRANCH" --base main --state open --json number --jq '.[0].number // empty')
-          if [ -n "$EXISTING" ]; then
-            echo "Sync PR already open for $BRANCH: #$EXISTING"
+          # Read the ref as data, never as shell source: a branch name is
+          # attacker-controlled by anyone with write access.
+          if ! printf '%s' "$RELEASE_BRANCH" | grep -Eq '^release/[A-Za-z0-9._-]+$'; then
+            echo "Not a release branch, skipping sync PR: $RELEASE_BRANCH"
             exit 0
           fi
 
-          gh pr create --base main --head "$BRANCH" \
+          VERSION=$(node -p "require('./package.json').version")
+
+          # Nothing to sync unless release-it actually made the release commit.
+          if [ "$(git log -1 --pretty=%s)" != "chore: release v$VERSION" ]; then
+            echo "No release commit on HEAD, skipping sync PR."
+            exit 0
+          fi
+
+          EXISTING=$(gh pr list --head "$RELEASE_BRANCH" --base main --state open --json number --jq '.[0].number // empty')
+          if [ -n "$EXISTING" ]; then
+            echo "Sync PR already open for $RELEASE_BRANCH: #$EXISTING"
+            exit 0
+          fi
+
+          gh pr create --base main --head "$RELEASE_BRANCH" \
             --title "chore: sync release $VERSION back to main" \
             --body "$(printf '%s\n' \
               "Merges the \`chore: release v$VERSION\` commit (version bump + changelog) back into \`main\`." \
