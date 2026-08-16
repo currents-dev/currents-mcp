@@ -5,6 +5,7 @@ import {
   MISSING_CURRENTS_API_KEY_MESSAGE,
 } from "./lib/env.js";
 import { logger } from "./lib/logger.js";
+import { registerSkills } from "./skills.js";
 // Actions tools
 import { createActionTool } from "./tools/actions/create-action.js";
 import { deleteActionTool } from "./tools/actions/delete-action.js";
@@ -481,6 +482,8 @@ server.registerTool(
   },
   deleteWebhookTool.handler,
 );
+
+  registerSkills(server);
 
   return server;
 }

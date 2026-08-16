@@ -17,6 +17,8 @@ npm-debug.log*
 .github
 **/*.md
 !mcp-server/README.md
+# Skill markdown is inlined into the bundle at build time.
+!skills/**/*.md
 
 # Test fixtures
 mcp-server/test

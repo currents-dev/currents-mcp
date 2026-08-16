@@ -1,9 +1,15 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 
-const { registeredTools } = vi.hoisted(() => {
+const { registeredTools, registeredResources } = vi.hoisted(() => {
   const registeredTools: Array<{ name: string; description: string }> = [];
-  return { registeredTools };
+  const registeredResources: Array<{
+    name: string;
+    uri: string;
+    mimeType?: string;
+    read: () => { contents: Array<{ uri: string; text: string }> };
+  }> = [];
+  return { registeredTools, registeredResources };
 });
 
 vi.mock("@modelcontextprotocol/sdk/server/mcp.js", () => ({
@@ -15,6 +21,15 @@ vi.mock("@modelcontextprotocol/sdk/server/mcp.js", () => ({
     ) {
       registeredTools.push({ name, description: opts.description });
     }
+
+    registerResource(
+      name: string,
+      uri: string,
+      opts: { mimeType?: string },
+      read: () => { contents: Array<{ uri: string; text: string }> }
+    ) {
+      registeredResources.push({ name, uri, mimeType: opts.mimeType, read });
+    }
   },
 }));
 
@@ -22,8 +37,9 @@ vi.mock("@modelcontextprotocol/sdk/server/stdio.js", () => ({
   StdioServerTransport: class {},
 }));
 
-// Building the server triggers all registerTool calls
+// Building the server triggers all registerTool / registerResource calls
 import { createMcpServer } from "./server.js";
+import { skillFileUri, skills } from "./skills.js";
 
 createMcpServer();
 
@@ -129,5 +145,43 @@ describe("MCP tool best practices", () => {
     it("description ends with a period", () => {
       expect(description.at(-1)).toBe(".");
     });
+  });
+});
+
+describe("skills registered as resources", () => {
+  it("registers every file of every skill", () => {
+    const expected = skills.flatMap((skill) =>
+      skill.files.map((file) => skillFileUri(skill.name, file.path))
+    );
+    expect(expected.length).toBeGreaterThan(0);
+    expect(registeredResources.map((r) => r.uri).sort()).toEqual(
+      expected.sort()
+    );
+  });
+
+  it("resource URIs are unique", () => {
+    const uris = registeredResources.map((r) => r.uri);
+    expect(new Set(uris).size).toBe(uris.length);
+  });
+
+  it("serves the skill markdown as text/markdown", () => {
+    for (const resource of registeredResources) {
+      expect(resource.mimeType).toBe("text/markdown");
+      const [content] = resource.read().contents;
+      expect(content.uri).toBe(resource.uri);
+      expect(content.text.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("serves the frontmatter of each skill entry point", () => {
+    for (const skill of skills) {
+      const entryPoint = registeredResources.find(
+        (r) => r.uri === skillFileUri(skill.name, "SKILL.md")
+      );
+      expect(entryPoint, `no SKILL.md resource for ${skill.name}`).toBeDefined();
+      expect(entryPoint?.read().contents[0].text).toContain(
+        `name: ${skill.name}`
+      );
+    }
   });
 });
