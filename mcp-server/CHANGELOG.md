@@ -1,5 +1,7 @@
 # Changelog
 
+## [2.4.2](https://github.com/currents-dev/currents-mcp/compare/v2.4.1...v2.4.2) (2026-08-16)
+
 ## [2.4.1](https://github.com/currents-dev/currents-mcp/compare/v2.4.0...v2.4.1) (2026-08-16)
 
 ### Bug Fixes
