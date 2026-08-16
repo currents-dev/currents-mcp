@@ -1,5 +1,16 @@
 # Changelog
 
+# [2.4.0](https://github.com/currents-dev/currents-mcp/compare/v2.3.3...v2.4.0) (2026-08-16)
+
+### Bug Fixes
+
+* attach full-page screenshot in skill example ([4223659](https://github.com/currents-dev/currents-mcp/commit/42236599fc96db75d84209129dcbbed7b9e54f97))
+* honor ciBuildId precedence over branch in evidence run lookup ([3467ea9](https://github.com/currents-dev/currents-mcp/commit/3467ea916df0810df40422d2d878f1b27d03bda6))
+
+### Features
+
+* add currents-get-test-evidence tool and collect-ci-evidence skill ([35a665f](https://github.com/currents-dev/currents-mcp/commit/35a665f95bef995b98d79f9689fcce9aac11ed6c))
+
 ## Unreleased (2026-06-12)
 
 ### Added

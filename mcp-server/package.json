@@ -17,7 +17,7 @@
     "mcp": "./dist/index.mjs",
     "currents-mcp-http": "./dist/http.mjs"
   },
-  "version": "2.3.3",
+  "version": "2.4.0",
   "description": "Currents MCP server",
   "main": "./dist/api.cjs",
   "module": "./dist/api.mjs",
