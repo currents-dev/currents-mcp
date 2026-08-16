@@ -46,6 +46,8 @@ import { getTestsPerformanceTool } from "./tools/tests/get-tests-performance.js"
 import { getTestSignatureTool } from "./tools/tests/get-tests-signature.js";
 // Errors tools
 import { getErrorsExplorerTool } from "./tools/errors/get-errors-explorer.js";
+// Evidence tools
+import { getTestEvidenceTool } from "./tools/evidence/get-test-evidence.js";
 // Webhooks tools
 import { createWebhookTool } from "./tools/webhooks/create-webhook.js";
 import { deleteWebhookTool } from "./tools/webhooks/delete-webhook.js";
@@ -416,6 +418,17 @@ server.registerTool(
     inputSchema: getErrorsExplorerTool.schema,
   },
   getErrorsExplorerTool.handler,
+);
+
+// Evidence tools
+server.registerTool(
+  "currents-get-test-evidence",
+  {
+    description:
+      "Collect evidence artifacts (screenshots, videos, traces, attachments) produced by tests in a CI run, with signed download URLs grouped per test. Use to gather proof or a demo of an implemented feature from CI — e.g. before/after screenshots, text output stored as test attachments, or Playwright videos and traces — instead of running tests locally. Locates the run by runId, or by projectId with ciBuildId or branch (latest run). Supports filtering by spec file, test title, and test status. URLs are signed and time-limited, so download the files promptly.",
+    inputSchema: getTestEvidenceTool.schema,
+  },
+  getTestEvidenceTool.handler,
 );
 
 // Webhooks API tools

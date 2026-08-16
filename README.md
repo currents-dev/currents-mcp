@@ -13,46 +13,55 @@ Give your AI coding agents full visibility into your CI test results. The Curren
 
 ## Tools
 
-| Tool                                    | Description                                                                               |
-| --------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `currents-list-actions`                 | List all actions for a project with optional filtering.                                   |
-| `currents-create-action`                | Create a new action for a project.                                                        |
-| `currents-get-action`                   | Get a single action by ID.                                                                |
-| `currents-update-action`                | Update an existing action.                                                                |
-| `currents-delete-action`                | Delete (archive) an action.                                                               |
-| `currents-enable-action`                | Enable a disabled action.                                                                 |
-| `currents-disable-action`               | Disable an active action.                                                                 |
-| `currents-list-affected-tests`          | List tests affected by actions (quarantine, skip, tag) for a project within a date range. |
-| `currents-get-affected-test-executions` | Get execution details for a specific affected test (by signature) within a date range.    |
-| `currents-get-affected-executions`      | List test executions where a specific action/rule was applied, within a date range.       |
-| `currents-get-projects`                 | Retrieves projects available in the Currents platform.                                    |
-| `currents-get-project`                  | Get a single project by ID.                                                               |
-| `currents-get-project-insights`         | Get aggregated run and test metrics for a project within a date range.                    |
-| `currents-list-pull-requests`           | List pull-request cards for a project (runs grouped by meta.pr.id).                       |
-| `currents-list-project-terms`           | List cursor-paginated project terms for one type (tag, branch, authorName, etc.).         |
-| `currents-create-jira-issue`            | Create a Jira issue from a run test using the organization Jira integration.              |
-| `currents-link-jira-issue`              | Link an existing Jira issue to a run test using the organization Jira integration.        |
-| `currents-list-jira-projects`           | List Jira projects available for the organization integration.                            |
-| `currents-list-jira-issue-types`        | List Jira issue types and custom fields for a Jira project.                               |
-| `currents-get-runs`                     | Retrieves a list of runs for a specific project with optional filtering.                  |
-| `currents-get-run-details`              | Retrieves details of a specific test run.                                                 |
-| `currents-find-run`                     | Find a run by query parameters.                                                           |
-| `currents-cancel-run`                   | Cancel a run in progress.                                                                 |
-| `currents-reset-run`                    | Reset failed spec files in a run to allow re-execution.                                   |
-| `currents-delete-run`                   | Delete a run and all associated data.                                                     |
-| `currents-cancel-run-github-ci`         | Cancel a run by GitHub Actions workflow run ID and attempt number.                        |
-| `currents-get-spec-instance`            | Retrieves debugging data from a specific execution of a test spec file by instanceId.     |
-| `currents-get-spec-files-performance`   | Retrieves spec files performance metrics for a specific project within a date range.      |
-| `currents-get-tests-performance`        | Retrieves aggregated test metrics for a specific project within a date range.             |
-| `currents-get-tests-signatures`         | Generates a unique test signature based on project, spec file path, and test title.       |
-| `currents-get-test-results`             | Retrieves historical test execution results for a specific test signature.                |
-| `currents-get-context`                  | Get test failure context for AI debugging at run, instance, or test level.                |
-| `currents-get-errors-explorer`          | Get aggregated error metrics for a project within a date range.                           |
-| `currents-list-webhooks`                | List all webhooks for a project.                                                          |
-| `currents-create-webhook`               | Create a new webhook for a project.                                                       |
-| `currents-get-webhook`                  | Get a single webhook by ID.                                                               |
-| `currents-update-webhook`               | Update an existing webhook.                                                               |
-| `currents-delete-webhook`               | Delete a webhook.                                                                         |
+| Tool                                    | Description                                                                                                                                      |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `currents-list-actions`                 | List all actions for a project with optional filtering.                                                                                          |
+| `currents-create-action`                | Create a new action for a project.                                                                                                               |
+| `currents-get-action`                   | Get a single action by ID.                                                                                                                       |
+| `currents-update-action`                | Update an existing action.                                                                                                                       |
+| `currents-delete-action`                | Delete (archive) an action.                                                                                                                      |
+| `currents-enable-action`                | Enable a disabled action.                                                                                                                        |
+| `currents-disable-action`               | Disable an active action.                                                                                                                        |
+| `currents-list-affected-tests`          | List tests affected by actions (quarantine, skip, tag) for a project within a date range.                                                        |
+| `currents-get-affected-test-executions` | Get execution details for a specific affected test (by signature) within a date range.                                                           |
+| `currents-get-affected-executions`      | List test executions where a specific action/rule was applied, within a date range.                                                              |
+| `currents-get-projects`                 | Retrieves projects available in the Currents platform.                                                                                           |
+| `currents-get-project`                  | Get a single project by ID.                                                                                                                      |
+| `currents-get-project-insights`         | Get aggregated run and test metrics for a project within a date range.                                                                           |
+| `currents-list-pull-requests`           | List pull-request cards for a project (runs grouped by meta.pr.id).                                                                              |
+| `currents-list-project-terms`           | List cursor-paginated project terms for one type (tag, branch, authorName, etc.).                                                                |
+| `currents-create-jira-issue`            | Create a Jira issue from a run test using the organization Jira integration.                                                                     |
+| `currents-link-jira-issue`              | Link an existing Jira issue to a run test using the organization Jira integration.                                                               |
+| `currents-list-jira-projects`           | List Jira projects available for the organization integration.                                                                                   |
+| `currents-list-jira-issue-types`        | List Jira issue types and custom fields for a Jira project.                                                                                      |
+| `currents-get-runs`                     | Retrieves a list of runs for a specific project with optional filtering.                                                                         |
+| `currents-get-run-details`              | Retrieves details of a specific test run.                                                                                                        |
+| `currents-find-run`                     | Find a run by query parameters.                                                                                                                  |
+| `currents-cancel-run`                   | Cancel a run in progress.                                                                                                                        |
+| `currents-reset-run`                    | Reset failed spec files in a run to allow re-execution.                                                                                          |
+| `currents-delete-run`                   | Delete a run and all associated data.                                                                                                            |
+| `currents-cancel-run-github-ci`         | Cancel a run by GitHub Actions workflow run ID and attempt number.                                                                               |
+| `currents-get-spec-instance`            | Retrieves debugging data from a specific execution of a test spec file by instanceId.                                                            |
+| `currents-get-spec-files-performance`   | Retrieves spec files performance metrics for a specific project within a date range.                                                             |
+| `currents-get-tests-performance`        | Retrieves aggregated test metrics for a specific project within a date range.                                                                    |
+| `currents-get-tests-signatures`         | Generates a unique test signature based on project, spec file path, and test title.                                                              |
+| `currents-get-test-results`             | Retrieves historical test execution results for a specific test signature.                                                                       |
+| `currents-get-context`                  | Get test failure context for AI debugging at run, instance, or test level.                                                                       |
+| `currents-get-errors-explorer`          | Get aggregated error metrics for a project within a date range.                                                                                  |
+| `currents-get-test-evidence`            | Collect evidence artifacts (screenshots, videos, traces, attachments) produced by tests in a CI run, with signed download URLs grouped per test. |
+| `currents-list-webhooks`                | List all webhooks for a project.                                                                                                                 |
+| `currents-create-webhook`               | Create a new webhook for a project.                                                                                                              |
+| `currents-get-webhook`                  | Get a single webhook by ID.                                                                                                                      |
+| `currents-update-webhook`               | Update an existing webhook.                                                                                                                      |
+| `currents-delete-webhook`               | Delete a webhook.                                                                                                                                |
+
+## Skills
+
+Agent skills that teach AI agents multi-step Currents workflows. Copy a skill directory into your agent's skills location (e.g. `.claude/skills/` for Claude Code).
+
+| Skill                                              | Description                                                                                                                        |
+| -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| [`collect-ci-evidence`](skills/collect-ci-evidence) | Collect evidence or a demo of an implemented feature from CI test runs — before/after screenshots, text attachments, videos, traces. |
 
 ## Setup
 
