@@ -7,7 +7,9 @@ on:
 jobs:
   cursor-agent-review:
     name: Cursor Agent Dependency Review
-    if: startsWith(github.head_ref, 'dependabot/')
+    # Gate on the actor, not the branch name: any fork can name a branch
+    # dependabot/... but only real Dependabot PRs run as dependabot[bot].
+    if: github.actor == 'dependabot[bot]' && startsWith(github.head_ref, 'dependabot/')
     runs-on: ubuntu-latest
     timeout-minutes: 35
     permissions:
@@ -18,10 +20,11 @@ jobs:
         id: launch
         env:
           CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+          # Pass PR fields through env, never inline ${{ }} in run: the title is
+          # attacker-controlled and would otherwise be executed as shell.
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
         run: |
-          PR_URL="${{ github.event.pull_request.html_url }}"
-          PR_TITLE="${{ github.event.pull_request.title }}"
-
           PROMPT=$(cat <<'PROMPT_EOF'
           You are reviewing a Dependabot pull request for the currents-mcp repository.
           This is a TypeScript MCP server located in the `mcp-server/` directory.
@@ -197,13 +200,14 @@ jobs:
         env:
           CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          # Pass interpolated values through env, never inline ${{ }} in run:
+          # PR_TITLE is attacker-controlled; the rest follow the same rule.
+          AGENT_ID: ${{ steps.launch.outputs.agent_id }}
+          AGENT_URL: ${{ steps.launch.outputs.agent_url }}
+          AGENT_STATUS: ${{ steps.poll.outputs.status }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
         run: |
-          AGENT_ID="${{ steps.launch.outputs.agent_id }}"
-          AGENT_URL="${{ steps.launch.outputs.agent_url }}"
-          AGENT_STATUS="${{ steps.poll.outputs.status }}"
-          PR_URL="${{ github.event.pull_request.html_url }}"
-          PR_TITLE="${{ github.event.pull_request.title }}"
-
           SUMMARY=""
           if [ -n "$AGENT_ID" ] && [ "$AGENT_ID" != "null" ]; then
             SUMMARY=$(curl -s -u "$CURSOR_API_KEY:" \
