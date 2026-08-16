@@ -81,24 +81,30 @@ jobs:
 
           # Read the ref as data, never as shell source: a branch name is
           # attacker-controlled by anyone with write access.
-          if ! printf '%s' "$RELEASE_BRANCH" | grep -Eq '^release/[A-Za-z0-9._-]+$'; then
+          # `+` is legal in a semver build version and release-it accepts the
+          # branch, so the allowlist has to allow it too.
+          if ! printf '%s' "$RELEASE_BRANCH" | grep -Eq '^release/[A-Za-z0-9.+_-]+$'; then
             echo "Not a release branch, skipping sync PR: $RELEASE_BRANCH"
             exit 0
           fi
 
-          VERSION=$(node -p "require('./package.json').version")
-
-          # Nothing to sync unless release-it actually made the release commit.
-          if [ "$(git log -1 --pretty=%s)" != "chore: release v$VERSION" ]; then
-            echo "No release commit on HEAD, skipping sync PR."
+          # Decide from the remote branch rather than the runner's checkout: a
+          # re-run of this workflow checks out the dispatch sha, which predates
+          # the release commit, and the PR is opened from the remote branch
+          # anyway.
+          REMOTE_TIP=$(git ls-remote origin "refs/heads/$RELEASE_BRANCH" | cut -f1 || true)
+          if [ -z "$REMOTE_TIP" ]; then
+            echo "No origin/$RELEASE_BRANCH, skipping sync PR."
             exit 0
           fi
 
-          # release-it commits before it pushes. If the push failed, the commit
-          # exists only on the runner and a PR would not contain it.
-          REMOTE_HEAD=$(git ls-remote origin "refs/heads/$RELEASE_BRANCH" | cut -f1 || true)
-          if [ "$REMOTE_HEAD" != "$(git rev-parse HEAD)" ]; then
-            echo "Release commit is not on origin/$RELEASE_BRANCH, skipping sync PR."
+          git fetch --quiet --tags origin "$RELEASE_BRANCH"
+          VERSION=$(git show "$REMOTE_TIP:mcp-server/package.json" | jq -r .version)
+
+          # The release is only real once its tag is pushed and contained in
+          # the branch. Ancestry, not equality: the branch may have moved on.
+          if ! git merge-base --is-ancestor "refs/tags/v$VERSION" "$REMOTE_TIP" 2>/dev/null; then
+            echo "v$VERSION is not on origin/$RELEASE_BRANCH, skipping sync PR."
             exit 0
           fi
 
