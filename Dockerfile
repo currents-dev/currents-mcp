@@ -2,8 +2,10 @@
 # syntax=docker/dockerfile:1
 
 # Build stage
+# The build reads skills/ from the repo root, so the layout here mirrors the
+# repo rather than flattening mcp-server/ into the workdir.
 FROM node:24-alpine AS build
-WORKDIR /app
+WORKDIR /repo/mcp-server
 
 # Install dependencies
 COPY mcp-server/package.json mcp-server/package-lock.json ./
@@ -13,7 +15,9 @@ RUN npm ci --production=false --ignore-scripts
 # Copy source code
 COPY mcp-server/tsconfig.json mcp-server/tsdown.config.ts ./
 COPY mcp-server/assets ./assets
+COPY mcp-server/scripts ./scripts
 COPY mcp-server/src ./src
+COPY skills /repo/skills
 
 # Build the project
 RUN npm run build
@@ -23,10 +27,10 @@ FROM node:20-alpine AS runtime
 WORKDIR /app
 
 # Copy build artifacts and dependencies
-COPY --from=build /app/dist ./dist
-COPY --from=build /app/assets ./assets
-COPY --from=build /app/package.json ./package.json
-COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /repo/mcp-server/dist ./dist
+COPY --from=build /repo/mcp-server/assets ./assets
+COPY --from=build /repo/mcp-server/package.json ./package.json
+COPY --from=build /repo/mcp-server/node_modules ./node_modules
 
 # Default API URL environment variable (must include the /v1 path segment)
 ENV CURRENTS_API_URL=https://api.currents.dev/v1

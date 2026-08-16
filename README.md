@@ -66,7 +66,7 @@ Agent skills that teach AI agents multi-step Currents workflows.
 The server publishes every skill as an MCP resource, so a connected agent can
 list and read them without a local copy:
 
-```
+```text
 skill://currents/collect-evidence/SKILL.md
 skill://currents/collect-evidence/references/instrumentation.md
 ```

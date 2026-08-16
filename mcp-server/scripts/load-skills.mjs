@@ -58,23 +58,18 @@ function frontmatterField(source, field) {
 }
 
 /**
- * Collects every skill directory into a manifest. Throws rather than skipping a
- * malformed skill: a skill that silently fails to load here ships as a server
- * with one fewer resource, which nobody notices until an agent cannot find it.
+ * Collects every skill directory into a manifest. Throws when the directory is
+ * unreadable or a skill is malformed, rather than returning what it could read:
+ * a skill that silently fails to load here ships as a server with one fewer
+ * resource, which nobody notices until an agent cannot find it.
  *
  * @returns {Skill[]}
  */
 export function loadSkills() {
-  /** @type {string[]} */
-  let dirs;
-  try {
-    dirs = readdirSync(SKILLS_DIR, { withFileTypes: true })
-      .filter((entry) => entry.isDirectory())
-      .map((entry) => entry.name)
-      .sort();
-  } catch {
-    return [];
-  }
+  const dirs = readdirSync(SKILLS_DIR, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .sort();
 
   return dirs.map((dirName) => {
     const root = join(SKILLS_DIR, dirName);
