@@ -30,10 +30,13 @@ before/after diffs — less unrelated churn. For full pages, fix the viewport in
 the config and mask dynamic regions:
 
 ```ts
-await page.screenshot({
-  fullPage: true,
-  animations: "disabled",
-  mask: [page.getByTestId("clock"), page.getByTestId("avatar")],
+await testInfo.attach("evidence-full-page.png", {
+  body: await page.screenshot({
+    fullPage: true,
+    animations: "disabled",
+    mask: [page.getByTestId("clock"), page.getByTestId("avatar")],
+  }),
+  contentType: "image/png",
 });
 ```
 
