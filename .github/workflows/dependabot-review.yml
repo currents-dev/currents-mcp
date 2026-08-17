@@ -7,9 +7,11 @@ on:
 jobs:
   cursor-agent-review:
     name: Cursor Agent Dependency Review
-    # Gate on the actor, not the branch name: any fork can name a branch
-    # dependabot/... but only real Dependabot PRs run as dependabot[bot].
-    if: github.actor == 'dependabot[bot]' && startsWith(github.head_ref, 'dependabot/')
+    # Gate on the PR author, not the branch name: any fork can name a branch
+    # dependabot/... but only real Dependabot PRs are authored by dependabot[bot].
+    # Use pull_request.user.login rather than github.actor so a maintainer who
+    # reopens or pushes to the PR does not flip the actor and skip the review.
+    if: github.event.pull_request.user.login == 'dependabot[bot]' && startsWith(github.head_ref, 'dependabot/')
     runs-on: ubuntu-latest
     timeout-minutes: 35
     permissions:
