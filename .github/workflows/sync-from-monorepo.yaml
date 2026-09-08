@@ -1,0 +1,122 @@
+# Pulls the shared MCP source the monorepo publishes and opens a PR with it.
+#
+# The monorepo is private and this repository is public, so this one holds no
+# credential for it: a token cannot be scoped below repo level, so a leak here
+# would disclose the whole monorepo. The monorepo publishes a public GHCR
+# artifact instead, which this reads anonymously and commits with its own
+# GITHUB_TOKEN. Neither side holds a credential for the other.
+#
+# src/host is what this copy provides for itself and never arrives from the
+# monorepo. Everything else under src/, plus skills/ and the logo, does.
+name: Sync MCP source from the monorepo
+
+on:
+  schedule:
+    # Daily. The monorepo publishes on a release tag, so this trails a release
+    # by up to a day unless someone dispatches it.
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Print the diff without pushing a branch
+        type: boolean
+        default: true
+      tag:
+        description: Artifact tag to pull (defaults to latest)
+        type: string
+        default: latest
+
+env:
+  ARTIFACT: ghcr.io/currents-dev/mcp-source
+  MARKER: mcp-server/.synced-from
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oras-project/setup-oras@v1
+
+      - name: Pull the published source
+        env:
+          TAG: ${{ inputs.tag || 'latest' }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/payload
+          # Anonymous: the package is public, and this repository deliberately
+          # holds no credential for the monorepo.
+          oras pull "${ARTIFACT}:${TAG}" -o /tmp/payload
+          cat /tmp/payload/manifest.json
+
+      - name: Decide whether anything changed
+        id: check
+        run: |
+          set -euo pipefail
+          SHA="$(jq -r .sha /tmp/payload/manifest.json)"
+          REF="$(jq -r .ref /tmp/payload/manifest.json)"
+          PREVIOUS="$(cat "$MARKER" 2>/dev/null || echo none)"
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+          echo "short=${SHA:0:7}" >> "$GITHUB_OUTPUT"
+          echo "ref=$REF" >> "$GITHUB_OUTPUT"
+          echo "previous=$PREVIOUS" >> "$GITHUB_OUTPUT"
+          if [ "$SHA" = "$PREVIOUS" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Already synced from $SHA."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Copy it in
+        if: steps.check.outputs.changed == 'true'
+        run: |
+          set -euo pipefail
+          # --delete so a file removed upstream is removed here. Excluded paths
+          # are protected from it, which is what keeps src/host.
+          rsync -a --delete --exclude='host/' /tmp/payload/src/ mcp-server/src/
+          rsync -a --delete /tmp/payload/skills/ skills/
+          cp /tmp/payload/assets/logo.png mcp-server/assets/logo.png
+          printf '%s\n' "${{ steps.check.outputs.sha }}" > "$MARKER"
+          git --no-pager diff --stat
+
+      - name: Open the PR
+        if: steps.check.outputs.changed == 'true' && inputs.dry_run != true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHA: ${{ steps.check.outputs.sha }}
+          SHORT: ${{ steps.check.outputs.short }}
+          SOURCE_REF: ${{ steps.check.outputs.ref }}
+          PREVIOUS: ${{ steps.check.outputs.previous }}
+        run: |
+          set -euo pipefail
+          BRANCH="sync/monorepo-${SHORT}"
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git checkout -b "$BRANCH"
+          git add -A
+
+          cat > /tmp/message <<EOF
+          chore: sync MCP source from the monorepo at ${SHORT}
+
+          Published by ${SOURCE_REF}. Previous sync: ${PREVIOUS}.
+          EOF
+          git commit --file /tmp/message
+          git push --force origin "$BRANCH"
+
+          cat > /tmp/body <<EOF
+          Published by \`${SOURCE_REF}\` from monorepo commit \`${SHA}\`.
+
+          Previous sync: \`${PREVIOUS}\`.
+
+          \`src/host/\` is this copy's own and is not touched.
+          EOF
+          # Not the cursor/currents-mcp-parity-* prefix: that one auto-bumps the
+          # version and dispatches a publish on merge, which a source sync
+          # should not do on its own.
+          gh pr create --base main --head "$BRANCH" \
+            --title "Sync MCP source from the monorepo (${SHORT})" \
+            --body-file /tmp/body \
+            || echo "A PR for $BRANCH already exists; it now has the new commit."

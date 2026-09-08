@@ -70,6 +70,40 @@ Publishes the `@currents/mcp` npm package and a public container image to GitHub
 
 ---
 
+### `sync-from-monorepo.yaml` - Sync MCP source from the monorepo
+
+Pulls the shared MCP source the monorepo publishes and opens a PR with it.
+
+**Triggers:**
+
+- Daily schedule (06:17 UTC)
+- Manual dispatch
+
+**Inputs:**
+
+- `dry_run` (boolean, default: true): print the diff without pushing a branch
+- `tag` (string, default: `latest`): artifact tag to pull
+
+**What it does:**
+
+1. Pulls `ghcr.io/currents-dev/mcp-source` with `oras` — anonymously, since the
+   package is public
+2. Compares the artifact's monorepo commit against `mcp-server/.synced-from`
+   and stops if they match
+3. Copies `src/` (except `src/host/`), `skills/` and the logo in
+4. Opens a PR from `sync/monorepo-<short-sha>`
+
+`src/host/` is what this copy provides for itself — its entry points, its pino
+logger and its build-time assets — and never arrives from the monorepo. The
+rest of `src/` is shared, and the monorepo is the side it is edited on.
+
+The monorepo is private and this repository is public, so this one holds no
+credential for it: a token cannot be scoped below repo level, so a leak here
+would disclose the whole monorepo. The monorepo publishes and this pulls, so
+neither side holds a credential for the other.
+
+---
+
 ### `test.yml` - Unit Tests
 
 Runs the unit test suite on every push and pull request.
