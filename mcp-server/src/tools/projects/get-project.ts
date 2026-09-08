@@ -1,9 +1,9 @@
-import { z } from "zod";
-import { fetchApi } from "../../lib/request.js";
-import { logger } from "../../lib/logger.js";
+import { z } from 'zod';
+import { fetchApi } from '../../lib/request.js';
+import { logger } from '../../lib/logger.js';
 
 const zodSchema = z.object({
-  projectId: z.string().describe("The project ID to fetch details for."),
+  projectId: z.string().describe('The project ID to fetch details for.'),
 });
 
 const handler = async ({ projectId }: z.infer<typeof zodSchema>) => {
@@ -15,8 +15,8 @@ const handler = async ({ projectId }: z.infer<typeof zodSchema>) => {
     return {
       content: [
         {
-          type: "text" as const,
-          text: "Failed to retrieve project",
+          type: 'text' as const,
+          text: 'Failed to retrieve project',
         },
       ],
     };
@@ -25,7 +25,7 @@ const handler = async ({ projectId }: z.infer<typeof zodSchema>) => {
   return {
     content: [
       {
-        type: "text" as const,
+        type: 'text' as const,
         text: JSON.stringify(data, null, 2),
       },
     ],

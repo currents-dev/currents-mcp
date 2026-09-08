@@ -1,4 +1,4 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
 declare const __SKILLS__: Skill[];
 
@@ -8,7 +8,7 @@ export type Skill = { name: string; description: string; files: SkillFile[] };
 /** Skill markdown, inlined at build time by scripts/load-skills.ts. */
 export const skills: Skill[] = __SKILLS__;
 
-export const SKILL_MIME_TYPE = "text/markdown";
+export const SKILL_MIME_TYPE = 'text/markdown';
 
 export function skillFileUri(skillName: string, filePath: string): string {
   return `skill://currents/${skillName}/${filePath}`;
@@ -25,7 +25,7 @@ export function registerSkills(server: McpServer): void {
   for (const skill of skills) {
     for (const file of skill.files) {
       const uri = skillFileUri(skill.name, file.path);
-      const isEntryPoint = file.path === "SKILL.md";
+      const isEntryPoint = file.path === 'SKILL.md';
       server.registerResource(
         `${skill.name}/${file.path}`,
         uri,
@@ -37,10 +37,8 @@ export function registerSkills(server: McpServer): void {
           mimeType: SKILL_MIME_TYPE,
         },
         () => ({
-          contents: [
-            { uri, mimeType: SKILL_MIME_TYPE, text: file.content },
-          ],
-        }),
+          contents: [{ uri, mimeType: SKILL_MIME_TYPE, text: file.content }],
+        })
       );
     }
   }

@@ -1,9 +1,9 @@
-import { z } from "zod";
-import { deleteApi } from "../../lib/request.js";
-import { logger } from "../../lib/logger.js";
+import { z } from 'zod';
+import { deleteApi } from '../../lib/request.js';
+import { logger } from '../../lib/logger.js';
 
 const zodSchema = z.object({
-  actionId: z.string().describe("The action ID to delete (archive)."),
+  actionId: z.string().describe('The action ID to delete (archive).'),
 });
 
 const handler = async ({ actionId }: z.infer<typeof zodSchema>) => {
@@ -15,8 +15,8 @@ const handler = async ({ actionId }: z.infer<typeof zodSchema>) => {
     return {
       content: [
         {
-          type: "text" as const,
-          text: "Failed to delete action",
+          type: 'text' as const,
+          text: 'Failed to delete action',
         },
       ],
     };
@@ -25,7 +25,7 @@ const handler = async ({ actionId }: z.infer<typeof zodSchema>) => {
   return {
     content: [
       {
-        type: "text" as const,
+        type: 'text' as const,
         text: JSON.stringify(data, null, 2),
       },
     ],

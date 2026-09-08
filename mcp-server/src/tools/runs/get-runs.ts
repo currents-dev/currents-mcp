@@ -1,47 +1,49 @@
-import { z } from "zod";
-import { fetchApi } from "../../lib/request.js";
-import { logger } from "../../lib/logger.js";
+import { z } from 'zod';
+import { fetchApi } from '../../lib/request.js';
+import { logger } from '../../lib/logger.js';
 
 const zodSchema = z.object({
-  projectId: z
-    .string()
-    .describe("The project ID to fetch runs from."),
+  projectId: z.string().describe('The project ID to fetch runs from.'),
   limit: z
     .number()
     .int()
     .min(1)
     .max(100)
     .optional()
-    .describe("The maximum number of results to return per page (default: 10, max: 100)."),
+    .describe(
+      'The maximum number of results to return per page (default: 10, max: 100).'
+    ),
   starting_after: z
     .string()
     .optional()
-    .describe(
-      "Cursor for pagination. Returns items after this cursor value."
-    ),
+    .describe('Cursor for pagination. Returns items after this cursor value.'),
   ending_before: z
     .string()
     .optional()
-    .describe(
-      "Cursor for pagination. Returns items before this cursor value."
-    ),
+    .describe('Cursor for pagination. Returns items before this cursor value.'),
   branches: z
     .array(z.string())
     .optional()
-    .describe("Filter runs by git branch names (can be specified multiple times)."),
+    .describe(
+      'Filter runs by git branch names (can be specified multiple times).'
+    ),
   tags: z
     .array(z.string())
     .optional()
-    .describe("Filter runs by tags (can be specified multiple times). Use tag_operator to control matching behavior."),
+    .describe(
+      'Filter runs by tags (can be specified multiple times). Use tag_operator to control matching behavior.'
+    ),
   tag_operator: z
-    .enum(["AND", "OR"])
+    .enum(['AND', 'OR'])
     .optional()
-    .describe("Logical operator for tag filtering. AND requires all tags to be present (default), OR requires any tag to be present."),
+    .describe(
+      'Logical operator for tag filtering. AND requires all tags to be present (default), OR requires any tag to be present.'
+    ),
   search: z
     .string()
     .max(200)
     .optional()
-    .describe("Search runs by ciBuildId or commit message. Case-insensitive."),
+    .describe('Search runs by ciBuildId or commit message. Case-insensitive.'),
   pr_id: z
     .string()
     .min(1)
@@ -49,28 +51,34 @@ const zodSchema = z.object({
     .regex(/^[!-~]+$/)
     .optional()
     .describe(
-      "Filter runs by normalized pull request id (meta.pr.id). Printable ASCII only, max 128 characters."
+      'Filter runs by normalized pull request id (meta.pr.id). Printable ASCII only, max 128 characters.'
     ),
   authors: z
     .array(z.string())
     .optional()
-    .describe("Filter runs by git commit author names (can be specified multiple times)."),
+    .describe(
+      'Filter runs by git commit author names (can be specified multiple times).'
+    ),
   status: z
-    .array(z.enum(["PASSED", "FAILED", "RUNNING", "FAILING"]))
+    .array(z.enum(['PASSED', 'FAILED', 'RUNNING', 'FAILING']))
     .optional()
-    .describe("Filter runs by status. PASSED: all tests passed, FAILED: some tests failed, RUNNING: run is in progress and passing, FAILING: run is in progress but has failures."),
+    .describe(
+      'Filter runs by status. PASSED: all tests passed, FAILED: some tests failed, RUNNING: run is in progress and passing, FAILING: run is in progress but has failures.'
+    ),
   completion_state: z
-    .array(z.enum(["COMPLETE", "IN_PROGRESS", "CANCELED", "TIMEOUT"]))
+    .array(z.enum(['COMPLETE', 'IN_PROGRESS', 'CANCELED', 'TIMEOUT']))
     .optional()
-    .describe("Filter runs by completion state. COMPLETE: run finished normally, IN_PROGRESS: run is still executing, CANCELED: run was canceled, TIMEOUT: run timed out."),
+    .describe(
+      'Filter runs by completion state. COMPLETE: run finished normally, IN_PROGRESS: run is still executing, CANCELED: run was canceled, TIMEOUT: run timed out.'
+    ),
   date_start: z
     .string()
     .optional()
-    .describe("Filter runs created on or after this date (ISO 8601 format)."),
+    .describe('Filter runs created on or after this date (ISO 8601 format).'),
   date_end: z
     .string()
     .optional()
-    .describe("Filter runs created before this date (ISO 8601 format)."),
+    .describe('Filter runs created before this date (ISO 8601 format).'),
 });
 
 const handler = async ({
@@ -90,54 +98,56 @@ const handler = async ({
   date_end,
 }: z.infer<typeof zodSchema>) => {
   const queryParams = new URLSearchParams();
-  queryParams.append("limit", limit.toString());
+  queryParams.append('limit', limit.toString());
 
   if (starting_after) {
-    queryParams.append("starting_after", starting_after);
+    queryParams.append('starting_after', starting_after);
   }
 
   if (ending_before) {
-    queryParams.append("ending_before", ending_before);
+    queryParams.append('ending_before', ending_before);
   }
 
   if (branches && branches.length > 0) {
-    branches.forEach((b) => queryParams.append("branches[]", b));
+    branches.forEach((b) => queryParams.append('branches[]', b));
   }
 
   if (tags && tags.length > 0) {
-    tags.forEach((t) => queryParams.append("tags[]", t));
+    tags.forEach((t) => queryParams.append('tags[]', t));
   }
 
   if (tag_operator) {
-    queryParams.append("tag_operator", tag_operator);
+    queryParams.append('tag_operator', tag_operator);
   }
 
   if (search) {
-    queryParams.append("search", search);
+    queryParams.append('search', search);
   }
 
   if (pr_id) {
-    queryParams.append("pr_id", pr_id);
+    queryParams.append('pr_id', pr_id);
   }
 
   if (authors && authors.length > 0) {
-    authors.forEach((a) => queryParams.append("authors[]", a));
+    authors.forEach((a) => queryParams.append('authors[]', a));
   }
 
   if (status && status.length > 0) {
-    status.forEach((s) => queryParams.append("status", s));
+    status.forEach((s) => queryParams.append('status', s));
   }
 
   if (completion_state && completion_state.length > 0) {
-    completion_state.forEach((cs) => queryParams.append("completion_state", cs));
+    completion_state.forEach((cs) =>
+      queryParams.append('completion_state', cs)
+    );
   }
 
   if (date_start) {
-    queryParams.append("date_start", date_start);
+    queryParams.append('date_start', date_start);
   }
 
   if (date_end) {
-    queryParams.append("date_end", date_end);
+    queryParams.append('date_end', date_end);
   }
 
   logger.info(`Fetching runs with query params: ${queryParams.toString()}`);
@@ -150,8 +160,8 @@ const handler = async ({
     return {
       content: [
         {
-          type: "text" as const,
-          text: "Failed to retrieve runs",
+          type: 'text' as const,
+          text: 'Failed to retrieve runs',
         },
       ],
     };
@@ -160,7 +170,7 @@ const handler = async ({
   return {
     content: [
       {
-        type: "text" as const,
+        type: 'text' as const,
         text: JSON.stringify(data, null, 2),
       },
     ],

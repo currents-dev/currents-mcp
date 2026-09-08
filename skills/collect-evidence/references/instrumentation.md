@@ -9,18 +9,20 @@ key for before/after comparisons — keep them deterministic and stable.
 ### Screenshot evidence
 
 ```ts
-import { test, expect } from "@playwright/test";
+import { test, expect } from '@playwright/test';
 
-test("evidence: order summary shows applied discount", async ({ page }, testInfo) => {
-  await page.goto("/checkout");
-  await page.getByRole("button", { name: "Apply coupon" }).click();
-  await expect(page.getByTestId("order-summary")).toBeVisible();
+test('evidence: order summary shows applied discount', async ({
+  page,
+}, testInfo) => {
+  await page.goto('/checkout');
+  await page.getByRole('button', { name: 'Apply coupon' }).click();
+  await expect(page.getByTestId('order-summary')).toBeVisible();
 
-  await testInfo.attach("evidence-order-summary.png", {
-    body: await page.getByTestId("order-summary").screenshot({
-      animations: "disabled",
+  await testInfo.attach('evidence-order-summary.png', {
+    body: await page.getByTestId('order-summary').screenshot({
+      animations: 'disabled',
     }),
-    contentType: "image/png",
+    contentType: 'image/png',
   });
 });
 ```
@@ -30,13 +32,13 @@ before/after diffs — less unrelated churn. For full pages, fix the viewport in
 the config and mask dynamic regions:
 
 ```ts
-await testInfo.attach("evidence-full-page.png", {
+await testInfo.attach('evidence-full-page.png', {
   body: await page.screenshot({
     fullPage: true,
-    animations: "disabled",
-    mask: [page.getByTestId("clock"), page.getByTestId("avatar")],
+    animations: 'disabled',
+    mask: [page.getByTestId('clock'), page.getByTestId('avatar')],
   }),
-  contentType: "image/png",
+  contentType: 'image/png',
 });
 ```
 
@@ -45,13 +47,15 @@ await testInfo.attach("evidence-full-page.png", {
 For CLI output, API responses, or computed values — anything diffable:
 
 ```ts
-test("evidence: pricing API returns discounted totals", async ({ request }, testInfo) => {
-  const response = await request.get("/api/cart/total?coupon=SAVE10");
+test('evidence: pricing API returns discounted totals', async ({
+  request,
+}, testInfo) => {
+  const response = await request.get('/api/cart/total?coupon=SAVE10');
   const body = await response.json();
 
-  await testInfo.attach("evidence-cart-total.json", {
+  await testInfo.attach('evidence-cart-total.json', {
     body: JSON.stringify(body, null, 2),
-    contentType: "application/json",
+    contentType: 'application/json',
   });
 
   expect(body.total).toBe(90);
@@ -61,9 +65,9 @@ test("evidence: pricing API returns discounted totals", async ({ request }, test
 Any file works the same way (`path` instead of `body`):
 
 ```ts
-await testInfo.attach("evidence-report.txt", {
+await testInfo.attach('evidence-report.txt', {
   path: outputFilePath,
-  contentType: "text/plain",
+  contentType: 'text/plain',
 });
 ```
 
@@ -74,20 +78,20 @@ failures; demo evidence usually comes from passing tests, so scope an
 always-on policy to the evidence tests with a dedicated project:
 
 ```ts
-import { defineConfig } from "@playwright/test";
+import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
   use: {
     viewport: { width: 1280, height: 720 },
-    screenshot: "on",
-    video: "retain-on-failure",
-    trace: "retain-on-failure",
+    screenshot: 'on',
+    video: 'retain-on-failure',
+    trace: 'retain-on-failure',
   },
   projects: [
     {
-      name: "evidence",
+      name: 'evidence',
       testMatch: /.*evidence.*\.spec\.ts/,
-      use: { video: "on", trace: "on" },
+      use: { video: 'on', trace: 'on' },
     },
   ],
 });
@@ -111,11 +115,11 @@ Requires `cypress-cloud` for artifact reporting to Currents (note: Currents
 suspended integration for Cypress 13+ — verify version compatibility).
 
 ```js
-it("evidence: order summary shows applied discount", () => {
-  cy.visit("/checkout");
-  cy.get("[data-testid=apply-coupon]").click();
-  cy.get("[data-testid=order-summary]").should("be.visible");
-  cy.screenshot("evidence-order-summary", { capture: "viewport" });
+it('evidence: order summary shows applied discount', () => {
+  cy.visit('/checkout');
+  cy.get('[data-testid=apply-coupon]').click();
+  cy.get('[data-testid=order-summary]').should('be.visible');
+  cy.screenshot('evidence-order-summary', { capture: 'viewport' });
 });
 ```
 

@@ -1,33 +1,35 @@
-import { z } from "zod";
-import { putApi } from "../../lib/request.js";
-import { logger } from "../../lib/logger.js";
+import { z } from 'zod';
+import { putApi } from '../../lib/request.js';
+import { logger } from '../../lib/logger.js';
 
 const zodSchema = z.object({
-  hookId: z
-    .string()
-    .describe("The webhook ID (UUID)."),
+  hookId: z.string().describe('The webhook ID (UUID).'),
   url: z
     .string()
     .max(2048)
     .optional()
-    .describe("URL to send webhook POST requests to."),
+    .describe('URL to send webhook POST requests to.'),
   headers: z
     .string()
     .max(4096)
     .optional()
     .nullable()
-    .describe("Custom headers as a JSON object string (e.g., {\"Authorization\": \"Bearer token\"})."),
+    .describe(
+      'Custom headers as a JSON object string (e.g., {"Authorization": "Bearer token"}).'
+    ),
   hookEvents: z
-    .array(z.enum(["RUN_FINISH", "RUN_START", "RUN_TIMEOUT", "RUN_CANCELED"]))
+    .array(z.enum(['RUN_FINISH', 'RUN_START', 'RUN_TIMEOUT', 'RUN_CANCELED']))
     .optional()
-    .describe("Events that trigger this webhook. Options: RUN_FINISH (run completed), RUN_START (run started), RUN_TIMEOUT (run timed out), RUN_CANCELED (run was cancelled)."),
+    .describe(
+      'Events that trigger this webhook. Options: RUN_FINISH (run completed), RUN_START (run started), RUN_TIMEOUT (run timed out), RUN_CANCELED (run was cancelled).'
+    ),
   label: z
     .string()
     .min(1)
     .max(255)
     .optional()
     .nullable()
-    .describe("Human-readable label for the webhook."),
+    .describe('Human-readable label for the webhook.'),
 });
 
 const handler = async ({
@@ -59,8 +61,8 @@ const handler = async ({
     return {
       content: [
         {
-          type: "text" as const,
-          text: "Error: At least one field to update must be provided (url, headers, hookEvents, or label).",
+          type: 'text' as const,
+          text: 'Error: At least one field to update must be provided (url, headers, hookEvents, or label).',
         },
       ],
     };
@@ -74,8 +76,8 @@ const handler = async ({
     return {
       content: [
         {
-          type: "text" as const,
-          text: "Failed to update webhook",
+          type: 'text' as const,
+          text: 'Failed to update webhook',
         },
       ],
     };
@@ -84,7 +86,7 @@ const handler = async ({
   return {
     content: [
       {
-        type: "text" as const,
+        type: 'text' as const,
         text: JSON.stringify(data, null, 2),
       },
     ],

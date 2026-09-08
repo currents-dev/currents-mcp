@@ -1,44 +1,49 @@
-import { z } from "zod";
-import { postApi } from "../../lib/request.js";
-import { logger } from "../../lib/logger.js";
+import { z } from 'zod';
+import { postApi } from '../../lib/request.js';
+import { logger } from '../../lib/logger.js';
 
 const zodSchema = z
   .object({
-    projectId: z.string().describe("Currents project ID."),
+    projectId: z.string().describe('Currents project ID.'),
     jiraIssueKey: z
       .string()
       .min(1)
-      .describe("Existing Jira issue key to link (e.g. PROJ-123)."),
-    runId: z.string().min(1).describe("Currents run ID containing the test."),
-    testId: z.string().min(1).describe("Test ID within the run."),
+      .describe('Existing Jira issue key to link (e.g. PROJ-123).'),
+    runId: z.string().min(1).describe('Currents run ID containing the test.'),
+    testId: z.string().min(1).describe('Test ID within the run.'),
     jiraInstallationId: z
       .string()
       .min(1)
-      .describe("Jira installation ID for the org integration (dashboard Installation ID)."),
-    jiraProjectId: z.string().min(1).describe("Jira project ID for the linked issue."),
+      .describe(
+        'Jira installation ID for the org integration (dashboard Installation ID).'
+      ),
+    jiraProjectId: z
+      .string()
+      .min(1)
+      .describe('Jira project ID for the linked issue.'),
     jiraIssueType: z
       .string()
       .min(1)
-      .describe("Jira issue type identifier stored on the Currents ticket."),
+      .describe('Jira issue type identifier stored on the Currents ticket.'),
     comment: z
       .string()
       .optional()
       .describe(
-        "Optional text prepended to the Jira comment and Currents issue description before automated test context."
+        'Optional text prepended to the Jira comment and Currents issue description before automated test context.'
       ),
     includeContextInComment: z
       .boolean()
       .optional()
       .describe(
-        "When true (default), appends automated test context to the Jira comment. When false, comment is required and used alone."
+        'When true (default), appends automated test context to the Jira comment. When false, comment is required and used alone.'
       ),
   })
   .superRefine((val, ctx) => {
     if (val.includeContextInComment === false && !val.comment?.trim()) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "comment is required when includeContextInComment is false",
-        path: ["comment"],
+        message: 'comment is required when includeContextInComment is false',
+        path: ['comment'],
       });
     }
   });
@@ -74,12 +79,12 @@ const handler = async ({
   const data = await postApi(path, body);
   if (!data) {
     return {
-      content: [{ type: "text" as const, text: "Failed to link Jira issue" }],
+      content: [{ type: 'text' as const, text: 'Failed to link Jira issue' }],
     };
   }
 
   return {
-    content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }],
+    content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }],
   };
 };
 

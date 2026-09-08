@@ -1,68 +1,62 @@
-import { z } from "zod";
-import { fetchApi } from "../../lib/request.js";
-import { logger } from "../../lib/logger.js";
+import { z } from 'zod';
+import { fetchApi } from '../../lib/request.js';
+import { logger } from '../../lib/logger.js';
 
 const zodSchema = z.object({
-  projectId: z
-    .string()
-    .describe("The project ID to fetch insights for."),
-  date_start: z
-    .string()
-    .describe("Start date in ISO 8601 format (required)."),
-  date_end: z
-    .string()
-    .describe("End date in ISO 8601 format (required)."),
+  projectId: z.string().describe('The project ID to fetch insights for.'),
+  date_start: z.string().describe('Start date in ISO 8601 format (required).'),
+  date_end: z.string().describe('End date in ISO 8601 format (required).'),
   resolution: z
-    .enum(["1h", "1d", "1w"])
+    .enum(['1h', '1d', '1w'])
     .optional()
     .describe("Time resolution for histogram data. Defaults to '1d'."),
   tags: z
     .array(z.string())
     .optional()
-    .describe("Filter by tags (can be specified multiple times)."),
+    .describe('Filter by tags (can be specified multiple times).'),
   branches: z
     .array(z.string())
     .optional()
-    .describe("Filter by branches (can be specified multiple times)."),
+    .describe('Filter by branches (can be specified multiple times).'),
   groups: z
     .array(z.string())
     .optional()
-    .describe("Filter by groups (can be specified multiple times)."),
+    .describe('Filter by groups (can be specified multiple times).'),
   authors: z
     .array(z.string())
     .optional()
-    .describe("Filter by git authors (can be specified multiple times)."),
+    .describe('Filter by git authors (can be specified multiple times).'),
 });
 
 const handler = async ({
   projectId,
   date_start,
   date_end,
-  resolution = "1d",
+  resolution = '1d',
   tags,
   branches,
   groups,
   authors,
 }: z.infer<typeof zodSchema>) => {
   const queryParams = new URLSearchParams();
-  queryParams.append("date_start", date_start);
-  queryParams.append("date_end", date_end);
-  queryParams.append("resolution", resolution);
+  queryParams.append('date_start', date_start);
+  queryParams.append('date_end', date_end);
+  queryParams.append('resolution', resolution);
 
   if (tags && tags.length > 0) {
-    tags.forEach((t) => queryParams.append("tags[]", t));
+    tags.forEach((t) => queryParams.append('tags[]', t));
   }
 
   if (branches && branches.length > 0) {
-    branches.forEach((b) => queryParams.append("branches[]", b));
+    branches.forEach((b) => queryParams.append('branches[]', b));
   }
 
   if (groups && groups.length > 0) {
-    groups.forEach((g) => queryParams.append("groups[]", g));
+    groups.forEach((g) => queryParams.append('groups[]', g));
   }
 
   if (authors && authors.length > 0) {
-    authors.forEach((a) => queryParams.append("authors[]", a));
+    authors.forEach((a) => queryParams.append('authors[]', a));
   }
 
   logger.info(
@@ -77,8 +71,8 @@ const handler = async ({
     return {
       content: [
         {
-          type: "text" as const,
-          text: "Failed to retrieve project insights",
+          type: 'text' as const,
+          text: 'Failed to retrieve project insights',
         },
       ],
     };
@@ -87,7 +81,7 @@ const handler = async ({
   return {
     content: [
       {
-        type: "text" as const,
+        type: 'text' as const,
         text: JSON.stringify(data, null, 2),
       },
     ],

@@ -1,8 +1,8 @@
-import { z } from "zod";
-import { fetchApi } from "../../lib/request.js";
+import { z } from 'zod';
+import { fetchApi } from '../../lib/request.js';
 
 const zodSchema = z.object({
-  runId: z.string().describe("The run ID to fetch details for."),
+  runId: z.string().describe('The run ID to fetch details for.'),
 });
 
 const handler = async ({ runId }: z.infer<typeof zodSchema>) => {
@@ -12,8 +12,8 @@ const handler = async ({ runId }: z.infer<typeof zodSchema>) => {
     return {
       content: [
         {
-          type: "text" as const,
-          text: "Failed to retrieve run data",
+          type: 'text' as const,
+          text: 'Failed to retrieve run data',
         },
       ],
     };
@@ -22,7 +22,7 @@ const handler = async ({ runId }: z.infer<typeof zodSchema>) => {
   return {
     content: [
       {
-        type: "text" as const,
+        type: 'text' as const,
         text: JSON.stringify(data, null, 2),
       },
     ],

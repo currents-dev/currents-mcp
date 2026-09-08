@@ -1,23 +1,21 @@
-import { z } from "zod";
-import { putApi } from "../../lib/request.js";
-import { logger } from "../../lib/logger.js";
+import { z } from 'zod';
+import { putApi } from '../../lib/request.js';
+import { logger } from '../../lib/logger.js';
 
 const zodSchema = z.object({
-  githubRunId: z
-    .string()
-    .describe("GitHub Actions workflow run ID."),
+  githubRunId: z.string().describe('GitHub Actions workflow run ID.'),
   githubRunAttempt: z
     .number()
     .int()
-    .describe("GitHub Actions workflow run attempt number."),
+    .describe('GitHub Actions workflow run attempt number.'),
   projectId: z
     .string()
     .optional()
-    .describe("Optional project ID to scope the cancellation."),
+    .describe('Optional project ID to scope the cancellation.'),
   ciBuildId: z
     .string()
     .optional()
-    .describe("Optional CI build ID to scope the cancellation."),
+    .describe('Optional CI build ID to scope the cancellation.'),
 });
 
 interface CancelRunGithubCIRequest {
@@ -64,8 +62,8 @@ const handler = async ({
     return {
       content: [
         {
-          type: "text" as const,
-          text: "Failed to cancel run by GitHub CI",
+          type: 'text' as const,
+          text: 'Failed to cancel run by GitHub CI',
         },
       ],
     };
@@ -74,7 +72,7 @@ const handler = async ({
   return {
     content: [
       {
-        type: "text" as const,
+        type: 'text' as const,
         text: JSON.stringify(data, null, 2),
       },
     ],

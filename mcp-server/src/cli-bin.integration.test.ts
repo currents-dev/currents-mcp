@@ -12,31 +12,31 @@
  *    (same artifact shape as registry install, minus release-only publish.cjs
  *    mutations).
  */
-import { existsSync, mkdtempSync, readdirSync } from "node:fs";
-import { tmpdir } from "node:os";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
-import { execNpm, spawnNpx } from "../test/npm-exec.js";
+import { existsSync, mkdtempSync, readdirSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { describe, expect, it } from 'vitest';
+import { execNpm, spawnNpx } from '../test/npm-exec.js';
 
-const root = fileURLToPath(new URL("..", import.meta.url));
-const buildIndex = path.join(root, "dist", "index.mjs");
+const root = fileURLToPath(new URL('..', import.meta.url));
+const buildIndex = path.join(root, 'dist', 'index.mjs');
 
 function packTarball(packDest: string): string {
   // Respect `files` and standard pack rules; do not mutate package.json (unlike release `publish.cjs`).
-  execNpm(["pack", "--ignore-scripts", "--pack-destination", packDest], {
+  execNpm(['pack', '--ignore-scripts', '--pack-destination', packDest], {
     cwd: root,
-    stdio: ["ignore", "pipe", "pipe"],
+    stdio: ['ignore', 'pipe', 'pipe'],
   });
-  const tgz = readdirSync(packDest).filter((f) => f.endsWith(".tgz"));
+  const tgz = readdirSync(packDest).filter((f) => f.endsWith('.tgz'));
   if (tgz.length !== 1) {
-    throw new Error(`expected one .tgz in ${packDest}, got: ${tgz.join(", ")}`);
+    throw new Error(`expected one .tgz in ${packDest}, got: ${tgz.join(', ')}`);
   }
   return path.join(packDest, tgz[0]);
 }
 
 describe.skipIf(!existsSync(buildIndex))(
-  "packaged CLI (npx / bin)",
+  'packaged CLI (npx / bin)',
   { timeout: 60_000 },
   () => {
     /**
@@ -47,24 +47,24 @@ describe.skipIf(!existsSync(buildIndex))(
      *    stdin closes; we cap wall time with `spawnSync` timeout). Accept either
      *    that log line or process timeout as success so slow CI still passes.
      *  */
-    it("starts via npx --package tarball mcp", () => {
-      const packDir = mkdtempSync(path.join(tmpdir(), "mcp-pack-"));
+    it('starts via npx --package tarball mcp', () => {
+      const packDir = mkdtempSync(path.join(tmpdir(), 'mcp-pack-'));
       const tarball = packTarball(packDir);
-      const r = spawnNpx(["-y", "--package", tarball, "mcp"], {
+      const r = spawnNpx(['-y', '--package', tarball, 'mcp'], {
         cwd: packDir,
         timeout: 45_000,
-        encoding: "utf-8",
-        stdio: ["pipe", "pipe", "pipe"],
+        encoding: 'utf-8',
+        stdio: ['pipe', 'pipe', 'pipe'],
         env: {
           ...process.env,
           // Required for server startup; value is unused in this smoke test.
-          CURRENTS_API_KEY: "vitest-cli-pack-smoke",
+          CURRENTS_API_KEY: 'vitest-cli-pack-smoke',
         },
       });
-      const combined = `${r.stdout ?? ""}${r.stderr ?? ""}`;
+      const combined = `${r.stdout ?? ''}${r.stderr ?? ''}`;
       const timedOut =
-        r.error != null && "code" in r.error && r.error.code === "ETIMEDOUT";
-      expect(combined.includes("Currents MCP Server is live") || timedOut).toBe(
+        r.error != null && 'code' in r.error && r.error.code === 'ETIMEDOUT';
+      expect(combined.includes('Currents MCP Server is live') || timedOut).toBe(
         true
       );
     });
@@ -76,22 +76,22 @@ describe.skipIf(!existsSync(buildIndex))(
      * - Assert the shim exists. This catches broken `bin`, wrong `files` (missing
      *    `dist/index.mjs`), or install layout issues without spawning the server.
      * */
-    it("exposes mcp bin after npm install from tarball", () => {
-      const packDir = mkdtempSync(path.join(tmpdir(), "mcp-pack-"));
-      const installDir = mkdtempSync(path.join(tmpdir(), "mcp-install-"));
+    it('exposes mcp bin after npm install from tarball', () => {
+      const packDir = mkdtempSync(path.join(tmpdir(), 'mcp-pack-'));
+      const installDir = mkdtempSync(path.join(tmpdir(), 'mcp-install-'));
       const tarball = packTarball(packDir);
-      execNpm(["init", "-y"], {
+      execNpm(['init', '-y'], {
         cwd: installDir,
-        stdio: "ignore",
+        stdio: 'ignore',
       });
-      execNpm(["install", tarball], {
+      execNpm(['install', tarball], {
         cwd: installDir,
-        stdio: "ignore",
+        stdio: 'ignore',
       });
-      const binDir = path.join(installDir, "node_modules", ".bin");
+      const binDir = path.join(installDir, 'node_modules', '.bin');
       const hasMcp =
-        existsSync(path.join(binDir, "mcp")) ||
-        existsSync(path.join(binDir, "mcp.cmd"));
+        existsSync(path.join(binDir, 'mcp')) ||
+        existsSync(path.join(binDir, 'mcp.cmd'));
       expect(hasMcp).toBe(true);
     });
   }

@@ -4,15 +4,15 @@ import {
   type IncomingMessage,
   type Server,
   type ServerResponse,
-} from "node:http";
-import { fileURLToPath } from "node:url";
-import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { requestContext } from "./lib/context.js";
-import { logger } from "./lib/logger.js";
-import { createMcpServer } from "./server.js";
+} from 'node:http';
+import { fileURLToPath } from 'node:url';
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import { requestContext } from './lib/context.js';
+import { logger } from './lib/logger.js';
+import { createMcpServer } from './server.js';
 
 const PORT = Number(process.env.PORT ?? 3000);
-const MCP_PATH = "/mcp";
+const MCP_PATH = '/mcp';
 
 /**
  * JSON-RPC 2.0 error codes used by the MCP HTTP transport.
@@ -49,17 +49,17 @@ async function readJsonBody(req: IncomingMessage): Promise<unknown> {
   if (chunks.length === 0) {
     return undefined;
   }
-  const raw = Buffer.concat(chunks).toString("utf-8");
+  const raw = Buffer.concat(chunks).toString('utf-8');
   return raw ? JSON.parse(raw) : undefined;
 }
 
 function sendJson(res: ServerResponse, status: number, payload: unknown): void {
-  res.writeHead(status, { "Content-Type": "application/json" });
+  res.writeHead(status, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify(payload));
 }
 
 function jsonRpcError(code: number, message: string) {
-  return { jsonrpc: "2.0" as const, error: { code, message }, id: null };
+  return { jsonrpc: '2.0' as const, error: { code, message }, id: null };
 }
 
 /**
@@ -69,13 +69,13 @@ function jsonRpcError(code: number, message: string) {
  */
 async function handleMcpPost(
   req: IncomingMessage,
-  res: ServerResponse,
+  res: ServerResponse
 ): Promise<void> {
   let body: unknown;
   try {
     body = await readJsonBody(req);
   } catch {
-    sendJson(res, 400, jsonRpcError(JSON_RPC_ERROR.PARSE_ERROR, "Parse error"));
+    sendJson(res, 400, jsonRpcError(JSON_RPC_ERROR.PARSE_ERROR, 'Parse error'));
     return;
   }
 
@@ -85,7 +85,7 @@ async function handleMcpPost(
     sessionIdGenerator: undefined,
   });
 
-  res.on("close", () => {
+  res.on('close', () => {
     void transport.close();
     void server.close();
   });
@@ -93,12 +93,16 @@ async function handleMcpPost(
   try {
     await server.connect(transport);
     await requestContext.run({ apiKey }, () =>
-      transport.handleRequest(req, res, body),
+      transport.handleRequest(req, res, body)
     );
   } catch (error) {
-    logger.error({ err: error }, "Error handling MCP request");
+    logger.error({ err: error }, 'Error handling MCP request');
     if (!res.headersSent) {
-      sendJson(res, 500, jsonRpcError(JSON_RPC_ERROR.INTERNAL_ERROR, "Internal server error"));
+      sendJson(
+        res,
+        500,
+        jsonRpcError(JSON_RPC_ERROR.INTERNAL_ERROR, 'Internal server error')
+      );
     }
   }
 }
@@ -106,27 +110,31 @@ async function handleMcpPost(
 export function createHttpServer(): Server {
   return createServer((req, res) => {
     const url = new URL(
-      req.url ?? "/",
-      `http://${req.headers.host ?? "localhost"}`,
+      req.url ?? '/',
+      `http://${req.headers.host ?? 'localhost'}`
     );
 
-    if (req.method === "GET" && url.pathname === "/healthz") {
-      sendJson(res, 200, { status: "ok" });
+    if (req.method === 'GET' && url.pathname === '/healthz') {
+      sendJson(res, 200, { status: 'ok' });
       return;
     }
 
     if (url.pathname === MCP_PATH) {
-      if (req.method === "POST") {
+      if (req.method === 'POST') {
         void handleMcpPost(req, res);
         return;
       }
       // Stateless: no standalone SSE stream (GET) or session teardown (DELETE).
-      res.writeHead(405, { Allow: "POST", "Content-Type": "application/json" });
-      res.end(JSON.stringify(jsonRpcError(JSON_RPC_ERROR.SERVER_ERROR, "Method not allowed")));
+      res.writeHead(405, { Allow: 'POST', 'Content-Type': 'application/json' });
+      res.end(
+        JSON.stringify(
+          jsonRpcError(JSON_RPC_ERROR.SERVER_ERROR, 'Method not allowed')
+        )
+      );
       return;
     }
 
-    sendJson(res, 404, { error: "Not found" });
+    sendJson(res, 404, { error: 'Not found' });
   });
 }
 
@@ -134,7 +142,7 @@ export function start(port: number = PORT): Server {
   const httpServer = createHttpServer();
   httpServer.listen(port, () => {
     logger.debug(
-      `🚀 Currents MCP HTTP server listening on :${port}${MCP_PATH}`,
+      `🚀 Currents MCP HTTP server listening on :${port}${MCP_PATH}`
     );
   });
   return httpServer;

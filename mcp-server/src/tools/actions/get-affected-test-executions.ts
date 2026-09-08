@@ -1,40 +1,34 @@
-import { z } from "zod";
-import { fetchApi } from "../../lib/request.js";
-import { logger } from "../../lib/logger.js";
+import { z } from 'zod';
+import { fetchApi } from '../../lib/request.js';
+import { logger } from '../../lib/logger.js';
 
 const zodSchema = z.object({
-  projectId: z
-    .string()
-    .describe("The project ID."),
+  projectId: z.string().describe('The project ID.'),
   signature: z
     .string()
-    .describe("The test signature hash to fetch affected executions for."),
-  date_start: z
-    .string()
-    .describe("Start date in ISO 8601 format (required)."),
-  date_end: z
-    .string()
-    .describe("End date in ISO 8601 format (required)."),
+    .describe('The test signature hash to fetch affected executions for.'),
+  date_start: z.string().describe('Start date in ISO 8601 format (required).'),
+  date_end: z.string().describe('End date in ISO 8601 format (required).'),
   limit: z
     .number()
     .int()
     .min(1)
     .max(50)
     .optional()
-    .describe("Maximum number of executions (1-50). Defaults to 25."),
+    .describe('Maximum number of executions (1-50). Defaults to 25.'),
   starting_after: z
     .string()
     .optional()
-    .describe("Cursor for pagination. Returns items after this cursor value."),
+    .describe('Cursor for pagination. Returns items after this cursor value.'),
   ending_before: z
     .string()
     .optional()
-    .describe("Cursor for pagination. Returns items before this cursor value."),
+    .describe('Cursor for pagination. Returns items before this cursor value.'),
   search: z
     .string()
     .max(100)
     .optional()
-    .describe("Search by action name (case-insensitive)."),
+    .describe('Search by action name (case-insensitive).'),
 });
 
 const handler = async ({
@@ -48,21 +42,21 @@ const handler = async ({
   search,
 }: z.infer<typeof zodSchema>) => {
   const queryParams = new URLSearchParams();
-  queryParams.append("projectId", projectId);
-  queryParams.append("date_start", date_start);
-  queryParams.append("date_end", date_end);
-  queryParams.append("limit", limit.toString());
+  queryParams.append('projectId', projectId);
+  queryParams.append('date_start', date_start);
+  queryParams.append('date_end', date_end);
+  queryParams.append('limit', limit.toString());
 
   if (starting_after) {
-    queryParams.append("starting_after", starting_after);
+    queryParams.append('starting_after', starting_after);
   }
 
   if (ending_before) {
-    queryParams.append("ending_before", ending_before);
+    queryParams.append('ending_before', ending_before);
   }
 
   if (search) {
-    queryParams.append("search", search);
+    queryParams.append('search', search);
   }
 
   logger.info(
@@ -77,8 +71,8 @@ const handler = async ({
     return {
       content: [
         {
-          type: "text" as const,
-          text: "Failed to retrieve affected test executions",
+          type: 'text' as const,
+          text: 'Failed to retrieve affected test executions',
         },
       ],
     };
@@ -87,7 +81,7 @@ const handler = async ({
   return {
     content: [
       {
-        type: "text" as const,
+        type: 'text' as const,
         text: JSON.stringify(data, null, 2),
       },
     ],
