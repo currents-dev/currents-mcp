@@ -40,7 +40,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { execNpm } from '../test/npm-exec.js';
+import { execNpm } from '../test/npm-exec';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const buildIndex = path.join(root, 'dist', 'index.mjs');

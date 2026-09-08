@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import * as request from '../../lib/request.js';
-import { getProjectsTool } from './get-projects.js';
+import * as request from '../../lib/request';
+import { getProjectsTool } from './get-projects';
 
-vi.mock('../../lib/request.js');
+vi.mock('../../lib/request');
 
 describe('getProjectsTool', () => {
   beforeEach(() => {

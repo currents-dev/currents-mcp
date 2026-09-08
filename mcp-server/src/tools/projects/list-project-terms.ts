@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { fetchApi } from '../../lib/request.js';
-import { logger } from '../../lib/logger.js';
+import { fetchApi } from '../../lib/request';
+import { logger } from '../../lib/logger';
 
 const termTypeEnum = z.enum([
   'tag',

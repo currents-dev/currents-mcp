@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { deleteApi } from '../../lib/request.js';
-import { logger } from '../../lib/logger.js';
+import { deleteApi } from '../../lib/request';
+import { logger } from '../../lib/logger';
 
 const zodSchema = z.object({
   actionId: z.string().describe('The action ID to delete (archive).'),

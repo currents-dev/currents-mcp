@@ -1,15 +1,15 @@
 import type { IncomingMessage } from 'node:http';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { requestContext } from './lib/context.js';
-import { fetchApi } from './lib/request.js';
-import { extractApiKey } from './http.js';
+import { requestContext } from './lib/context';
+import { fetchApi } from './lib/request';
+import { extractApiKey } from './http';
 
-vi.mock('./lib/env.js', () => ({
+vi.mock('./lib/env', () => ({
   CURRENTS_API_KEY: 'env-key',
   CURRENTS_API_URL: 'https://api.test.com',
 }));
 
-vi.mock('./lib/logger.js', () => ({
+vi.mock('./lib/logger', () => ({
   logger: { error: vi.fn(), debug: vi.fn() },
 }));
 

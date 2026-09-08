@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import * as request from '../../lib/request.js';
-import { getTestEvidenceTool } from './get-test-evidence.js';
+import * as request from '../../lib/request';
+import { getTestEvidenceTool } from './get-test-evidence';
 
-vi.mock('../../lib/request.js');
+vi.mock('../../lib/request');
 
 const runPayload = {
   data: {

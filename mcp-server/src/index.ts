@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-import { MISSING_CURRENTS_API_KEY_MESSAGE } from './lib/env.js';
-import { logger } from './lib/logger.js';
-import { startMcpServer } from './server.js';
+import { MISSING_CURRENTS_API_KEY_MESSAGE } from './lib/env';
+import { logger } from './lib/logger';
+import { startMcpServer } from './server';
 
 startMcpServer().catch((error) => {
   if (

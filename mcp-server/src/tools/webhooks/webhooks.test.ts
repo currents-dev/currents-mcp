@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import * as request from '../../lib/request.js';
-import { listWebhooksTool } from './list-webhooks.js';
-import { getWebhookTool } from './get-webhook.js';
-import { createWebhookTool } from './create-webhook.js';
-import { updateWebhookTool } from './update-webhook.js';
-import { deleteWebhookTool } from './delete-webhook.js';
+import * as request from '../../lib/request';
+import { listWebhooksTool } from './list-webhooks';
+import { getWebhookTool } from './get-webhook';
+import { createWebhookTool } from './create-webhook';
+import { updateWebhookTool } from './update-webhook';
+import { deleteWebhookTool } from './delete-webhook';
 
-vi.mock('../../lib/request.js');
+vi.mock('../../lib/request');
 
 describe('listWebhooksTool', () => {
   beforeEach(() => {

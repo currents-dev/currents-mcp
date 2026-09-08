@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { CURRENTS_API_KEY, CURRENTS_API_URL } from '../../lib/env.js';
-import { logger } from '../../lib/logger.js';
+import { CURRENTS_API_KEY, CURRENTS_API_URL } from '../../lib/env';
+import { logger } from '../../lib/logger';
 
 const zodSchema = z
   .object({

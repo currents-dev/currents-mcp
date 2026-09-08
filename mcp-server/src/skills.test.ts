@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { skillFileUri, skills } from './skills.js';
+import { skillFileUri, skills } from './skills';
 
 describe('skills manifest', () => {
   it('inlines at least one skill', () => {

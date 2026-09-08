@@ -1,5 +1,5 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { CURRENTS_API_KEY } from './env.js';
+import { CURRENTS_API_KEY } from './env';
 
 export interface RequestContext {
   /** Per-request Currents API key (e.g. from the inbound Authorization header). */

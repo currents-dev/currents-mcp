@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { postApi } from '../../lib/request.js';
-import { logger } from '../../lib/logger.js';
+import { postApi } from '../../lib/request';
+import { logger } from '../../lib/logger';
 
 const zodSchema = z.object({
   projectId: z

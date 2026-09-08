@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import * as request from '../../lib/request.js';
-import { listProjectPullRequestsTool } from './list-project-pull-requests.js';
+import * as request from '../../lib/request';
+import { listProjectPullRequestsTool } from './list-project-pull-requests';
 
 describe('listProjectPullRequestsTool', () => {
   it('serializes query per OpenAPI (repeated status, bracket arrays)', async () => {

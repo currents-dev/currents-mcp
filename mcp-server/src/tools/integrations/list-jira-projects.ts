@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { fetchApi } from '../../lib/request.js';
-import { logger } from '../../lib/logger.js';
+import { fetchApi } from '../../lib/request';
+import { logger } from '../../lib/logger';
 
 const zodSchema = z.object({
   jira_installation_id: z

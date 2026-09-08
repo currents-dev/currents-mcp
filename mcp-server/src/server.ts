@@ -3,58 +3,58 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import {
   CURRENTS_API_KEY,
   MISSING_CURRENTS_API_KEY_MESSAGE,
-} from './lib/env.js';
-import { logger } from './lib/logger.js';
-import { registerSkills } from './skills.js';
+} from './lib/env';
+import { logger } from './lib/logger';
+import { registerSkills } from './skills';
 // Actions tools
-import { createActionTool } from './tools/actions/create-action.js';
-import { deleteActionTool } from './tools/actions/delete-action.js';
-import { disableActionTool } from './tools/actions/disable-action.js';
-import { enableActionTool } from './tools/actions/enable-action.js';
-import { getActionTool } from './tools/actions/get-action.js';
-import { getAffectedTestExecutionsByActionTool } from './tools/actions/get-affected-test-executions-by-action.js';
-import { getAffectedTestExecutionsTool } from './tools/actions/get-affected-test-executions.js';
-import { listActionsTool } from './tools/actions/list-actions.js';
-import { listAffectedTestsTool } from './tools/actions/list-affected-tests.js';
-import { updateActionTool } from './tools/actions/update-action.js';
+import { createActionTool } from './tools/actions/create-action';
+import { deleteActionTool } from './tools/actions/delete-action';
+import { disableActionTool } from './tools/actions/disable-action';
+import { enableActionTool } from './tools/actions/enable-action';
+import { getActionTool } from './tools/actions/get-action';
+import { getAffectedTestExecutionsByActionTool } from './tools/actions/get-affected-test-executions-by-action';
+import { getAffectedTestExecutionsTool } from './tools/actions/get-affected-test-executions';
+import { listActionsTool } from './tools/actions/list-actions';
+import { listAffectedTestsTool } from './tools/actions/list-affected-tests';
+import { updateActionTool } from './tools/actions/update-action';
 // Context tools
-import { getContextTool } from './tools/context/get-context.js';
+import { getContextTool } from './tools/context/get-context';
 // Integrations tools
-import { createJiraIssueFromRunTestTool } from './tools/integrations/create-jira-issue.js';
-import { linkJiraIssueFromRunTestTool } from './tools/integrations/link-jira-issue.js';
-import { listJiraIssueTypesTool } from './tools/integrations/list-jira-issue-types.js';
-import { listJiraProjectsTool } from './tools/integrations/list-jira-projects.js';
+import { createJiraIssueFromRunTestTool } from './tools/integrations/create-jira-issue';
+import { linkJiraIssueFromRunTestTool } from './tools/integrations/link-jira-issue';
+import { listJiraIssueTypesTool } from './tools/integrations/list-jira-issue-types';
+import { listJiraProjectsTool } from './tools/integrations/list-jira-projects';
 // Projects tools
-import { getProjectInsightsTool } from './tools/projects/get-project-insights.js';
-import { getProjectTool } from './tools/projects/get-project.js';
-import { getProjectsTool } from './tools/projects/get-projects.js';
-import { listProjectPullRequestsTool } from './tools/projects/list-project-pull-requests.js';
-import { listProjectTermsTool } from './tools/projects/list-project-terms.js';
+import { getProjectInsightsTool } from './tools/projects/get-project-insights';
+import { getProjectTool } from './tools/projects/get-project';
+import { getProjectsTool } from './tools/projects/get-projects';
+import { listProjectPullRequestsTool } from './tools/projects/list-project-pull-requests';
+import { listProjectTermsTool } from './tools/projects/list-project-terms';
 // Runs tools
-import { cancelRunByGithubCITool } from './tools/runs/cancel-run-github-ci.js';
-import { cancelRunTool } from './tools/runs/cancel-run.js';
-import { deleteRunTool } from './tools/runs/delete-run.js';
-import { findRunTool } from './tools/runs/find-run.js';
-import { getRunDetailsTool } from './tools/runs/get-run.js';
-import { getRunsTool } from './tools/runs/get-runs.js';
-import { resetRunTool } from './tools/runs/reset-run.js';
+import { cancelRunByGithubCITool } from './tools/runs/cancel-run-github-ci';
+import { cancelRunTool } from './tools/runs/cancel-run';
+import { deleteRunTool } from './tools/runs/delete-run';
+import { findRunTool } from './tools/runs/find-run';
+import { getRunDetailsTool } from './tools/runs/get-run';
+import { getRunsTool } from './tools/runs/get-runs';
+import { resetRunTool } from './tools/runs/reset-run';
 // Specs tools
-import { getSpecFilesPerformanceTool } from './tools/specs/get-spec-files-performance.js';
-import { getSpecInstancesTool } from './tools/specs/get-spec-instances.js';
+import { getSpecFilesPerformanceTool } from './tools/specs/get-spec-files-performance';
+import { getSpecInstancesTool } from './tools/specs/get-spec-instances';
 // Tests tools
-import { getTestResultsTool } from './tools/tests/get-test-results.js';
-import { getTestsPerformanceTool } from './tools/tests/get-tests-performance.js';
-import { getTestSignatureTool } from './tools/tests/get-tests-signature.js';
+import { getTestResultsTool } from './tools/tests/get-test-results';
+import { getTestsPerformanceTool } from './tools/tests/get-tests-performance';
+import { getTestSignatureTool } from './tools/tests/get-tests-signature';
 // Errors tools
-import { getErrorsExplorerTool } from './tools/errors/get-errors-explorer.js';
+import { getErrorsExplorerTool } from './tools/errors/get-errors-explorer';
 // Evidence tools
-import { getTestEvidenceTool } from './tools/evidence/get-test-evidence.js';
+import { getTestEvidenceTool } from './tools/evidence/get-test-evidence';
 // Webhooks tools
-import { createWebhookTool } from './tools/webhooks/create-webhook.js';
-import { deleteWebhookTool } from './tools/webhooks/delete-webhook.js';
-import { getWebhookTool } from './tools/webhooks/get-webhook.js';
-import { listWebhooksTool } from './tools/webhooks/list-webhooks.js';
-import { updateWebhookTool } from './tools/webhooks/update-webhook.js';
+import { createWebhookTool } from './tools/webhooks/create-webhook';
+import { deleteWebhookTool } from './tools/webhooks/delete-webhook';
+import { getWebhookTool } from './tools/webhooks/get-webhook';
+import { listWebhooksTool } from './tools/webhooks/list-webhooks';
+import { updateWebhookTool } from './tools/webhooks/update-webhook';
 
 declare const __LOGO_BASE64__: string;
 declare const __VERSION__: string;

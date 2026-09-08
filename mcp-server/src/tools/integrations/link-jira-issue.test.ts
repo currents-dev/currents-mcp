@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import * as request from '../../lib/request.js';
-import { linkJiraIssueFromRunTestTool } from './link-jira-issue.js';
+import * as request from '../../lib/request';
+import { linkJiraIssueFromRunTestTool } from './link-jira-issue';
 
 describe('linkJiraIssueFromRunTestTool', () => {
   it('calls POST /projects/{projectId}/jira/issues/{jiraIssueKey}/link with required body fields', async () => {

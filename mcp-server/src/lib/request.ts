@@ -1,6 +1,6 @@
-import { getApiKey } from './context.js';
-import { CURRENTS_API_URL } from './env.js';
-import { logger } from './logger.js';
+import { getApiKey } from './context';
+import { CURRENTS_API_URL } from './env';
+import { logger } from './logger';
 
 const USER_AGENT = 'currents-app/1.0';
 

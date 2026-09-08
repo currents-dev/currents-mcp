@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { fetchApi } from '../../lib/request.js';
+import { fetchApi } from '../../lib/request';
 
 const zodSchema = z.object({
   instanceId: z

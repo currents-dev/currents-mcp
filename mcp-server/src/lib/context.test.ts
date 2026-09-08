@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
-import { getApiKey, requestContext } from './context.js';
+import { getApiKey, requestContext } from './context';
 
 // Falls back to this when no per-request context is set (stdio path).
-vi.mock('./env.js', () => ({
+vi.mock('./env', () => ({
   CURRENTS_API_KEY: 'env-key',
   CURRENTS_API_URL: 'https://api.test.com',
 }));

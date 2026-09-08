@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('../../lib/env.js', () => ({
+vi.mock('../../lib/env', () => ({
   CURRENTS_API_KEY: 'k',
   CURRENTS_API_URL: 'https://api.test.com/v1',
 }));
 
-const { getContextTool } = await import('./get-context.js');
+const { getContextTool } = await import('./get-context');
 
 describe('getContextTool', () => {
   beforeEach(() => {

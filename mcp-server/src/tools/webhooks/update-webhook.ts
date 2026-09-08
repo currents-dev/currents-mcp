@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { putApi } from '../../lib/request.js';
-import { logger } from '../../lib/logger.js';
+import { putApi } from '../../lib/request';
+import { logger } from '../../lib/logger';
 
 const zodSchema = z.object({
   hookId: z.string().describe('The webhook ID (UUID).'),

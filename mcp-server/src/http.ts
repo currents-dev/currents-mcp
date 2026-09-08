@@ -7,9 +7,9 @@ import {
 } from 'node:http';
 import { fileURLToPath } from 'node:url';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
-import { requestContext } from './lib/context.js';
-import { logger } from './lib/logger.js';
-import { createMcpServer } from './server.js';
+import { requestContext } from './lib/context';
+import { logger } from './lib/logger';
+import { createMcpServer } from './server';
 
 const PORT = Number(process.env.PORT ?? 3000);
 const MCP_PATH = '/mcp';

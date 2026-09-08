@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { fetchApi, fetchCursorBasedPaginatedApi } from '../../lib/request.js';
-import { logger } from '../../lib/logger.js';
+import { fetchApi, fetchCursorBasedPaginatedApi } from '../../lib/request';
+import { logger } from '../../lib/logger';
 
 const zodSchema = z.object({
   limit: z

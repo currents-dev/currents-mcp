@@ -38,8 +38,8 @@ vi.mock('@modelcontextprotocol/sdk/server/stdio.js', () => ({
 }));
 
 // Building the server triggers all registerTool / registerResource calls
-import { createMcpServer } from './server.js';
-import { skillFileUri, skills } from './skills.js';
+import { createMcpServer } from './server';
+import { skillFileUri, skills } from './skills';
 
 createMcpServer();
 

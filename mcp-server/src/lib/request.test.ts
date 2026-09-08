@@ -1,14 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fetchApi, fetchCursorBasedPaginatedApi } from './request.js';
+import { fetchApi, fetchCursorBasedPaginatedApi } from './request';
 
 // Mock the env module
-vi.mock('./env.js', () => ({
+vi.mock('./env', () => ({
   CURRENTS_API_KEY: 'test-api-key',
   CURRENTS_API_URL: 'https://api.test.com',
 }));
 
 // Mock the logger module
-vi.mock('./logger.js', () => ({
+vi.mock('./logger', () => ({
   logger: {
     error: vi.fn(),
   },
