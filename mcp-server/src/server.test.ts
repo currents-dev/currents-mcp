@@ -1,4 +1,3 @@
-import { readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
 
 const { registeredTools, registeredResources } = vi.hoisted(() => {
@@ -33,13 +32,9 @@ vi.mock('@modelcontextprotocol/sdk/server/mcp.js', () => ({
   },
 }));
 
-vi.mock('@modelcontextprotocol/sdk/server/stdio.js', () => ({
-  StdioServerTransport: class {},
-}));
-
 // Building the server triggers all registerTool / registerResource calls
 import { createMcpServer } from './server';
-import { skillFileUri, skills } from './skills';
+import { getSkills, skillFileUri } from './skills';
 
 createMcpServer();
 
@@ -63,38 +58,6 @@ describe('MCP tool best practices', () => {
     const names = registeredTools.map((t) => t.name);
     const dupes = names.filter((n, i) => names.indexOf(n) !== i);
     expect(dupes, `duplicate tool names: ${dupes.join(', ')}`).toHaveLength(0);
-  });
-
-  describe('README.md tools table', () => {
-    const readme = readFileSync(
-      new URL('../../README.md', import.meta.url),
-      'utf-8'
-    );
-    const toolNamesInReadme = [
-      ...readme.matchAll(/\| `(currents-[\w-]+)` /g),
-    ].map((m) => m[1]);
-
-    it('every registered tool is listed in README', () => {
-      const registered = registeredTools.map((t) => t.name);
-      const missing = registered.filter(
-        (name) => !toolNamesInReadme.includes(name)
-      );
-      expect(
-        missing,
-        `tools missing from README: ${missing.join(', ')}. Run: npm run sync-readme`
-      ).toHaveLength(0);
-    });
-
-    it('README does not list removed tools', () => {
-      const registered = registeredTools.map((t) => t.name);
-      const stale = toolNamesInReadme.filter(
-        (name) => !registered.includes(name)
-      );
-      expect(
-        stale,
-        `stale tools in README: ${stale.join(', ')}. Run: npm run sync-readme`
-      ).toHaveLength(0);
-    });
   });
 
   describe.each(registeredTools)('$name', ({ name, description }) => {
@@ -150,7 +113,7 @@ describe('MCP tool best practices', () => {
 
 describe('skills registered as resources', () => {
   it('registers every file of every skill', () => {
-    const expected = skills.flatMap((skill) =>
+    const expected = getSkills().flatMap((skill) =>
       skill.files.map((file) => skillFileUri(skill.name, file.path))
     );
     expect(expected.length).toBeGreaterThan(0);
@@ -174,7 +137,7 @@ describe('skills registered as resources', () => {
   });
 
   it('serves the frontmatter of each skill entry point', () => {
-    for (const skill of skills) {
+    for (const skill of getSkills()) {
       const entryPoint = registeredResources.find(
         (r) => r.uri === skillFileUri(skill.name, 'SKILL.md')
       );

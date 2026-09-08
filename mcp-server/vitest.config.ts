@@ -25,7 +25,7 @@ export default defineConfig({
         "dist/",
         "**/*.d.ts",
         "**/*.config.*",
-        "**/index.ts",
+        "src/host/stdio.ts",
       ],
     },
   },

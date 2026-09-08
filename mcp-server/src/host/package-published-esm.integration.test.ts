@@ -40,9 +40,9 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { execNpm } from '../test/npm-exec';
+import { execNpm } from '../../test/npm-exec';
 
-const root = fileURLToPath(new URL('..', import.meta.url));
+const root = fileURLToPath(new URL('../..', import.meta.url));
 const buildIndex = path.join(root, 'dist', 'index.mjs');
 
 /** Run `npm pack` from the package root and return the path to the single `.tgz` in `packDest`. */

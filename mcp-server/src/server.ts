@@ -1,10 +1,5 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import {
-  CURRENTS_API_KEY,
-  MISSING_CURRENTS_API_KEY_MESSAGE,
-} from './lib/env';
-import { logger } from './lib/logger';
+import { getLogoDataUri, MCP_SERVER_VERSION } from './host/assets';
 import { registerSkills } from './skills';
 // Actions tools
 import { createActionTool } from './tools/actions/create-action';
@@ -56,12 +51,6 @@ import { getWebhookTool } from './tools/webhooks/get-webhook';
 import { listWebhooksTool } from './tools/webhooks/list-webhooks';
 import { updateWebhookTool } from './tools/webhooks/update-webhook';
 
-declare const __LOGO_BASE64__: string;
-declare const __VERSION__: string;
-
-const logoBase64 = __LOGO_BASE64__;
-const version = __VERSION__;
-
 /**
  * Builds a fully configured MCP server with all Currents tools registered.
  *
@@ -70,16 +59,19 @@ const version = __VERSION__;
  * request, keeping the tool/api layer identical across both.
  */
 export function createMcpServer(): McpServer {
+  const logoDataUri = getLogoDataUri();
   const server = new McpServer({
     name: 'currents',
-    version,
-    icons: [
-      {
-        src: `data:image/png;base64,${logoBase64}`,
-        mimeType: 'image/png',
-        sizes: ['256x256', '128x128', '64x64', '32x32', '16x16'],
-      },
-    ],
+    version: MCP_SERVER_VERSION,
+    icons: logoDataUri
+      ? [
+          {
+            src: logoDataUri,
+            mimeType: 'image/png',
+            sizes: ['256x256', '128x128', '64x64', '32x32', '16x16'],
+          },
+        ]
+      : undefined,
   });
 
   // Actions API tools
@@ -484,17 +476,4 @@ export function createMcpServer(): McpServer {
   registerSkills(server);
 
   return server;
-}
-
-/** Starts the MCP server over stdio (used by the CLI and programmatic embedders). */
-export async function startMcpServer(): Promise<void> {
-  if (!CURRENTS_API_KEY) {
-    throw new Error(MISSING_CURRENTS_API_KEY_MESSAGE);
-  }
-
-  const server = createMcpServer();
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
-  logger.debug('🚀 Currents MCP Server is live');
-  await new Promise(() => {});
 }

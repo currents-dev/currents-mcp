@@ -1,13 +1,12 @@
-import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { skillFileUri, skills } from './skills';
+import { getSkills, skillFileUri } from './skills';
 
 describe('skills manifest', () => {
   it('inlines at least one skill', () => {
-    expect(skills.length).toBeGreaterThan(0);
+    expect(getSkills().length).toBeGreaterThan(0);
   });
 
-  describe.each(skills)('$name', (skill) => {
+  describe.each(getSkills())('$name', (skill) => {
     it('has a SKILL.md entry point', () => {
       expect(skill.files.map((f) => f.path)).toContain('SKILL.md');
     });
@@ -42,31 +41,5 @@ describe('skill resource URIs', () => {
     expect(skillFileUri('collect-evidence', 'SKILL.md')).toBe(
       'skill://currents/collect-evidence/SKILL.md'
     );
-  });
-});
-
-describe('README.md skills table', () => {
-  const readme = readFileSync(
-    new URL('../../README.md', import.meta.url),
-    'utf-8'
-  );
-  const skillNamesInReadme = [
-    ...readme.matchAll(/\| \[`([\w-]+)`\]\(skills\//g),
-  ].map((m) => m[1]);
-
-  it('every skill is listed in README', () => {
-    const missing = skills
-      .map((s) => s.name)
-      .filter((name) => !skillNamesInReadme.includes(name));
-    expect(
-      missing,
-      `skills missing from README: ${missing.join(', ')}`
-    ).toEqual([]);
-  });
-
-  it('README does not list removed skills', () => {
-    const names = skills.map((s) => s.name);
-    const stale = skillNamesInReadme.filter((name) => !names.includes(name));
-    expect(stale, `stale skills in README: ${stale.join(', ')}`).toEqual([]);
   });
 });

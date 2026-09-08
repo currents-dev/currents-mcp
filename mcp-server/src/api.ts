@@ -1,1 +1,0 @@
-export { startMcpServer } from './server';
