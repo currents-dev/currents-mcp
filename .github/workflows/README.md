@@ -102,6 +102,12 @@ credential for it: a token cannot be scoped below repo level, so a leak here
 would disclose the whole monorepo. The monorepo publishes and this pulls, so
 neither side holds a credential for the other.
 
+**`prettier` is pinned to the exact version the monorepo uses.** Matching
+`.prettierrc` is not enough — 3.6 changed how it breaks union types, so a
+newer prettier here reformats what the monorepo sent and `npm run format`
+fails on a tree nobody edited. Bumping it means bumping both repositories
+together, so decline the dependabot bump until the monorepo takes it.
+
 ---
 
 ### `test.yml` - Unit Tests
