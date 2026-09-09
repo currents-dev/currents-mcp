@@ -86,8 +86,8 @@ Pulls the shared MCP source the monorepo publishes and opens a PR with it.
 
 **What it does:**
 
-1. Pulls `ghcr.io/currents-dev/mcp-source` with `oras` — anonymously, since the
-   package is public
+1. Pulls `ghcr.io/currents-dev/mcp-source` with `oras`, authenticating with the
+   job's own `GITHUB_TOKEN` — this repository is a reader on that package
 2. Compares the artifact's monorepo commit against `mcp-server/.synced-from`
    and stops if they match
 3. Copies `src/` (except `src/host/`), `skills/` and the logo in
@@ -100,7 +100,11 @@ rest of `src/` is shared, and the monorepo is the side it is edited on.
 The monorepo is private and this repository is public, so this one holds no
 credential for it: a token cannot be scoped below repo level, so a leak here
 would disclose the whole monorepo. The monorepo publishes and this pulls, so
-neither side holds a credential for the other.
+neither side stores a credential for the other — what grants the read is a
+reader grant on the `mcp-source` package, revocable in package settings without
+touching either repository.
+
+A 403 on the pull means that grant is gone, not that the artifact is missing.
 
 **`prettier` is pinned to the exact version the monorepo uses.** Matching
 `.prettierrc` is not enough — 3.6 changed how it breaks union types, so a

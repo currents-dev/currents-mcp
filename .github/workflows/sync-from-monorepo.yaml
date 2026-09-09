@@ -2,9 +2,11 @@
 #
 # The monorepo is private and this repository is public, so this one holds no
 # credential for it: a token cannot be scoped below repo level, so a leak here
-# would disclose the whole monorepo. The monorepo publishes a public GHCR
-# artifact instead, which this reads anonymously and commits with its own
-# GITHUB_TOKEN. Neither side holds a credential for the other.
+# would disclose the whole monorepo. The monorepo publishes a GHCR artifact
+# instead, and this repository is a reader on that package, so the pull needs
+# nothing beyond this job's own GITHUB_TOKEN. Neither side stores a credential
+# for the other; what grants the read is a package permission, revocable
+# without touching either repository.
 #
 # src/host is what this copy provides for itself and never arrives from the
 # monorepo. Everything else under src/, plus skills/ and the logo, does.
@@ -36,6 +38,9 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      # Reads the monorepo's mcp-source package, which this repository is a
+      # reader on. Not write: nothing here publishes.
+      packages: read
     steps:
       - uses: actions/checkout@v4
 
@@ -44,11 +49,18 @@ jobs:
       - name: Pull the published source
         env:
           TAG: ${{ inputs.tag || 'latest' }}
+          # Through the environment rather than interpolated into the script,
+          # so nothing here can be read as shell.
+          REGISTRY_USER: ${{ github.actor }}
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           mkdir -p /tmp/payload
-          # Anonymous: the package is public, and this repository deliberately
-          # holds no credential for the monorepo.
+          # This job's own token. The package is private and this repository is
+          # a reader on it, so a failure here with a 403 means that grant is
+          # gone rather than that the artifact is missing.
+          printf '%s' "$REGISTRY_TOKEN" \
+            | oras login ghcr.io -u "$REGISTRY_USER" --password-stdin
           oras pull "${ARTIFACT}:${TAG}" -o /tmp/payload
           cat /tmp/payload/manifest.json
 
