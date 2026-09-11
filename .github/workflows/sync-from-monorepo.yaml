@@ -218,10 +218,14 @@ jobs:
           npx prettier --check src ../skills
           npx tsc --noEmit
           npx tsdown
-          # The packaging integration tests pack and install the tarball, which
-          # is slow and tests this repository's own wiring rather than what
-          # arrived. `test.yml` still covers them on a human-pushed branch.
-          npx vitest run --exclude '**/*.integration.test.ts'
+          # Everything, including the packaging tests. They pack the tarball and
+          # install it on its own, which is the only place a dependency the
+          # monorepo declares and this package does not shows up: the synced
+          # source imports it, it resolves from the dev tree here, and a
+          # consumer's install has nothing to resolve it from. They also drive
+          # the packaged binary through an MCP handshake, so a sync that leaves
+          # the server unable to serve fails here rather than in a client.
+          npx vitest run
 
       - name: Hand the vetted tree to the write job
         if: steps.check.outputs.changed == 'true'
