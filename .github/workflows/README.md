@@ -90,8 +90,10 @@ Pulls the shared MCP source the monorepo publishes and opens a PR with it.
    job's own `GITHUB_TOKEN` — this repository is a reader on that package
 2. Compares the artifact's monorepo commit against `mcp-server/.synced-from`
    and stops if they match
-3. Copies `src/` (except `src/host/`), `skills/` and the logo in
-4. Opens a PR from `sync/monorepo-<short-sha>`
+3. Copies `src/` (except `src/host/`), `skills/` and the logo in, and
+   regenerates the README tool table
+4. Runs format, types, build and the unit suite over the result
+5. Opens a PR from `sync/monorepo-<short-sha>`
 
 `src/host/` is what this copy provides for itself — its entry points, its pino
 logger and its build-time assets — and never arrives from the monorepo. The
@@ -114,9 +116,16 @@ attestations API is not available to this organization for a private repository
 digest defeats a job whose purpose is to pull whatever was published last.
 
 What bounds it is what this job can do with what it pulls: push a branch and
-open a PR. It cannot merge or publish, the PR is reviewed by a person and gated
-by `test.yml`, and its branch prefix is deliberately outside the one
-`parity-pr-merged.yaml` turns into a release. If cryptographic provenance is
+open a PR. It cannot merge or publish, the PR is reviewed by a person, and its
+branch prefix is deliberately outside the one `parity-pr-merged.yaml` turns
+into a release.
+
+**`test.yml` does not run on that PR.** GitHub starts no `push` or
+`pull_request` workflow runs for events caused by `GITHUB_TOKEN` — the parity
+workflow's own PRs (#149, #168, #171) show it, none carry a Test job. So this
+workflow runs format, types, build and the unit suite itself, before pushing:
+a failure means no PR rather than a PR whose green tick is absent for a reason
+nobody notices. If cryptographic provenance is
 wanted later, `cosign` keyless signing is not plan-gated — at the cost of the
 artifact digest appearing in a public transparency log.
 

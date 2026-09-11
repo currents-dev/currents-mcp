@@ -140,6 +140,33 @@ jobs:
             git status --short
           fi
 
+      # `test.yml` will not run on the PR below: GitHub starts no push or
+      # pull_request runs for events caused by GITHUB_TOKEN, and the parity
+      # workflow's own PRs (#149, #168, #171) show it — none carry a Test job.
+      # So the gate runs here, before anything is pushed, and a failure means
+      # no PR rather than a PR nobody checked.
+      - name: Set up Node
+        if: steps.check.outputs.changed == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+
+      - name: Validate the copied source
+        if: steps.check.outputs.changed == 'true'
+        working-directory: ./mcp-server
+        run: |
+          set -euo pipefail
+          npm ci
+          # Formatting first: the two copies pin the same prettier, and a drift
+          # there rewrites files nobody edited.
+          npx prettier --check src ../skills
+          npx tsc --noEmit
+          npx tsdown
+          # The packaging integration tests pack and install the tarball, which
+          # is slow and tests this repository's own wiring rather than what
+          # arrived. `test.yml` still covers them on a human-pushed branch.
+          npx vitest run --exclude '**/*.integration.test.ts'
+
       - name: Open the PR
         if: steps.check.outputs.changed == 'true' && inputs.dry_run != true
         env:
