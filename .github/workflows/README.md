@@ -86,8 +86,10 @@ Pulls the shared MCP source the monorepo publishes and opens a PR with it.
 
 **What it does:**
 
-1. Pulls `ghcr.io/currents-dev/mcp-source` with `oras`, authenticating with the
-   job's own `GITHUB_TOKEN` — this repository is a reader on that package
+1. Verifies the artifact's build provenance against `currents-dev/currents`,
+   then pulls `ghcr.io/currents-dev/mcp-source` with `oras`, authenticating
+   with the job's own `GITHUB_TOKEN` — this repository is a reader on that
+   package
 2. Compares the artifact's monorepo commit against `mcp-server/.synced-from`
    and stops if they match
 3. Copies `src/` (except `src/host/`), `skills/` and the logo in
@@ -105,6 +107,13 @@ reader grant on the `mcp-source` package, revocable in package settings without
 touching either repository.
 
 A 403 on the pull means that grant is gone, not that the artifact is missing.
+
+The tag is mutable and the artifact's `manifest.json` reports its own source
+commit, so neither establishes where the bytes came from. The provenance check
+does: it fails unless a workflow in the monorepo built them, which is what stops
+anything else with write on the package from having its content copied in here
+and pushed as a branch. Pinning to a digest instead would not work — this
+deliberately pulls whatever was published most recently.
 
 **`prettier` is pinned to the exact version the monorepo uses.** Matching
 `.prettierrc` is not enough — 3.6 changed how it breaks union types, so a
