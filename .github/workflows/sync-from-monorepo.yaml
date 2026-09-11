@@ -220,6 +220,21 @@ jobs:
             mcp-server/src mcp-server/assets/logo.png mcp-server/.synced-from \
             skills README.md /tmp/vetted/
 
+      # Uploaded before the tests run, not after. Taking the snapshot early was
+      # half the fix: `/tmp/vetted` stayed writable while artifact-derived tests
+      # executed, so they could still edit what was about to be handed over.
+      # Once it is uploaded they cannot reach it. A failing gate fails this job,
+      # and `open-pr` needs it to succeed, so an artifact from a failed run is
+      # never applied.
+      - name: Hand the vetted tree to the write job
+        if: steps.check.outputs.changed == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: synced-tree
+          retention-days: 1
+          include-hidden-files: true
+          path: /tmp/vetted
+
       - uses: actions/setup-node@v4
         if: steps.check.outputs.changed == 'true'
         with:
@@ -244,17 +259,6 @@ jobs:
           # the packaged binary through an MCP handshake, so a sync that leaves
           # the server unable to serve fails here rather than in a client.
           npx vitest run
-
-      - name: Hand the vetted tree to the write job
-        if: steps.check.outputs.changed == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: synced-tree
-          retention-days: 1
-          include-hidden-files: true
-          # The snapshot, not the live checkout: the test run sits between the
-          # two and is the part that is not trusted.
-          path: /tmp/vetted
 
   open-pr:
     needs: validate
@@ -303,7 +307,10 @@ jobs:
           cp /tmp/synced/mcp-server/.synced-from "$MARKER"
           cp /tmp/synced/README.md README.md
 
-          BRANCH="sync/monorepo-${SHORT}"
+          # The whole commit, not the short form. The guard below treats an
+          # open PR on this branch as the same sync, and that only holds if the
+          # name cannot be reached by two different commits.
+          BRANCH="sync/monorepo-${SHA}"
           git config user.name 'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
           git checkout -b "$BRANCH"
