@@ -35,6 +35,13 @@ describe('extractApiKey', () => {
   });
 });
 
+function jsonResponse(body: unknown = {}, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'content-type': 'application/json' },
+  });
+}
+
 describe('API key passthrough via request context', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -45,9 +52,10 @@ describe('API key passthrough via request context', () => {
   });
 
   it('uses the per-request key for the outbound Currents call', async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValue({ ok: true, json: async () => ({}) });
+    // A real Response, not a stub of the parts lib/request.ts reads today:
+    // it reads the status, the body and the www-authenticate header, and a
+    // partial stub breaks whenever that set grows.
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse());
     global.fetch = fetchMock;
 
     await requestContext.run({ apiKey: 'req-key' }, () => fetchApi('/runs/1'));
@@ -69,7 +77,7 @@ describe('API key passthrough via request context', () => {
       // Record which Authorization header each path saw.
       const path = String(_url);
       authByKey[path] = auth;
-      return Promise.resolve({ ok: true, json: async () => ({}) });
+      return Promise.resolve(jsonResponse());
     });
 
     await Promise.all([
