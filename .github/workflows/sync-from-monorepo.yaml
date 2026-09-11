@@ -4,22 +4,33 @@
 # credential for it: a token cannot be scoped below repo level, so a leak here
 # would disclose the whole monorepo. The monorepo publishes a GHCR artifact
 # instead, and this repository is a reader on that package, so the pull needs
-# nothing beyond this job's own GITHUB_TOKEN. Neither side stores a credential
-# for the other; what grants the read is a package permission, revocable
-# without touching either repository.
+# nothing beyond a GITHUB_TOKEN. Neither side stores a credential for the
+# other; what grants the read is a package permission, revocable without
+# touching either repository.
 #
 # src/host is what this copy provides for itself and never arrives from the
 # monorepo. Everything else under src/, plus skills/ and the logo, does.
+#
+# Two jobs, because the artifact is not trusted code. `validate` executes it —
+# `npm ci`, the build, the test suite — and holds no write credential, no
+# persisted git token and no registry login by the time it does. `open-pr`
+# holds the write credentials and executes nothing that arrived: it checks out
+# main, applies the tree `validate` already vetted, and pushes.
+#
+# Both check out main rather than the dispatching ref, so a dispatch from a
+# feature branch cannot carry that branch's commits into a PR against main.
+# The workflow file itself still comes from the dispatching ref, which no
+# workflow can defend against — that is bounded by who may dispatch.
 #
 # What this trusts, and what bounds it: the tag is mutable and the artifact
 # reports its own source commit, so neither establishes where the bytes came
 # from. Writing to that package is the control. Build provenance would narrow
 # it further, but GitHub's attestations API is not available to this
 # organization for a private repository, and pinning a digest defeats a job
-# whose purpose is to pull whatever was published last. So the bound is what
-# this job can do with what it pulls: push a branch and open a PR, reviewed by
-# a person and gated by `test.yml`, under a branch prefix deliberately outside
-# the one `parity-pr-merged.yaml` turns into a release.
+# whose purpose is to pull whatever was published last. `test.yml` does not run
+# on the PR either — GitHub starts no push or pull_request runs for events
+# caused by GITHUB_TOKEN — so `validate` runs those checks itself, and a
+# failure means no PR rather than a PR whose missing checks nobody reads.
 name: Sync MCP source from the monorepo
 
 on:
@@ -43,16 +54,26 @@ env:
   MARKER: mcp-server/.synced-from
 
 jobs:
-  sync:
+  validate:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
-      pull-requests: write
-      # Reads the monorepo's mcp-source package, which this repository is a
-      # reader on. Not write: nothing here publishes.
+      # Read only. This job runs code that arrived in the artifact, so it must
+      # hold nothing worth stealing.
       packages: read
+    outputs:
+      changed: ${{ steps.check.outputs.changed }}
+      sha: ${{ steps.manifest.outputs.sha }}
+      short: ${{ steps.manifest.outputs.short }}
+      ref: ${{ steps.manifest.outputs.ref }}
+      previous: ${{ steps.manifest.outputs.previous }}
+      removed: ${{ steps.check.outputs.removed }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
+          # Otherwise the token lands in .git/config, readable by anything the
+          # test suite below runs.
+          persist-credentials: false
 
       - uses: oras-project/setup-oras@v1
 
@@ -66,12 +87,14 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p /tmp/payload
-          # This job's own token. The package is private and this repository is
-          # a reader on it, so a failure here with a 403 means that grant is
-          # gone rather than that the artifact is missing.
+          # The package is private and this repository is a reader on it, so a
+          # failure here with a 403 means that grant is gone rather than that
+          # the artifact is missing.
           printf '%s' "$REGISTRY_TOKEN" \
             | oras login ghcr.io -u "$REGISTRY_USER" --password-stdin
           oras pull "${ARTIFACT}:${TAG}" -o /tmp/payload
+          # Drops ~/.docker/config.json before anything from the artifact runs.
+          oras logout ghcr.io
           cat /tmp/payload/manifest.json
 
       - name: Read the manifest
@@ -80,10 +103,11 @@ jobs:
           set -euo pipefail
           SHA="$(jq -r '.sha // empty' /tmp/payload/manifest.json)"
           REF="$(jq -r '.ref // empty' /tmp/payload/manifest.json)"
-          # The artifact is data, not input. Both fields reach a shell and a
-          # workflow output below, so a `sha` carrying `$(...)` would run here
-          # and one carrying a newline would forge further outputs. Shape is
-          # checked before either is used.
+          PREVIOUS="$(cat "$MARKER" 2>/dev/null || echo none)"
+          # The artifact is data, not input, and so is the marker a previous
+          # sync committed. All three reach a shell and a workflow output
+          # below, so a value carrying `$(...)` would run and one carrying a
+          # newline would forge further outputs. Shape is checked first.
           case "$SHA" in
             '' | *[!0-9a-f]*)
               echo "manifest sha is not a commit: '$SHA'" >&2; exit 1 ;;
@@ -95,14 +119,17 @@ jobs:
             '' | *[!A-Za-z0-9/._-]*)
               echo "manifest ref has unexpected characters" >&2; exit 1 ;;
           esac
+          case "$PREVIOUS" in
+            none | *[!0-9a-f]* | '') PREVIOUS=none ;;
+          esac
           {
             echo "sha=$SHA"
             echo "short=${SHA:0:7}"
             echo "ref=$REF"
-            echo "previous=$(cat "$MARKER" 2>/dev/null || echo none)"
+            echo "previous=$PREVIOUS"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Copy it in
+      - name: Apply it
         env:
           SHA: ${{ steps.manifest.outputs.sha }}
         run: |
@@ -122,9 +149,9 @@ jobs:
           # The README tool table is generated from server.ts, and
           # host/readme.test.ts fails when they disagree — so a sync that adds
           # or drops a tool has to bring the table with it. Node builtins only,
-          # so this needs no install. The skill table has no generator; a skill
-          # added upstream still fails that test, by design, and is fixed by
-          # hand on the PR.
+          # and from main's checkout rather than the dispatching ref. The skill
+          # table has no generator; a skill added upstream still fails that
+          # test, by design, and is fixed by hand on the PR.
           node mcp-server/scripts/sync-readme-tools.mjs
 
       - name: Decide whether anything changed
@@ -134,24 +161,28 @@ jobs:
           if [ -z "$(git status --porcelain)" ]; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
             echo "The tree already matches the published source."
-          else
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-            git --no-pager diff --stat
-            git status --short
+            exit 0
+          fi
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          git --no-pager diff --stat
+          git status --short
+          # A tool or skill withdrawn upstream is a breaking change for anything
+          # already calling it. The sync applies it either way — the monorepo
+          # decides the catalog — but the reviewer should not have to find it in
+          # a fifty-file diff.
+          REMOVED="$(git status --porcelain -- mcp-server/src/tools skills \
+            | awk '$1 ~ /D/ { print $2 }' | tr '\n' ' ')"
+          echo "removed=$REMOVED" >> "$GITHUB_OUTPUT"
+          if [ -n "$REMOVED" ]; then
+            echo "::warning::This sync withdraws: $REMOVED"
           fi
 
-      # `test.yml` will not run on the PR below: GitHub starts no push or
-      # pull_request runs for events caused by GITHUB_TOKEN, and the parity
-      # workflow's own PRs (#149, #168, #171) show it — none carry a Test job.
-      # So the gate runs here, before anything is pushed, and a failure means
-      # no PR rather than a PR nobody checked.
-      - name: Set up Node
+      - uses: actions/setup-node@v4
         if: steps.check.outputs.changed == 'true'
-        uses: actions/setup-node@v4
         with:
           node-version: 24.x
 
-      - name: Validate the copied source
+      - name: Check the result builds and passes
         if: steps.check.outputs.changed == 'true'
         working-directory: ./mcp-server
         run: |
@@ -167,16 +198,58 @@ jobs:
           # arrived. `test.yml` still covers them on a human-pushed branch.
           npx vitest run --exclude '**/*.integration.test.ts'
 
-      - name: Open the PR
-        if: steps.check.outputs.changed == 'true' && inputs.dry_run != true
+      - name: Hand the vetted tree to the write job
+        if: steps.check.outputs.changed == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: synced-tree
+          retention-days: 1
+          include-hidden-files: true
+          path: |
+            mcp-server/src
+            mcp-server/assets/logo.png
+            mcp-server/.synced-from
+            skills
+            README.md
+
+  open-pr:
+    needs: validate
+    if: needs.validate.outputs.changed == 'true' && inputs.dry_run != true
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      # main, not the dispatching ref, so a dispatch from elsewhere cannot
+      # carry that branch's commits into a PR against main.
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: synced-tree
+          path: /tmp/synced
+
+      - name: Apply the vetted tree and open the PR
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SHA: ${{ steps.manifest.outputs.sha }}
-          SHORT: ${{ steps.manifest.outputs.short }}
-          SOURCE_REF: ${{ steps.manifest.outputs.ref }}
-          PREVIOUS: ${{ steps.manifest.outputs.previous }}
+          SHA: ${{ needs.validate.outputs.sha }}
+          SHORT: ${{ needs.validate.outputs.short }}
+          SOURCE_REF: ${{ needs.validate.outputs.ref }}
+          PREVIOUS: ${{ needs.validate.outputs.previous }}
+          REMOVED: ${{ needs.validate.outputs.removed }}
         run: |
           set -euo pipefail
+          # Nothing from the artifact is executed in this job. These are the
+          # same bytes `validate` built and tested, copied onto a fresh main.
+          rsync -a --delete --exclude='host/' \
+            /tmp/synced/mcp-server/src/ mcp-server/src/
+          rsync -a --delete /tmp/synced/skills/ skills/
+          cp /tmp/synced/mcp-server/assets/logo.png mcp-server/assets/logo.png
+          cp /tmp/synced/mcp-server/.synced-from "$MARKER"
+          cp /tmp/synced/README.md README.md
+
           BRANCH="sync/monorepo-${SHORT}"
           git config user.name 'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
@@ -191,13 +264,19 @@ jobs:
           git commit --file /tmp/message
           git push --force origin "$BRANCH"
 
-          cat > /tmp/body <<EOF
-          Published by \`${SOURCE_REF}\` from monorepo commit \`${SHA}\`.
+          {
+            printf 'Published by `%s` from monorepo commit `%s`.\n\n' \
+              "$SOURCE_REF" "$SHA"
+            printf 'Previous sync: `%s`.\n\n' "$PREVIOUS"
+            printf 'src/host/ is this copy own and is not touched.\n'
+            if [ -n "$REMOVED" ]; then
+              printf '\n**This withdraws:** `%s`\n\n' "$REMOVED"
+              printf 'Already-released tools and skill:// resources disappear '
+              printf 'with them, so confirm the monorepo removed them '
+              printf 'deliberately.\n'
+            fi
+          } > /tmp/body
 
-          Previous sync: \`${PREVIOUS}\`.
-
-          \`src/host/\` is this copy's own and is not touched.
-          EOF
           # Asked rather than inferred from a failure: `|| true` on the create
           # would report a PR that auth, validation or a rate limit stopped as
           # one that already existed, after the branch had been pushed.
