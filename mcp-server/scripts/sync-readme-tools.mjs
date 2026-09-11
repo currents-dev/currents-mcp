@@ -41,8 +41,12 @@ const serverSrc = readFileSync(join(root, "src", "server.ts"), "utf-8");
 
 // Quote-agnostic: the source is prettier-formatted with singleQuote, but the
 // monorepo copy this file's subject is synced from has been both.
+// `server.` is optional: registration moved behind a local wrapper that
+// applies scope filtering, so the call sites now read `registerTool('name',
+// ...)`. The wrapper's own `server.registerTool(name, ...)` passes a variable
+// rather than a literal, so it does not match and is not counted twice.
 const toolRegex =
-  /server\.registerTool\(\s*\n?\s*(['"])(.+?)\1,\s*\n?\s*\{\s*\n?\s*description:\s*\n?\s*(['"])((?:\\.|(?!\3)[^\\])*)\3/g;
+  /(?:server\.)?registerTool\(\s*\n?\s*(['"])(.+?)\1,\s*\n?\s*\{\s*\n?\s*description:\s*\n?\s*(['"])((?:\\.|(?!\3)[^\\])*)\3/g;
 
 let match;
 while ((match = toolRegex.exec(serverSrc)) !== null) {
