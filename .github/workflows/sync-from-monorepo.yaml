@@ -10,6 +10,16 @@
 #
 # src/host is what this copy provides for itself and never arrives from the
 # monorepo. Everything else under src/, plus skills/ and the logo, does.
+#
+# What this trusts, and what bounds it: the tag is mutable and the artifact
+# reports its own source commit, so neither establishes where the bytes came
+# from. Writing to that package is the control. Build provenance would narrow
+# it further, but GitHub's attestations API is not available to this
+# organization for a private repository, and pinning a digest defeats a job
+# whose purpose is to pull whatever was published last. So the bound is what
+# this job can do with what it pulls: push a branch and open a PR, reviewed by
+# a person and gated by `test.yml`, under a branch prefix deliberately outside
+# the one `parity-pr-merged.yaml` turns into a release.
 name: Sync MCP source from the monorepo
 
 on:
@@ -41,8 +51,6 @@ jobs:
       # Reads the monorepo's mcp-source package, which this repository is a
       # reader on. Not write: nothing here publishes.
       packages: read
-      # Reads the build provenance attached to the artifact.
-      attestations: read
     steps:
       - uses: actions/checkout@v4
 
@@ -55,7 +63,6 @@ jobs:
           # so nothing here can be read as shell.
           REGISTRY_USER: ${{ github.actor }}
           REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           mkdir -p /tmp/payload
@@ -64,12 +71,6 @@ jobs:
           # gone rather than that the artifact is missing.
           printf '%s' "$REGISTRY_TOKEN" \
             | oras login ghcr.io -u "$REGISTRY_USER" --password-stdin
-          # The tag is mutable and `manifest.json` reports its own source
-          # commit, so neither says where these bytes came from. This does:
-          # it fails unless they were built by a workflow in the monorepo.
-          # Before the pull, so nothing unverified is ever written to disk.
-          gh attestation verify "oci://${ARTIFACT}:${TAG}" \
-            --repo currents-dev/currents
           oras pull "${ARTIFACT}:${TAG}" -o /tmp/payload
           cat /tmp/payload/manifest.json
 
