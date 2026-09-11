@@ -17,10 +17,12 @@
 # holds the write credentials and executes nothing that arrived: it checks out
 # main, applies the tree `validate` already vetted, and pushes.
 #
-# Both check out main rather than the dispatching ref, so a dispatch from a
-# feature branch cannot carry that branch's commits into a PR against main.
-# The workflow file itself still comes from the dispatching ref, which no
-# workflow can defend against — that is bounded by who may dispatch.
+# Neither checks out the dispatching ref, so a dispatch from a feature branch
+# cannot carry that branch's commits into a PR against main: `validate` takes
+# main, and `open-pr` takes the exact commit `validate` tested against rather
+# than main as it stands by then. The workflow file itself still comes from the
+# dispatching ref, which no workflow can defend against — that is bounded by
+# who may dispatch.
 #
 # What this trusts, and what bounds it: the tag is mutable and the artifact
 # reports its own source commit, so neither establishes where the bytes came
@@ -49,6 +51,11 @@ on:
         type: string
         default: latest
 
+# One at a time: two runs would race the same deterministic branch name.
+concurrency:
+  group: sync-from-monorepo
+  cancel-in-progress: false
+
 env:
   ARTIFACT: ghcr.io/currents-dev/mcp-source
   MARKER: mcp-server/.synced-from
@@ -67,6 +74,7 @@ jobs:
       ref: ${{ steps.manifest.outputs.ref }}
       previous: ${{ steps.manifest.outputs.previous }}
       removed: ${{ steps.check.outputs.removed }}
+      base: ${{ steps.base.outputs.sha }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -74,6 +82,10 @@ jobs:
           # Otherwise the token lands in .git/config, readable by anything the
           # test suite below runs.
           persist-credentials: false
+
+      - name: Record the base this ran against
+        id: base
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - uses: oras-project/setup-oras@v1
 
@@ -177,6 +189,19 @@ jobs:
             echo "::warning::This sync withdraws: $REMOVED"
           fi
 
+      # Taken before the step below runs anything that arrived. The tests are
+      # not supposed to write to the tree, but they are the untrusted part, so
+      # what gets handed on is what was checked rather than whatever they left
+      # behind.
+      - name: Snapshot what is about to be checked
+        if: steps.check.outputs.changed == 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/vetted
+          rsync -a --relative \
+            mcp-server/src mcp-server/assets/logo.png mcp-server/.synced-from \
+            skills README.md /tmp/vetted/
+
       - uses: actions/setup-node@v4
         if: steps.check.outputs.changed == 'true'
         with:
@@ -205,12 +230,9 @@ jobs:
           name: synced-tree
           retention-days: 1
           include-hidden-files: true
-          path: |
-            mcp-server/src
-            mcp-server/assets/logo.png
-            mcp-server/.synced-from
-            skills
-            README.md
+          # The snapshot, not the live checkout: the test run sits between the
+          # two and is the part that is not trusted.
+          path: /tmp/vetted
 
   open-pr:
     needs: validate
@@ -220,11 +242,13 @@ jobs:
       contents: write
       pull-requests: write
     steps:
-      # main, not the dispatching ref, so a dispatch from elsewhere cannot
-      # carry that branch's commits into a PR against main.
+      # The exact commit `validate` checked out and tested against, not main as
+      # it now stands: main can advance between the two jobs, and applying a
+      # vetted tree onto a base nobody vetted it against is how a sync quietly
+      # reverts whatever landed in between.
       - uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ needs.validate.outputs.base }}
 
       - uses: actions/download-artifact@v4
         with:
@@ -262,7 +286,6 @@ jobs:
           Published by ${SOURCE_REF}. Previous sync: ${PREVIOUS}.
           EOF
           git commit --file /tmp/message
-          git push --force origin "$BRANCH"
 
           {
             printf 'Published by `%s` from monorepo commit `%s`.\n\n' \
@@ -277,16 +300,27 @@ jobs:
             fi
           } > /tmp/body
 
+          # Before the push, not after it. The branch name is derived from the
+          # source commit, so a rerun for the same commit targets the same
+          # branch — and force-pushing over an open PR would discard whatever a
+          # reviewer had added to it. Same commit means the same content, so
+          # there is nothing to update.
+          EXISTING="$(gh pr list --head "$BRANCH" --state open \
+            --json number --jq '.[0].number // empty')"
+          if [ -n "$EXISTING" ]; then
+            echo "PR #${EXISTING} is already open for ${BRANCH} at the same" \
+              "source commit; leaving it alone."
+            exit 0
+          fi
+          # Force because the branch may be left over from a closed PR; no open
+          # one can be clobbered, having just checked.
+          git push --force origin "$BRANCH"
           # Asked rather than inferred from a failure: `|| true` on the create
           # would report a PR that auth, validation or a rate limit stopped as
           # one that already existed, after the branch had been pushed.
           # Not the cursor/currents-mcp-parity-* prefix: that one auto-bumps the
           # version and dispatches a publish on merge, which a source sync
           # should not do on its own.
-          if [ -n "$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number // empty')" ]; then
-            echo "A PR for $BRANCH is already open; it now carries the new commit."
-          else
-            gh pr create --base main --head "$BRANCH" \
-              --title "Sync MCP source from the monorepo (${SHORT})" \
-              --body-file /tmp/body
-          fi
+          gh pr create --base main --head "$BRANCH" \
+            --title "Sync MCP source from the monorepo (${SHORT})" \
+            --body-file /tmp/body
