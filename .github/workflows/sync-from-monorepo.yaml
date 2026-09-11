@@ -11,6 +11,10 @@
 # src/host is what this copy provides for itself and never arrives from the
 # monorepo. Everything else under src/, plus skills/ and the logo, does.
 #
+# Runs on a schedule, on demand, and on any pull request that changes this
+# file. Only the first two can write: a pull_request run reports what the sync
+# would do to that PR's tree and stops.
+#
 # Two jobs, because the artifact is not trusted code. `validate` executes it —
 # `npm ci`, the build, the test suite — and holds no write credential, no
 # persisted git token and no registry login by the time it does. `open-pr`
@@ -50,10 +54,18 @@ on:
         description: Artifact tag to pull (defaults to latest)
         type: string
         default: latest
+  # Changing this workflow runs it against the PR's own tree, without opening
+  # anything. It is the only way to see what the sync does before merging a
+  # change to it — and on a PR that alters the shared source, what the sync
+  # would land on top of those changes.
+  pull_request:
+    paths:
+      - '.github/workflows/sync-from-monorepo.yaml'
 
-# One at a time: two runs would race the same deterministic branch name.
+# One at a time per ref: two runs would race the same deterministic branch
+# name. Keyed by ref so a PR check does not queue behind the daily run.
 concurrency:
-  group: sync-from-monorepo
+  group: sync-from-monorepo-${{ github.ref }}
   cancel-in-progress: false
 
 env:
@@ -62,6 +74,9 @@ env:
 
 jobs:
   validate:
+    # A fork's token cannot read the organization's packages, so the pull would
+    # 403 and say nothing useful. Nothing here is worth running for one anyway.
+    if: github.event.pull_request.head.repo.fork != true
     runs-on: ubuntu-latest
     permissions:
       # Read only. This job runs code that arrived in the artifact, so it must
@@ -78,7 +93,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: main
+          # On a pull_request, that PR's merge commit rather than main: the
+          # point of running there is to see what the sync does to *those*
+          # changes, which is the case main cannot show.
+          ref: ${{ github.event_name == 'pull_request' && github.sha || 'main' }}
           # Otherwise the token lands in .git/config, readable by anything the
           # test suite below runs.
           persist-credentials: false
@@ -240,7 +258,14 @@ jobs:
 
   open-pr:
     needs: validate
-    if: needs.validate.outputs.changed == 'true' && inputs.dry_run != true
+    # Named triggers rather than "not a dry run": `inputs` is empty on a
+    # pull_request event, so `inputs.dry_run != true` held there and a PR check
+    # would have pushed a branch and opened a sync PR. Anything added to `on:`
+    # from here defaults to not writing.
+    if: >-
+      needs.validate.outputs.changed == 'true' &&
+      (github.event_name == 'schedule' ||
+      (github.event_name == 'workflow_dispatch' && inputs.dry_run != true))
     runs-on: ubuntu-latest
     permissions:
       contents: write

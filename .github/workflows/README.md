@@ -78,6 +78,7 @@ Pulls the shared MCP source the monorepo publishes and opens a PR with it.
 
 - Daily schedule (06:17 UTC)
 - Manual dispatch
+- Any pull request that changes this workflow — reports only, never writes
 
 **Inputs:**
 
@@ -93,7 +94,18 @@ Pulls the shared MCP source the monorepo publishes and opens a PR with it.
 3. Copies `src/` (except `src/host/`), `skills/` and the logo in, and
    regenerates the README tool table
 4. Runs format, types, build and the unit suite over the result
-5. Opens a PR from `sync/monorepo-<short-sha>`
+5. Opens a PR from `sync/monorepo-<short-sha>` — on a schedule or an explicit
+   `dry_run: false` dispatch only
+
+On a pull request it stops after step 4, against that PR's own merge commit
+rather than `main`. That is the only way to see what a sync would do to a
+change before merging it — including a change to the shared source itself,
+which `main` cannot show.
+
+The write job names the triggers that may write rather than excluding dry runs:
+`inputs` is empty on a `pull_request` event, so a condition of
+`inputs.dry_run != true` is **true** there. Anything added to `on:` therefore
+defaults to not writing.
 
 `src/host/` is what this copy provides for itself — its entry points, its pino
 logger and its build-time assets — and never arrives from the monorepo. The
