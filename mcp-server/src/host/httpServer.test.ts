@@ -4,12 +4,21 @@ import { requestContext } from '../lib/context';
 import { fetchApi } from '../lib/request';
 import { extractApiKey } from './httpServer';
 
-vi.mock('../lib/env', () => ({
+/*
+ * Spread over the real modules rather than replacing them. `lib/` is shared
+ * with the monorepo copy of this source and arrives by sync, so a module
+ * listed exhaustively here fails the moment that copy adds an export — in a
+ * PR whose diff does not contain the cause. Only the values these tests need
+ * to control are overridden.
+ */
+vi.mock('../lib/env', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../lib/env')>()),
   CURRENTS_API_KEY: 'env-key',
   CURRENTS_API_URL: 'https://api.test.com',
 }));
 
-vi.mock('../lib/logger', () => ({
+vi.mock('../lib/logger', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../lib/logger')>()),
   logger: { error: vi.fn(), debug: vi.fn() },
   setLogger: vi.fn(),
 }));
