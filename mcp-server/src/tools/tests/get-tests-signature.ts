@@ -1,17 +1,15 @@
-import { z } from "zod";
-import { postApi } from "../../lib/request.js";
-import { logger } from "../../lib/logger.js";
+import { z } from 'zod';
+import { postApi } from '../../lib/request';
+import { logger } from '../../lib/logger';
 
 const zodSchema = z.object({
   projectId: z
     .string()
-    .describe("The project ID to generate the test signature for."),
-  specFilePath: z
-    .string()
-    .describe("Full path to the spec file."),
+    .describe('The project ID to generate the test signature for.'),
+  specFilePath: z.string().describe('Full path to the spec file.'),
   testTitle: z
     .union([z.string(), z.array(z.string()).min(1)])
-    .describe("Test title or array of titles (for nested describe blocks)."),
+    .describe('Test title or array of titles (for nested describe blocks).'),
 });
 
 interface SignatureRequest {
@@ -43,7 +41,7 @@ const handler = async ({
   };
 
   const data = await postApi<SignatureResponse, SignatureRequest>(
-    "/signature/test",
+    '/signature/test',
     body
   );
 
@@ -51,8 +49,8 @@ const handler = async ({
     return {
       content: [
         {
-          type: "text" as const,
-          text: "Failed to generate test signature",
+          type: 'text' as const,
+          text: 'Failed to generate test signature',
         },
       ],
     };
@@ -61,7 +59,7 @@ const handler = async ({
   return {
     content: [
       {
-        type: "text" as const,
+        type: 'text' as const,
         text: JSON.stringify(data, null, 2),
       },
     ],

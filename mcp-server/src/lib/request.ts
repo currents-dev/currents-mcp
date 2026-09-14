@@ -1,11 +1,11 @@
-import { getApiKey } from "./context.js";
-import { CURRENTS_API_URL } from "./env.js";
-import { logger } from "./logger.js";
+import { getApiKey } from './context';
+import { CURRENTS_API_URL } from './env';
+import { logger } from './logger';
 
-const USER_AGENT = "currents-app/1.0";
+const USER_AGENT = 'currents-app/1.0';
 
 function getAuthorizationHeader(): string {
-  return "Bearer " + getApiKey();
+  return 'Bearer ' + getApiKey();
 }
 
 export interface PaginatedResponse<T> {
@@ -16,8 +16,8 @@ export interface PaginatedResponse<T> {
 
 export async function fetchApi<T>(path: string): Promise<T | null> {
   const headers = {
-    "User-Agent": USER_AGENT,
-    Accept: "application/json",
+    'User-Agent': USER_AGENT,
+    Accept: 'application/json',
     Authorization: getAuthorizationHeader(),
   };
 
@@ -30,22 +30,22 @@ export async function fetchApi<T>(path: string): Promise<T | null> {
     }
     return (await response.json()) as T;
   } catch (error: any) {
-    logger.error("Error making Currents request:", error.toString());
+    logger.error('Error making Currents request:', error.toString());
     return null;
   }
 }
 
 export async function postApi<T, B>(path: string, body: B): Promise<T | null> {
   const headers = {
-    "User-Agent": USER_AGENT,
-    Accept: "application/json",
-    "Content-Type": "application/json",
+    'User-Agent': USER_AGENT,
+    Accept: 'application/json',
+    'Content-Type': 'application/json',
     Authorization: getAuthorizationHeader(),
   };
 
   try {
     const response = await fetch(`${CURRENTS_API_URL}${path}`, {
-      method: "POST",
+      method: 'POST',
       headers,
       body: JSON.stringify(body),
     });
@@ -54,31 +54,34 @@ export async function postApi<T, B>(path: string, body: B): Promise<T | null> {
       logger.error(response);
       return null;
     }
-    if (response.status === 204 || response.headers.get("content-length") === "0") {
+    if (
+      response.status === 204 ||
+      response.headers.get('content-length') === '0'
+    ) {
       return {} as T;
     }
-    const contentType = response.headers.get("content-type");
-    if (contentType && contentType.includes("application/json")) {
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
       return (await response.json()) as T;
     }
     return {} as T;
   } catch (error: any) {
-    logger.error("Error making Currents POST request:", error.toString());
+    logger.error('Error making Currents POST request:', error.toString());
     return null;
   }
 }
 
 export async function putApi<T, B>(path: string, body?: B): Promise<T | null> {
   const headers = {
-    "User-Agent": USER_AGENT,
-    Accept: "application/json",
-    "Content-Type": "application/json",
+    'User-Agent': USER_AGENT,
+    Accept: 'application/json',
+    'Content-Type': 'application/json',
     Authorization: getAuthorizationHeader(),
   };
 
   try {
     const response = await fetch(`${CURRENTS_API_URL}${path}`, {
-      method: "PUT",
+      method: 'PUT',
       headers,
       body: body ? JSON.stringify(body) : undefined,
     });
@@ -89,21 +92,21 @@ export async function putApi<T, B>(path: string, body?: B): Promise<T | null> {
     }
     return (await response.json()) as T;
   } catch (error: any) {
-    logger.error("Error making Currents PUT request:", error.toString());
+    logger.error('Error making Currents PUT request:', error.toString());
     return null;
   }
 }
 
 export async function deleteApi<T>(path: string): Promise<T | null> {
   const headers = {
-    "User-Agent": USER_AGENT,
-    Accept: "application/json",
+    'User-Agent': USER_AGENT,
+    Accept: 'application/json',
     Authorization: getAuthorizationHeader(),
   };
 
   try {
     const response = await fetch(`${CURRENTS_API_URL}${path}`, {
-      method: "DELETE",
+      method: 'DELETE',
       headers,
     });
     if (!response.ok) {
@@ -112,18 +115,21 @@ export async function deleteApi<T>(path: string): Promise<T | null> {
       return null;
     }
     // Handle 204 No Content responses (common for DELETE operations)
-    if (response.status === 204 || response.headers.get("content-length") === "0") {
+    if (
+      response.status === 204 ||
+      response.headers.get('content-length') === '0'
+    ) {
       return {} as T;
     }
     // Check if response has content before parsing JSON
-    const contentType = response.headers.get("content-type");
-    if (contentType && contentType.includes("application/json")) {
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
       return (await response.json()) as T;
     }
     // If no JSON content, return empty object
     return {} as T;
   } catch (error: any) {
-    logger.error("Error making Currents DELETE request:", error.toString());
+    logger.error('Error making Currents DELETE request:', error.toString());
     return null;
   }
 }
@@ -137,7 +143,7 @@ export async function fetchCursorBasedPaginatedApi<T>(
 
   do {
     if (iteration > 100) {
-      logger.error("Too many iterations, stopping pagination");
+      logger.error('Too many iterations, stopping pagination');
       return allData;
     }
 

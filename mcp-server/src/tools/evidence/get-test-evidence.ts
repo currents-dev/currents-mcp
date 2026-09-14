@@ -1,48 +1,48 @@
-import { z } from "zod";
-import { fetchApi } from "../../lib/request.js";
-import { logger } from "../../lib/logger.js";
+import { z } from 'zod';
+import { fetchApi } from '../../lib/request';
+import { logger } from '../../lib/logger';
 
 const zodSchema = z.object({
   projectId: z
     .string()
     .optional()
     .describe(
-      "The project ID. Required unless runId is provided. Used to locate the run by ciBuildId or branch."
+      'The project ID. Required unless runId is provided. Used to locate the run by ciBuildId or branch.'
     ),
   runId: z
     .string()
     .optional()
     .describe(
-      "The run ID to collect evidence from. When provided, projectId, ciBuildId, and branch are ignored."
+      'The run ID to collect evidence from. When provided, projectId, ciBuildId, and branch are ignored.'
     ),
   ciBuildId: z
     .string()
     .optional()
     .describe(
-      "CI build ID for exact run lookup. Requires projectId. Takes precedence over branch."
+      'CI build ID for exact run lookup. Requires projectId. Takes precedence over branch.'
     ),
   branch: z
     .string()
     .optional()
     .describe(
-      "Git branch name. The most recent completed run on this branch is used. Requires projectId."
+      'Git branch name. The most recent completed run on this branch is used. Requires projectId.'
     ),
   spec: z
     .string()
     .optional()
     .describe(
-      "Filter spec files by substring match on the spec file path (case-insensitive)."
+      'Filter spec files by substring match on the spec file path (case-insensitive).'
     ),
   testTitle: z
     .string()
     .optional()
     .describe(
-      "Filter tests by substring match on the full test title, including describe blocks (case-insensitive)."
+      'Filter tests by substring match on the full test title, including describe blocks (case-insensitive).'
     ),
   testStatus: z
-    .array(z.enum(["passed", "failed", "pending", "skipped"]))
+    .array(z.enum(['passed', 'failed', 'pending', 'skipped']))
     .optional()
-    .describe("Filter tests by status. When omitted, all tests are included."),
+    .describe('Filter tests by status. When omitted, all tests are included.'),
   maxInstances: z
     .number()
     .int()
@@ -50,7 +50,7 @@ const zodSchema = z.object({
     .max(25)
     .optional()
     .describe(
-      "Maximum number of spec file instances to fetch artifacts for (default: 10, max: 25). Narrow with the spec filter instead of raising this."
+      'Maximum number of spec file instances to fetch artifacts for (default: 10, max: 25). Narrow with the spec filter instead of raising this.'
     ),
 });
 
@@ -101,7 +101,7 @@ const hasEvidence = (e: TestEvidence): boolean =>
 function groupArtifactsByTest(results: any): Map<string, TestEvidence> {
   const byTest = new Map<string, TestEvidence>();
   const groupFor = (testId: string | undefined): TestEvidence => {
-    const key = testId ?? "";
+    const key = testId ?? '';
     let group = byTest.get(key);
     if (!group) {
       group = emptyEvidence();
@@ -157,12 +157,12 @@ const handler = async ({
   maxInstances = 10,
 }: z.infer<typeof zodSchema>) => {
   const fail = (text: string) => ({
-    content: [{ type: "text" as const, text }],
+    content: [{ type: 'text' as const, text }],
   });
 
   if (!runId && !projectId) {
     return fail(
-      "Either runId or projectId is required. Provide runId directly, or projectId with optional ciBuildId/branch to locate the run."
+      'Either runId or projectId is required. Provide runId directly, or projectId with optional ciBuildId/branch to locate the run.'
     );
   }
 
@@ -170,9 +170,9 @@ const handler = async ({
   let resolvedRunId = runId;
   if (!resolvedRunId) {
     const queryParams = new URLSearchParams();
-    queryParams.append("projectId", projectId as string);
-    if (ciBuildId) queryParams.append("ciBuildId", ciBuildId);
-    else if (branch) queryParams.append("branch", branch);
+    queryParams.append('projectId', projectId as string);
+    if (ciBuildId) queryParams.append('ciBuildId', ciBuildId);
+    else if (branch) queryParams.append('branch', branch);
     const found = await fetchApi<{ data?: { runId?: string } }>(
       `/runs/find?${queryParams.toString()}`
     );
@@ -180,8 +180,8 @@ const handler = async ({
     if (!resolvedRunId) {
       return fail(
         `No run found for projectId=${projectId}${
-          ciBuildId ? ` ciBuildId=${ciBuildId}` : ""
-        }${branch ? ` branch=${branch}` : ""}. The CI run may not have started reporting to Currents yet.`
+          ciBuildId ? ` ciBuildId=${ciBuildId}` : ''
+        }${branch ? ` branch=${branch}` : ''}. The CI run may not have started reporting to Currents yet.`
       );
     }
   }
@@ -195,11 +195,11 @@ const handler = async ({
   const allSpecs: any[] = run.specs ?? [];
   const specFilter = spec?.toLowerCase();
   const matchingSpecs = specFilter
-    ? allSpecs.filter((s) => (s.spec ?? "").toLowerCase().includes(specFilter))
+    ? allSpecs.filter((s) => (s.spec ?? '').toLowerCase().includes(specFilter))
     : allSpecs;
 
   if (matchingSpecs.length === 0) {
-    const available = allSpecs.map((s) => s.spec).join("\n");
+    const available = allSpecs.map((s) => s.spec).join('\n');
     return fail(
       spec
         ? `No spec files matching "${spec}" in run ${resolvedRunId}. Spec files in this run:\n${available}`
@@ -226,7 +226,7 @@ const handler = async ({
         return {
           spec: specEntry.spec,
           instanceId: specEntry.instanceId,
-          error: "Failed to retrieve instance data",
+          error: 'Failed to retrieve instance data',
         };
       }
 
@@ -235,8 +235,8 @@ const handler = async ({
       const tests: EvidenceTest[] = (results.tests ?? [])
         .map((t: any): EvidenceTest => {
           const title = Array.isArray(t.title)
-            ? t.title.join(" > ")
-            : String(t.title ?? "");
+            ? t.title.join(' > ')
+            : String(t.title ?? '');
           return {
             testId: t.testId,
             title,
@@ -249,14 +249,17 @@ const handler = async ({
           if (titleFilter && !t.title.toLowerCase().includes(titleFilter)) {
             return false;
           }
-          if (statusFilter && (!t.status || !statusFilter.includes(t.status as any))) {
+          if (
+            statusFilter &&
+            (!t.status || !statusFilter.includes(t.status as any))
+          ) {
             return false;
           }
           return true;
         });
 
       // Spec-level artifacts: Cypress spec video plus any artifact with no testId
-      const specLevel = artifactsByTest.get("") ?? emptyEvidence();
+      const specLevel = artifactsByTest.get('') ?? emptyEvidence();
       if (results.videoUrl) {
         specLevel.videos.push({ attempt: null, url: results.videoUrl });
       }
@@ -287,13 +290,13 @@ const handler = async ({
           truncated: `Only the first ${selectedSpecs.length} of ${matchingSpecs.length} matching spec instances were fetched. Use the spec filter to narrow down, or raise maxInstances.`,
         }
       : {}),
-    note: "Artifact URLs are signed and time-limited. Download the files promptly (e.g. with curl) rather than storing the URLs.",
+    note: 'Artifact URLs are signed and time-limited. Download the files promptly (e.g. with curl) rather than storing the URLs.',
   };
 
   return {
     content: [
       {
-        type: "text" as const,
+        type: 'text' as const,
         text: JSON.stringify(manifest, null, 2),
       },
     ],

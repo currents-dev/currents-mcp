@@ -1,16 +1,12 @@
-import { z } from "zod";
-import { deleteApi } from "../../lib/request.js";
-import { logger } from "../../lib/logger.js";
+import { z } from 'zod';
+import { deleteApi } from '../../lib/request';
+import { logger } from '../../lib/logger';
 
 const zodSchema = z.object({
-  hookId: z
-    .string()
-    .describe("The webhook ID (UUID)."),
+  hookId: z.string().describe('The webhook ID (UUID).'),
 });
 
-const handler = async ({
-  hookId,
-}: z.infer<typeof zodSchema>) => {
+const handler = async ({ hookId }: z.infer<typeof zodSchema>) => {
   logger.info(`Deleting webhook ${hookId}`);
 
   const data = await deleteApi(`/webhooks/${hookId}`);
@@ -19,8 +15,8 @@ const handler = async ({
     return {
       content: [
         {
-          type: "text" as const,
-          text: "Failed to delete webhook",
+          type: 'text' as const,
+          text: 'Failed to delete webhook',
         },
       ],
     };
@@ -29,7 +25,7 @@ const handler = async ({
   return {
     content: [
       {
-        type: "text" as const,
+        type: 'text' as const,
         text: JSON.stringify(data, null, 2),
       },
     ],

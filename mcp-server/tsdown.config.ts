@@ -8,9 +8,9 @@ const skills = loadSkills();
 
 export default defineConfig({
   entry: {
-    index: "./src/index.ts",
-    http: "./src/http.ts",
-    api: "./src/api.ts",
+    index: "./src/host/stdio.ts",
+    http: "./src/host/httpServer.ts",
+    api: "./src/host/api.ts",
   },
   format: ["esm", "cjs"],
   dts: true,

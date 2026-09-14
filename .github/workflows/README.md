@@ -70,6 +70,85 @@ Publishes the `@currents/mcp` npm package and a public container image to GitHub
 
 ---
 
+### `sync-from-monorepo.yaml` - Sync MCP source from the monorepo
+
+Pulls the shared MCP source the monorepo publishes and opens a PR with it.
+
+**Triggers:**
+
+- Daily schedule (06:17 UTC)
+- Manual dispatch
+- Any pull request that changes this workflow — reports only, never writes
+
+**Inputs:**
+
+- `dry_run` (boolean, default: true): print the diff without pushing a branch
+- `tag` (string, default: `latest`): artifact tag to pull
+
+**What it does:**
+
+1. Pulls `ghcr.io/currents-dev/mcp-source` with `oras`, authenticating with the
+   job's own `GITHUB_TOKEN` — this repository is a reader on that package
+2. Compares the artifact's monorepo commit against `mcp-server/.synced-from`
+   and stops if they match
+3. Copies `src/` (except `src/host/`), `skills/` and the logo in, and
+   regenerates the README tool table
+4. Runs format, types, build and the unit suite over the result
+5. Opens a PR from `sync/monorepo-<short-sha>` — on a schedule or an explicit
+   `dry_run: false` dispatch only
+
+On a pull request it stops after step 4, against that PR's own merge commit
+rather than `main`. That is the only way to see what a sync would do to a
+change before merging it — including a change to the shared source itself,
+which `main` cannot show.
+
+The write job names the triggers that may write rather than excluding dry runs:
+`inputs` is empty on a `pull_request` event, so a condition of
+`inputs.dry_run != true` is **true** there. Anything added to `on:` therefore
+defaults to not writing.
+
+`src/host/` is what this copy provides for itself — its entry points, its pino
+logger and its build-time assets — and never arrives from the monorepo. The
+rest of `src/` is shared, and the monorepo is the side it is edited on.
+
+The monorepo is private and this repository is public, so this one holds no
+credential for it: a token cannot be scoped below repo level, so a leak here
+would disclose the whole monorepo. The monorepo publishes and this pulls, so
+neither side stores a credential for the other — what grants the read is a
+reader grant on the `mcp-source` package, revocable in package settings without
+touching either repository.
+
+A 403 on the pull means that grant is gone, not that the artifact is missing.
+
+The tag is mutable and the artifact's `manifest.json` reports its own source
+commit, so neither establishes where the bytes came from. Write access to that
+package is the control. Build provenance would narrow it further, but GitHub's
+attestations API is not available to this organization for a private repository
+(`Feature not available for the currents-dev organization`), and pinning a
+digest defeats a job whose purpose is to pull whatever was published last.
+
+What bounds it is what this job can do with what it pulls: push a branch and
+open a PR. It cannot merge or publish, the PR is reviewed by a person, and its
+branch prefix is deliberately outside the one `parity-pr-merged.yaml` turns
+into a release.
+
+**`test.yml` does not run on that PR.** GitHub starts no `push` or
+`pull_request` workflow runs for events caused by `GITHUB_TOKEN` — the parity
+workflow's own PRs (#149, #168, #171) show it, none carry a Test job. So this
+workflow runs format, types, build and the unit suite itself, before pushing:
+a failure means no PR rather than a PR whose green tick is absent for a reason
+nobody notices. If cryptographic provenance is
+wanted later, `cosign` keyless signing is not plan-gated — at the cost of the
+artifact digest appearing in a public transparency log.
+
+**`prettier` is pinned to the exact version the monorepo uses.** Matching
+`.prettierrc` is not enough — 3.6 changed how it breaks union types, so a
+newer prettier here reformats what the monorepo sent and `npm run format`
+fails on a tree nobody edited. Bumping it means bumping both repositories
+together, so decline the dependabot bump until the monorepo takes it.
+
+---
+
 ### `test.yml` - Unit Tests
 
 Runs the unit test suite on every push and pull request.

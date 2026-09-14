@@ -1,22 +1,16 @@
-import { z } from "zod";
-import { fetchApi } from "../../lib/request.js";
-import { logger } from "../../lib/logger.js";
+import { z } from 'zod';
+import { fetchApi } from '../../lib/request';
+import { logger } from '../../lib/logger';
 
 const zodSchema = z.object({
-  projectId: z
-    .string()
-    .describe("The project ID to fetch webhooks from."),
+  projectId: z.string().describe('The project ID to fetch webhooks from.'),
 });
 
-const handler = async ({
-  projectId,
-}: z.infer<typeof zodSchema>) => {
+const handler = async ({ projectId }: z.infer<typeof zodSchema>) => {
   const queryParams = new URLSearchParams();
-  queryParams.append("projectId", projectId);
+  queryParams.append('projectId', projectId);
 
-  logger.info(
-    `Fetching webhooks for project ${projectId}`
-  );
+  logger.info(`Fetching webhooks for project ${projectId}`);
 
   const data = await fetchApi(`/webhooks?${queryParams.toString()}`);
 
@@ -24,8 +18,8 @@ const handler = async ({
     return {
       content: [
         {
-          type: "text" as const,
-          text: "Failed to retrieve webhooks",
+          type: 'text' as const,
+          text: 'Failed to retrieve webhooks',
         },
       ],
     };
@@ -34,7 +28,7 @@ const handler = async ({
   return {
     content: [
       {
-        type: "text" as const,
+        type: 'text' as const,
         text: JSON.stringify(data, null, 2),
       },
     ],

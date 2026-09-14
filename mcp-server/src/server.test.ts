@@ -1,5 +1,4 @@
-import { readFileSync } from "node:fs";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from 'vitest';
 
 const { registeredTools, registeredResources } = vi.hoisted(() => {
   const registeredTools: Array<{ name: string; description: string }> = [];
@@ -12,7 +11,7 @@ const { registeredTools, registeredResources } = vi.hoisted(() => {
   return { registeredTools, registeredResources };
 });
 
-vi.mock("@modelcontextprotocol/sdk/server/mcp.js", () => ({
+vi.mock('@modelcontextprotocol/sdk/server/mcp.js', () => ({
   McpServer: class {
     registerTool(
       name: string,
@@ -33,13 +32,9 @@ vi.mock("@modelcontextprotocol/sdk/server/mcp.js", () => ({
   },
 }));
 
-vi.mock("@modelcontextprotocol/sdk/server/stdio.js", () => ({
-  StdioServerTransport: class {},
-}));
-
 // Building the server triggers all registerTool / registerResource calls
-import { createMcpServer } from "./server.js";
-import { skillFileUri, skills } from "./skills.js";
+import { createMcpServer } from './server';
+import { getSkills, skillFileUri } from './skills';
 
 createMcpServer();
 
@@ -51,53 +46,21 @@ const TOOL_NAME_PATTERN = /^[a-zA-Z0-9_\-./]+$/;
 const TOOL_DESCRIPTION_MAX_LENGTH = 1024;
 // Cursor IDE prefixes tool names with "extension-<server>:" when displaying them.
 // Combined length must stay ≤ 60 to avoid filtering warnings.
-const CURSOR_SERVER_PREFIX = "extension-currents:";
+const CURSOR_SERVER_PREFIX = 'extension-currents:';
 const CURSOR_COMBINED_MAX_LENGTH = 60;
 
-describe("MCP tool best practices", () => {
-  it("has at least one registered tool", () => {
+describe('MCP tool best practices', () => {
+  it('has at least one registered tool', () => {
     expect(registeredTools.length).toBeGreaterThan(0);
   });
 
-  it("tool names are unique", () => {
+  it('tool names are unique', () => {
     const names = registeredTools.map((t) => t.name);
     const dupes = names.filter((n, i) => names.indexOf(n) !== i);
-    expect(dupes, `duplicate tool names: ${dupes.join(", ")}`).toHaveLength(0);
+    expect(dupes, `duplicate tool names: ${dupes.join(', ')}`).toHaveLength(0);
   });
 
-  describe("README.md tools table", () => {
-    const readme = readFileSync(
-      new URL("../../README.md", import.meta.url),
-      "utf-8"
-    );
-    const toolNamesInReadme = [
-      ...readme.matchAll(/\| `(currents-[\w-]+)` /g),
-    ].map((m) => m[1]);
-
-    it("every registered tool is listed in README", () => {
-      const registered = registeredTools.map((t) => t.name);
-      const missing = registered.filter(
-        (name) => !toolNamesInReadme.includes(name)
-      );
-      expect(
-        missing,
-        `tools missing from README: ${missing.join(", ")}. Run: npm run sync-readme`
-      ).toHaveLength(0);
-    });
-
-    it("README does not list removed tools", () => {
-      const registered = registeredTools.map((t) => t.name);
-      const stale = toolNamesInReadme.filter(
-        (name) => !registered.includes(name)
-      );
-      expect(
-        stale,
-        `stale tools in README: ${stale.join(", ")}. Run: npm run sync-readme`
-      ).toHaveLength(0);
-    });
-  });
-
-  describe.each(registeredTools)("$name", ({ name, description }) => {
+  describe.each(registeredTools)('$name', ({ name, description }) => {
     // ── name constraints (SEP-986) ──────────────────────────────
     it(`name length ≤ ${TOOL_NAME_MAX_LENGTH}`, () => {
       expect(
@@ -106,11 +69,11 @@ describe("MCP tool best practices", () => {
       ).toBeLessThanOrEqual(TOOL_NAME_MAX_LENGTH);
     });
 
-    it("name contains only allowed characters", () => {
+    it('name contains only allowed characters', () => {
       expect(name).toMatch(TOOL_NAME_PATTERN);
     });
 
-    it("name is not empty", () => {
+    it('name is not empty', () => {
       expect(name.length).toBeGreaterThan(0);
     });
 
@@ -123,7 +86,7 @@ describe("MCP tool best practices", () => {
     });
 
     // ── description constraints ─────────────────────────────────
-    it("description is not empty", () => {
+    it('description is not empty', () => {
       expect(description.length).toBeGreaterThan(0);
     });
 
@@ -134,23 +97,23 @@ describe("MCP tool best practices", () => {
       ).toBeLessThanOrEqual(TOOL_DESCRIPTION_MAX_LENGTH);
     });
 
-    it("description has no leading/trailing whitespace", () => {
+    it('description has no leading/trailing whitespace', () => {
       expect(description).toBe(description.trim());
     });
 
-    it("description starts with a capital letter", () => {
+    it('description starts with a capital letter', () => {
       expect(description).toMatch(/^[A-Z]/);
     });
 
-    it("description ends with a period", () => {
-      expect(description.at(-1)).toBe(".");
+    it('description ends with a period', () => {
+      expect(description.at(-1)).toBe('.');
     });
   });
 });
 
-describe("skills registered as resources", () => {
-  it("registers every file of every skill", () => {
-    const expected = skills.flatMap((skill) =>
+describe('skills registered as resources', () => {
+  it('registers every file of every skill', () => {
+    const expected = getSkills().flatMap((skill) =>
       skill.files.map((file) => skillFileUri(skill.name, file.path))
     );
     expect(expected.length).toBeGreaterThan(0);
@@ -159,26 +122,29 @@ describe("skills registered as resources", () => {
     );
   });
 
-  it("resource URIs are unique", () => {
+  it('resource URIs are unique', () => {
     const uris = registeredResources.map((r) => r.uri);
     expect(new Set(uris).size).toBe(uris.length);
   });
 
-  it("serves the skill markdown as text/markdown", () => {
+  it('serves the skill markdown as text/markdown', () => {
     for (const resource of registeredResources) {
-      expect(resource.mimeType).toBe("text/markdown");
+      expect(resource.mimeType).toBe('text/markdown');
       const [content] = resource.read().contents;
       expect(content.uri).toBe(resource.uri);
       expect(content.text.length).toBeGreaterThan(0);
     }
   });
 
-  it("serves the frontmatter of each skill entry point", () => {
-    for (const skill of skills) {
+  it('serves the frontmatter of each skill entry point', () => {
+    for (const skill of getSkills()) {
       const entryPoint = registeredResources.find(
-        (r) => r.uri === skillFileUri(skill.name, "SKILL.md")
+        (r) => r.uri === skillFileUri(skill.name, 'SKILL.md')
       );
-      expect(entryPoint, `no SKILL.md resource for ${skill.name}`).toBeDefined();
+      expect(
+        entryPoint,
+        `no SKILL.md resource for ${skill.name}`
+      ).toBeDefined();
       expect(entryPoint?.read().contents[0].text).toContain(
         `name: ${skill.name}`
       );

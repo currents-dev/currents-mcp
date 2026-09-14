@@ -1,9 +1,9 @@
-import { z } from "zod";
-import { putApi } from "../../lib/request.js";
-import { logger } from "../../lib/logger.js";
+import { z } from 'zod';
+import { putApi } from '../../lib/request';
+import { logger } from '../../lib/logger';
 
 const zodSchema = z.object({
-  runId: z.string().describe("The run ID to cancel."),
+  runId: z.string().describe('The run ID to cancel.'),
 });
 
 const handler = async ({ runId }: z.infer<typeof zodSchema>) => {
@@ -15,8 +15,8 @@ const handler = async ({ runId }: z.infer<typeof zodSchema>) => {
     return {
       content: [
         {
-          type: "text" as const,
-          text: "Failed to cancel run",
+          type: 'text' as const,
+          text: 'Failed to cancel run',
         },
       ],
     };
@@ -25,7 +25,7 @@ const handler = async ({ runId }: z.infer<typeof zodSchema>) => {
   return {
     content: [
       {
-        type: "text" as const,
+        type: 'text' as const,
         text: JSON.stringify(data, null, 2),
       },
     ],

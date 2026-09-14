@@ -1,0 +1,355 @@
+# Pulls the shared MCP source the monorepo publishes and opens a PR with it.
+#
+# The monorepo is private and this repository is public, so this one holds no
+# credential for it: a token cannot be scoped below repo level, so a leak here
+# would disclose the whole monorepo. The monorepo publishes a GHCR artifact
+# instead, and this repository is a reader on that package, so the pull needs
+# nothing beyond a GITHUB_TOKEN. Neither side stores a credential for the
+# other; what grants the read is a package permission, revocable without
+# touching either repository.
+#
+# src/host is what this copy provides for itself and never arrives from the
+# monorepo. Everything else under src/, plus skills/ and the logo, does.
+#
+# Runs on a schedule, on demand, and on any pull request that changes this
+# file. Only the first two can write: a pull_request run reports what the sync
+# would do to that PR's tree and stops.
+#
+# Two jobs, because the artifact is not trusted code. `validate` executes it —
+# `npm ci`, the build, the test suite — and holds no write credential, no
+# persisted git token and no registry login by the time it does. `open-pr`
+# holds the write credentials and executes nothing that arrived: it checks out
+# main, applies the tree `validate` already vetted, and pushes.
+#
+# Neither checks out the dispatching ref, so a dispatch from a feature branch
+# cannot carry that branch's commits into a PR against main: `validate` takes
+# main, and `open-pr` takes the exact commit `validate` tested against rather
+# than main as it stands by then. The workflow file itself still comes from the
+# dispatching ref, which no workflow can defend against — that is bounded by
+# who may dispatch.
+#
+# What this trusts, and what bounds it: the tag is mutable and the artifact
+# reports its own source commit, so neither establishes where the bytes came
+# from. Writing to that package is the control. Build provenance would narrow
+# it further, but GitHub's attestations API is not available to this
+# organization for a private repository, and pinning a digest defeats a job
+# whose purpose is to pull whatever was published last. `test.yml` does not run
+# on the PR either — GitHub starts no push or pull_request runs for events
+# caused by GITHUB_TOKEN — so `validate` runs those checks itself, and a
+# failure means no PR rather than a PR whose missing checks nobody reads.
+name: Sync MCP source from the monorepo
+
+on:
+  schedule:
+    # Daily. The monorepo publishes on a release tag, so this trails a release
+    # by up to a day unless someone dispatches it.
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Print the diff without pushing a branch
+        type: boolean
+        default: true
+      tag:
+        description: Artifact tag to pull (defaults to latest)
+        type: string
+        default: latest
+  # Changing this workflow runs it against the PR's own tree, without opening
+  # anything. It is the only way to see what the sync does before merging a
+  # change to it — and on a PR that alters the shared source, what the sync
+  # would land on top of those changes.
+  pull_request:
+    paths:
+      - '.github/workflows/sync-from-monorepo.yaml'
+
+# One at a time per ref: two runs would race the same deterministic branch
+# name. Keyed by ref so a PR check does not queue behind the daily run.
+concurrency:
+  group: sync-from-monorepo-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  ARTIFACT: ghcr.io/currents-dev/mcp-source
+  MARKER: mcp-server/.synced-from
+
+jobs:
+  validate:
+    # A fork's token cannot read the organization's packages, so the pull would
+    # 403 and say nothing useful. Nothing here is worth running for one anyway.
+    if: github.event.pull_request.head.repo.fork != true
+    runs-on: ubuntu-latest
+    permissions:
+      # Read only. This job runs code that arrived in the artifact, so it must
+      # hold nothing worth stealing.
+      packages: read
+    outputs:
+      changed: ${{ steps.check.outputs.changed }}
+      sha: ${{ steps.manifest.outputs.sha }}
+      short: ${{ steps.manifest.outputs.short }}
+      ref: ${{ steps.manifest.outputs.ref }}
+      previous: ${{ steps.manifest.outputs.previous }}
+      removed: ${{ steps.check.outputs.removed }}
+      base: ${{ steps.base.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # On a pull_request, that PR's merge commit rather than main: the
+          # point of running there is to see what the sync does to *those*
+          # changes, which is the case main cannot show.
+          ref: ${{ github.event_name == 'pull_request' && github.sha || 'main' }}
+          # Otherwise the token lands in .git/config, readable by anything the
+          # test suite below runs.
+          persist-credentials: false
+
+      - name: Record the base this ran against
+        id: base
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - uses: oras-project/setup-oras@v1
+
+      - name: Pull the published source
+        env:
+          TAG: ${{ inputs.tag || 'latest' }}
+          # Through the environment rather than interpolated into the script,
+          # so nothing here can be read as shell.
+          REGISTRY_USER: ${{ github.actor }}
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/payload
+          # The package is private and this repository is a reader on it, so a
+          # failure here with a 403 means that grant is gone rather than that
+          # the artifact is missing.
+          printf '%s' "$REGISTRY_TOKEN" \
+            | oras login ghcr.io -u "$REGISTRY_USER" --password-stdin
+          oras pull "${ARTIFACT}:${TAG}" -o /tmp/payload
+          # Drops ~/.docker/config.json before anything from the artifact runs.
+          oras logout ghcr.io
+          cat /tmp/payload/manifest.json
+
+      - name: Read the manifest
+        id: manifest
+        run: |
+          set -euo pipefail
+          SHA="$(jq -r '.sha // empty' /tmp/payload/manifest.json)"
+          REF="$(jq -r '.ref // empty' /tmp/payload/manifest.json)"
+          PREVIOUS="$(cat "$MARKER" 2>/dev/null || echo none)"
+          # The artifact is data, not input, and so is the marker a previous
+          # sync committed. All three reach a shell and a workflow output
+          # below, so a value carrying `$(...)` would run and one carrying a
+          # newline would forge further outputs. Shape is checked first.
+          case "$SHA" in
+            '' | *[!0-9a-f]*)
+              echo "manifest sha is not a commit: '$SHA'" >&2; exit 1 ;;
+          esac
+          if [ "${#SHA}" -lt 7 ]; then
+            echo "manifest sha is too short to identify a commit" >&2; exit 1
+          fi
+          case "$REF" in
+            '' | *[!A-Za-z0-9/._-]*)
+              echo "manifest ref has unexpected characters" >&2; exit 1 ;;
+          esac
+          case "$PREVIOUS" in
+            none | *[!0-9a-f]* | '') PREVIOUS=none ;;
+          esac
+          {
+            echo "sha=$SHA"
+            echo "short=${SHA:0:7}"
+            echo "ref=$REF"
+            echo "previous=$PREVIOUS"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Apply it
+        env:
+          SHA: ${{ steps.manifest.outputs.sha }}
+        run: |
+          set -euo pipefail
+          # Unconditional rather than gated on the marker: the marker records
+          # what was last pulled, not what the tree holds, so gating on it
+          # leaves a hand-edited or half-applied copy uncorrected forever. The
+          # copy is idempotent, and git decides below whether it changed
+          # anything.
+          #
+          # --delete so a file removed upstream is removed here. Excluded paths
+          # are protected from it, which is what keeps src/host.
+          rsync -a --delete --exclude='host/' /tmp/payload/src/ mcp-server/src/
+          rsync -a --delete /tmp/payload/skills/ skills/
+          cp /tmp/payload/assets/logo.png mcp-server/assets/logo.png
+          printf '%s\n' "$SHA" > "$MARKER"
+          # The README tool table is generated from server.ts, and
+          # host/readme.test.ts fails when they disagree — so a sync that adds
+          # or drops a tool has to bring the table with it. Node builtins only,
+          # and from main's checkout rather than the dispatching ref. The skill
+          # table has no generator; a skill added upstream still fails that
+          # test, by design, and is fixed by hand on the PR.
+          node mcp-server/scripts/sync-readme-tools.mjs
+
+      - name: Decide whether anything changed
+        id: check
+        run: |
+          set -euo pipefail
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "The tree already matches the published source."
+            exit 0
+          fi
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          git --no-pager diff --stat
+          git status --short
+          # A tool or skill withdrawn upstream is a breaking change for anything
+          # already calling it. The sync applies it either way — the monorepo
+          # decides the catalog — but the reviewer should not have to find it in
+          # a fifty-file diff.
+          REMOVED="$(git status --porcelain -- mcp-server/src/tools skills \
+            | awk '$1 ~ /D/ { print $2 }' | tr '\n' ' ')"
+          echo "removed=$REMOVED" >> "$GITHUB_OUTPUT"
+          if [ -n "$REMOVED" ]; then
+            echo "::warning::This sync withdraws: $REMOVED"
+          fi
+
+      # Taken before the step below runs anything that arrived. The tests are
+      # not supposed to write to the tree, but they are the untrusted part, so
+      # what gets handed on is what was checked rather than whatever they left
+      # behind.
+      - name: Snapshot what is about to be checked
+        if: steps.check.outputs.changed == 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/vetted
+          rsync -a --relative \
+            mcp-server/src mcp-server/assets/logo.png mcp-server/.synced-from \
+            skills README.md /tmp/vetted/
+
+      - uses: actions/setup-node@v4
+        if: steps.check.outputs.changed == 'true'
+        with:
+          node-version: 24.x
+
+      - name: Check the result builds and passes
+        if: steps.check.outputs.changed == 'true'
+        working-directory: ./mcp-server
+        run: |
+          set -euo pipefail
+          npm ci
+          # Formatting first: the two copies pin the same prettier, and a drift
+          # there rewrites files nobody edited.
+          npx prettier --check src ../skills
+          npx tsc --noEmit
+          npx tsdown
+          # Everything, including the packaging tests. They pack the tarball and
+          # install it on its own, which is the only place a dependency the
+          # monorepo declares and this package does not shows up: the synced
+          # source imports it, it resolves from the dev tree here, and a
+          # consumer's install has nothing to resolve it from. They also drive
+          # the packaged binary through an MCP handshake, so a sync that leaves
+          # the server unable to serve fails here rather than in a client.
+          npx vitest run
+
+      - name: Hand the vetted tree to the write job
+        if: steps.check.outputs.changed == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: synced-tree
+          retention-days: 1
+          include-hidden-files: true
+          # The snapshot, not the live checkout: the test run sits between the
+          # two and is the part that is not trusted.
+          path: /tmp/vetted
+
+  open-pr:
+    needs: validate
+    # Named triggers rather than "not a dry run": `inputs` is empty on a
+    # pull_request event, so `inputs.dry_run != true` held there and a PR check
+    # would have pushed a branch and opened a sync PR. Anything added to `on:`
+    # from here defaults to not writing.
+    if: >-
+      needs.validate.outputs.changed == 'true' &&
+      (github.event_name == 'schedule' ||
+      (github.event_name == 'workflow_dispatch' && inputs.dry_run != true))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      # The exact commit `validate` checked out and tested against, not main as
+      # it now stands: main can advance between the two jobs, and applying a
+      # vetted tree onto a base nobody vetted it against is how a sync quietly
+      # reverts whatever landed in between.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.validate.outputs.base }}
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: synced-tree
+          path: /tmp/synced
+
+      - name: Apply the vetted tree and open the PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHA: ${{ needs.validate.outputs.sha }}
+          SHORT: ${{ needs.validate.outputs.short }}
+          SOURCE_REF: ${{ needs.validate.outputs.ref }}
+          PREVIOUS: ${{ needs.validate.outputs.previous }}
+          REMOVED: ${{ needs.validate.outputs.removed }}
+        run: |
+          set -euo pipefail
+          # Nothing from the artifact is executed in this job. These are the
+          # same bytes `validate` built and tested, copied onto a fresh main.
+          rsync -a --delete --exclude='host/' \
+            /tmp/synced/mcp-server/src/ mcp-server/src/
+          rsync -a --delete /tmp/synced/skills/ skills/
+          cp /tmp/synced/mcp-server/assets/logo.png mcp-server/assets/logo.png
+          cp /tmp/synced/mcp-server/.synced-from "$MARKER"
+          cp /tmp/synced/README.md README.md
+
+          BRANCH="sync/monorepo-${SHORT}"
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git checkout -b "$BRANCH"
+          git add -A
+
+          cat > /tmp/message <<EOF
+          chore: sync MCP source from the monorepo at ${SHORT}
+
+          Published by ${SOURCE_REF}. Previous sync: ${PREVIOUS}.
+          EOF
+          git commit --file /tmp/message
+
+          {
+            printf 'Published by `%s` from monorepo commit `%s`.\n\n' \
+              "$SOURCE_REF" "$SHA"
+            printf 'Previous sync: `%s`.\n\n' "$PREVIOUS"
+            printf 'src/host/ is this copy own and is not touched.\n'
+            if [ -n "$REMOVED" ]; then
+              printf '\n**This withdraws:** `%s`\n\n' "$REMOVED"
+              printf 'Already-released tools and skill:// resources disappear '
+              printf 'with them, so confirm the monorepo removed them '
+              printf 'deliberately.\n'
+            fi
+          } > /tmp/body
+
+          # Before the push, not after it. The branch name is derived from the
+          # source commit, so a rerun for the same commit targets the same
+          # branch — and force-pushing over an open PR would discard whatever a
+          # reviewer had added to it. Same commit means the same content, so
+          # there is nothing to update.
+          EXISTING="$(gh pr list --head "$BRANCH" --state open \
+            --json number --jq '.[0].number // empty')"
+          if [ -n "$EXISTING" ]; then
+            echo "PR #${EXISTING} is already open for ${BRANCH} at the same" \
+              "source commit; leaving it alone."
+            exit 0
+          fi
+          # Force because the branch may be left over from a closed PR; no open
+          # one can be clobbered, having just checked.
+          git push --force origin "$BRANCH"
+          # Asked rather than inferred from a failure: `|| true` on the create
+          # would report a PR that auth, validation or a rate limit stopped as
+          # one that already existed, after the branch had been pushed.
+          # Not the cursor/currents-mcp-parity-* prefix: that one auto-bumps the
+          # version and dispatches a publish on merge, which a source sync
+          # should not do on its own.
+          gh pr create --base main --head "$BRANCH" \
+            --title "Sync MCP source from the monorepo (${SHORT})" \
+            --body-file /tmp/body

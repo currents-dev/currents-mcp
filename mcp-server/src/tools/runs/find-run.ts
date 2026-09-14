@@ -1,27 +1,29 @@
-import { z } from "zod";
-import { fetchApi } from "../../lib/request.js";
-import { logger } from "../../lib/logger.js";
+import { z } from 'zod';
+import { fetchApi } from '../../lib/request';
+import { logger } from '../../lib/logger';
 
 const zodSchema = z.object({
-  projectId: z
-    .string()
-    .describe("The project ID to search for runs in."),
+  projectId: z.string().describe('The project ID to search for runs in.'),
   ciBuildId: z
     .string()
     .optional()
-    .describe("The CI build ID. If provided, returns the run with this exact ciBuildId."),
+    .describe(
+      'The CI build ID. If provided, returns the run with this exact ciBuildId.'
+    ),
   branch: z
     .string()
     .optional()
-    .describe("Git branch name. Used when ciBuildId is not provided."),
+    .describe('Git branch name. Used when ciBuildId is not provided.'),
   tags: z
     .array(z.string())
     .optional()
-    .describe("Run tags to filter by (can be specified multiple times)."),
+    .describe('Run tags to filter by (can be specified multiple times).'),
   pwLastRun: z
     .boolean()
     .optional()
-    .describe("If true, includes information about failed tests from the last run (Playwright only)."),
+    .describe(
+      'If true, includes information about failed tests from the last run (Playwright only).'
+    ),
 });
 
 const handler = async ({
@@ -32,22 +34,22 @@ const handler = async ({
   pwLastRun,
 }: z.infer<typeof zodSchema>) => {
   const queryParams = new URLSearchParams();
-  queryParams.append("projectId", projectId);
+  queryParams.append('projectId', projectId);
 
   if (ciBuildId) {
-    queryParams.append("ciBuildId", ciBuildId);
+    queryParams.append('ciBuildId', ciBuildId);
   }
 
   if (branch) {
-    queryParams.append("branch", branch);
+    queryParams.append('branch', branch);
   }
 
   if (tags && tags.length > 0) {
-    tags.forEach((t) => queryParams.append("tags[]", t));
+    tags.forEach((t) => queryParams.append('tags[]', t));
   }
 
   if (pwLastRun !== undefined) {
-    queryParams.append("pwLastRun", pwLastRun.toString());
+    queryParams.append('pwLastRun', pwLastRun.toString());
   }
 
   logger.info(`Finding run with query params: ${queryParams.toString()}`);
@@ -58,8 +60,8 @@ const handler = async ({
     return {
       content: [
         {
-          type: "text" as const,
-          text: "Failed to find run",
+          type: 'text' as const,
+          text: 'Failed to find run',
         },
       ],
     };
@@ -68,7 +70,7 @@ const handler = async ({
   return {
     content: [
       {
-        type: "text" as const,
+        type: 'text' as const,
         text: JSON.stringify(data, null, 2),
       },
     ],

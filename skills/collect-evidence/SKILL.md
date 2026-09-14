@@ -13,13 +13,13 @@ Do not capture evidence locally: CI runs in a clean, reproducible environment, a
 
 Evidence types and when to use each:
 
-| Evidence | Use for | Captured by |
-| --- | --- | --- |
-| Screenshot | Visual state, before/after UI comparison | `page.screenshot()` attached to the test |
-| Text/JSON attachment | CLI output, API responses, computed values, diffs | `testInfo.attach()` |
-| Video | Multi-step flows, interactions | Playwright/Cypress video recording |
-| Trace | Full replay with DOM, network, console | Playwright tracing |
-| GIF | Embedding a short demo in a PR/issue | Convert downloaded video with ffmpeg |
+| Evidence             | Use for                                           | Captured by                              |
+| -------------------- | ------------------------------------------------- | ---------------------------------------- |
+| Screenshot           | Visual state, before/after UI comparison          | `page.screenshot()` attached to the test |
+| Text/JSON attachment | CLI output, API responses, computed values, diffs | `testInfo.attach()`                      |
+| Video                | Multi-step flows, interactions                    | Playwright/Cypress video recording       |
+| Trace                | Full replay with DOM, network, console            | Playwright tracing                       |
+| GIF                  | Embedding a short demo in a PR/issue              | Convert downloaded video with ffmpeg     |
 
 ## Requirements
 
