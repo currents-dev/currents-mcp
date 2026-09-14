@@ -45,7 +45,8 @@
     "release": "release-it",
     "release:dry": "release-it --dry-run",
     "format": "prettier --check src ../skills",
-    "format-fix": "prettier --write src ../skills"
+    "format-fix": "prettier --write src ../skills",
+    "verify": "npm run format && tsc --noEmit && npm run build && vitest run"
   },
   "author": "Currents Software Inc",
   "homepage": "https://currents.dev",
