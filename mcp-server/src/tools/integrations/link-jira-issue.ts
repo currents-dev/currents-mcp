@@ -1,10 +1,12 @@
 import { z } from 'zod';
 import { postApi } from '../../lib/request';
+import { apiFailureResult } from '../../lib/toolResult';
 import { logger } from '../../lib/logger';
+import type { McpTool } from '../../lib/tool';
 
 const zodSchema = z
   .object({
-    projectId: z.string().describe('Currents project ID.'),
+    projectId: z.string().min(1).describe('Currents project ID.'),
     jiraIssueKey: z
       .string()
       .min(1)
@@ -76,19 +78,20 @@ const handler = async ({
   const path = `/projects/${encodeURIComponent(projectId)}/jira/issues/${encodeURIComponent(jiraIssueKey)}/link`;
   logger.info(`Linking Jira issue: ${path}`);
 
-  const data = await postApi(path, body);
-  if (!data) {
-    return {
-      content: [{ type: 'text' as const, text: 'Failed to link Jira issue' }],
-    };
+  const result = await postApi(path, body);
+  if (!result.ok) {
+    return apiFailureResult('Failed to link Jira issue', result);
   }
 
   return {
-    content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }],
+    content: [
+      { type: 'text' as const, text: JSON.stringify(result.data, null, 2) },
+    ],
   };
 };
 
 export const linkJiraIssueFromRunTestTool = {
+  scope: 'issues:write',
   schema: zodSchema,
   handler,
-};
+} satisfies McpTool<typeof zodSchema>;

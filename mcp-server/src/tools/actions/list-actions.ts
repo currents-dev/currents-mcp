@@ -1,9 +1,14 @@
 import { z } from 'zod';
 import { fetchApi } from '../../lib/request';
+import { apiFailureResult } from '../../lib/toolResult';
 import { logger } from '../../lib/logger';
+import type { McpTool } from '../../lib/tool';
 
 const zodSchema = z.object({
-  projectId: z.string().describe('The project ID to fetch actions from.'),
+  projectId: z
+    .string()
+    .min(1)
+    .describe('The project ID to fetch actions from.'),
   status: z
     .array(z.enum(['active', 'disabled', 'archived', 'expired']))
     .optional()
@@ -31,30 +36,24 @@ const handler = async ({
     `Fetching actions for project ${projectId} with query params: ${queryParams.toString()}`
   );
 
-  const data = await fetchApi(`/actions?${queryParams.toString()}`);
+  const result = await fetchApi(`/actions?${queryParams.toString()}`);
 
-  if (!data) {
-    return {
-      content: [
-        {
-          type: 'text' as const,
-          text: 'Failed to retrieve actions',
-        },
-      ],
-    };
+  if (!result.ok) {
+    return apiFailureResult('Failed to retrieve actions', result);
   }
 
   return {
     content: [
       {
         type: 'text' as const,
-        text: JSON.stringify(data, null, 2),
+        text: JSON.stringify(result.data, null, 2),
       },
     ],
   };
 };
 
 export const listActionsTool = {
+  scope: 'actions:read',
   schema: zodSchema,
   handler,
-};
+} satisfies McpTool<typeof zodSchema>;

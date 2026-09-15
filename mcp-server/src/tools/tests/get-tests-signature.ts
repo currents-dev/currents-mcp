@@ -1,10 +1,13 @@
 import { z } from 'zod';
 import { postApi } from '../../lib/request';
+import { apiFailureResult } from '../../lib/toolResult';
 import { logger } from '../../lib/logger';
+import type { McpTool } from '../../lib/tool';
 
 const zodSchema = z.object({
   projectId: z
     .string()
+    .min(1)
     .describe('The project ID to generate the test signature for.'),
   specFilePath: z.string().describe('Full path to the spec file.'),
   testTitle: z
@@ -40,33 +43,27 @@ const handler = async ({
     testTitle,
   };
 
-  const data = await postApi<SignatureResponse, SignatureRequest>(
+  const result = await postApi<SignatureResponse, SignatureRequest>(
     '/signature/test',
     body
   );
 
-  if (!data) {
-    return {
-      content: [
-        {
-          type: 'text' as const,
-          text: 'Failed to generate test signature',
-        },
-      ],
-    };
+  if (!result.ok) {
+    return apiFailureResult('Failed to generate test signature', result);
   }
 
   return {
     content: [
       {
         type: 'text' as const,
-        text: JSON.stringify(data, null, 2),
+        text: JSON.stringify(result.data, null, 2),
       },
     ],
   };
 };
 
 export const getTestSignatureTool = {
+  scope: 'any',
   schema: zodSchema,
   handler,
-};
+} satisfies McpTool<typeof zodSchema>;

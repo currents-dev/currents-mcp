@@ -4,7 +4,10 @@ import { listJiraProjectsTool } from './list-jira-projects';
 
 describe('listJiraProjectsTool', () => {
   it('calls GET /integrations/jira/projects with required installation id', async () => {
-    vi.spyOn(request, 'fetchApi').mockResolvedValue({ status: 'OK', data: [] });
+    vi.spyOn(request, 'fetchApi').mockResolvedValue({
+      ok: true,
+      data: { status: 'OK', data: [] },
+    });
 
     await listJiraProjectsTool.handler({
       jira_installation_id: 'inst-1',

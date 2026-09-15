@@ -4,7 +4,10 @@ import { linkJiraIssueFromRunTestTool } from './link-jira-issue';
 
 describe('linkJiraIssueFromRunTestTool', () => {
   it('calls POST /projects/{projectId}/jira/issues/{jiraIssueKey}/link with required body fields', async () => {
-    vi.spyOn(request, 'postApi').mockResolvedValue({ status: 'OK', data: {} });
+    vi.spyOn(request, 'postApi').mockResolvedValue({
+      ok: true,
+      data: { status: 'OK', data: {} },
+    });
 
     await linkJiraIssueFromRunTestTool.handler({
       projectId: 'p1',
@@ -29,7 +32,10 @@ describe('linkJiraIssueFromRunTestTool', () => {
   });
 
   it('includes optional comment and includeContextInComment in request body', async () => {
-    vi.spyOn(request, 'postApi').mockResolvedValue({ status: 'OK', data: {} });
+    vi.spyOn(request, 'postApi').mockResolvedValue({
+      ok: true,
+      data: { status: 'OK', data: {} },
+    });
 
     await linkJiraIssueFromRunTestTool.handler({
       projectId: 'p1',

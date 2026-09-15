@@ -1,9 +1,14 @@
 import { z } from 'zod';
 import { postApi } from '../../lib/request';
+import { apiFailureResult } from '../../lib/toolResult';
 import { logger } from '../../lib/logger';
+import type { McpTool } from '../../lib/tool';
 
 const zodSchema = z.object({
-  projectId: z.string().describe('The project ID to create the webhook for.'),
+  projectId: z
+    .string()
+    .min(1)
+    .describe('The project ID to create the webhook for.'),
   url: z.string().max(2048).describe('URL to send webhook POST requests to.'),
   headers: z
     .string()
@@ -56,30 +61,24 @@ const handler = async ({
 
   logger.info(`Creating webhook for project ${projectId}`);
 
-  const data = await postApi(`/webhooks?${queryParams.toString()}`, body);
+  const result = await postApi(`/webhooks?${queryParams.toString()}`, body);
 
-  if (!data) {
-    return {
-      content: [
-        {
-          type: 'text' as const,
-          text: 'Failed to create webhook',
-        },
-      ],
-    };
+  if (!result.ok) {
+    return apiFailureResult('Failed to create webhook', result);
   }
 
   return {
     content: [
       {
         type: 'text' as const,
-        text: JSON.stringify(data, null, 2),
+        text: JSON.stringify(result.data, null, 2),
       },
     ],
   };
 };
 
 export const createWebhookTool = {
+  scope: 'webhooks:write',
   schema: zodSchema,
   handler,
-};
+} satisfies McpTool<typeof zodSchema>;

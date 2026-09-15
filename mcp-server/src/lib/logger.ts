@@ -44,11 +44,21 @@ export const logger = {
   error: (...args: unknown[]) => resolveSink().error(format(args)),
 };
 
+/**
+ * Control characters, including the ESC that starts an ANSI sequence. Tool
+ * arguments reach these messages verbatim - an action name carrying a newline
+ * would otherwise write what looks like a second log line, and one carrying an
+ * escape sequence would colour or reposition a pretty-printing consumer's
+ * output.
+ */
+const CONTROL_CHARACTERS = /[\u0000-\u001f\u007f-\u009f]/g;
+
 /** Joins the varargs the tool code passes into the single message pino takes. */
 function format(args: unknown[]): string {
   return args
     .map((arg) => (typeof arg === 'string' ? arg : safeStringify(arg)))
-    .join(' ');
+    .join(' ')
+    .replace(CONTROL_CHARACTERS, ' ');
 }
 
 function safeStringify(value: unknown): string {

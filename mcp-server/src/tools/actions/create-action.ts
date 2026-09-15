@@ -1,6 +1,9 @@
 import { z } from 'zod';
 import { postApi } from '../../lib/request';
+import { apiFailureResult } from '../../lib/toolResult';
+import { isoDateTimeString } from '../../lib/schema';
 import { logger } from '../../lib/logger';
+import type { McpTool } from '../../lib/tool';
 
 // Define condition type and operator enums
 const ConditionType = z.enum([
@@ -44,7 +47,11 @@ const RuleActionQuarantine = z.object({
 const RuleActionTag = z.object({
   op: z.literal('tag'),
   details: z.object({
-    tags: z.array(z.string()).max(10).describe('Tags to add to matching tests'),
+    tags: z
+      .array(z.string())
+      .min(1)
+      .max(10)
+      .describe('Tags to add to matching tests'),
   }),
 });
 
@@ -74,7 +81,10 @@ const RuleMatcher = z.object({
 });
 
 const zodSchema = z.object({
-  projectId: z.string().describe('The project ID to create the action for.'),
+  projectId: z
+    .string()
+    .min(1)
+    .describe('The project ID to create the action for.'),
   name: z
     .string()
     .min(1)
@@ -93,8 +103,7 @@ const zodSchema = z.object({
   matcher: RuleMatcher.describe(
     'Matcher defining which tests this action applies to.'
   ),
-  expiresAfter: z
-    .string()
+  expiresAfter: isoDateTimeString()
     .optional()
     .nullable()
     .describe('Optional expiration date in ISO 8601 format.'),
@@ -134,33 +143,27 @@ const handler = async ({
   const queryParams = new URLSearchParams();
   queryParams.append('projectId', projectId);
 
-  const data = await postApi<ActionResponse, CreateActionRequest>(
+  const result = await postApi<ActionResponse, CreateActionRequest>(
     `/actions?${queryParams.toString()}`,
     body
   );
 
-  if (!data) {
-    return {
-      content: [
-        {
-          type: 'text' as const,
-          text: 'Failed to create action',
-        },
-      ],
-    };
+  if (!result.ok) {
+    return apiFailureResult('Failed to create action', result);
   }
 
   return {
     content: [
       {
         type: 'text' as const,
-        text: JSON.stringify(data, null, 2),
+        text: JSON.stringify(result.data, null, 2),
       },
     ],
   };
 };
 
 export const createActionTool = {
+  scope: 'actions:write',
   schema: zodSchema,
   handler,
-};
+} satisfies McpTool<typeof zodSchema>;

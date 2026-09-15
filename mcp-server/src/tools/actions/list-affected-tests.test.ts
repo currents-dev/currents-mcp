@@ -10,7 +10,10 @@ describe('listAffectedTestsTool', () => {
   });
 
   it('serializes action_type as repeated action_type per OpenAPI (form explode)', async () => {
-    vi.spyOn(request, 'fetchApi').mockResolvedValue({ status: 'OK', data: [] });
+    vi.spyOn(request, 'fetchApi').mockResolvedValue({
+      ok: true,
+      data: { status: 'OK', data: [] },
+    });
 
     await listAffectedTestsTool.handler({
       projectId: 'p1',

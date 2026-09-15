@@ -1,9 +1,14 @@
 import { z } from 'zod';
 import { fetchApi } from '../../lib/request';
+import { apiFailureResult } from '../../lib/toolResult';
 import { logger } from '../../lib/logger';
+import type { McpTool } from '../../lib/tool';
 
 const zodSchema = z.object({
-  projectId: z.string().describe('The project ID to fetch error metrics from.'),
+  projectId: z
+    .string()
+    .min(1)
+    .describe('The project ID to fetch error metrics from.'),
   date_start: z.string().describe('Start date in ISO 8601 format (required).'),
   date_end: z.string().describe('End date in ISO 8601 format (required).'),
   page: z
@@ -163,34 +168,32 @@ const handler = async ({
     queryParams.append('top_n', top_n.toString());
   }
 
+  // authors[] holds git commit author addresses, so the filters are logged as
+  // counts instead of values.
   logger.info(
-    `Fetching errors explorer for project ${projectId} with query params: ${queryParams.toString()}`
+    `Fetching errors explorer for project ${projectId}: ${date_start} to ${date_end}, filters: ${tags?.length ?? 0} tags, ${branches?.length ?? 0} branches, ${groups?.length ?? 0} groups, ${authors?.length ?? 0} authors`
   );
 
-  const data = await fetchApi(`/errors/${projectId}?${queryParams.toString()}`);
+  const result = await fetchApi(
+    `/errors/${encodeURIComponent(projectId)}?${queryParams.toString()}`
+  );
 
-  if (!data) {
-    return {
-      content: [
-        {
-          type: 'text' as const,
-          text: 'Failed to retrieve errors explorer data',
-        },
-      ],
-    };
+  if (!result.ok) {
+    return apiFailureResult('Failed to retrieve errors explorer data', result);
   }
 
   return {
     content: [
       {
         type: 'text' as const,
-        text: JSON.stringify(data, null, 2),
+        text: JSON.stringify(result.data, null, 2),
       },
     ],
   };
 };
 
 export const getErrorsExplorerTool = {
+  scope: 'analytics:read',
   schema: zodSchema,
   handler,
-};
+} satisfies McpTool<typeof zodSchema>;

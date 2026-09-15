@@ -1,9 +1,14 @@
 import { z } from 'zod';
 import { fetchApi } from '../../lib/request';
+import { apiFailureResult } from '../../lib/toolResult';
 import { logger } from '../../lib/logger';
+import type { McpTool } from '../../lib/tool';
 
 const zodSchema = z.object({
-  projectId: z.string().describe('The project ID to fetch insights for.'),
+  projectId: z
+    .string()
+    .min(1)
+    .describe('The project ID to fetch insights for.'),
   date_start: z.string().describe('Start date in ISO 8601 format (required).'),
   date_end: z.string().describe('End date in ISO 8601 format (required).'),
   resolution: z
@@ -59,36 +64,32 @@ const handler = async ({
     authors.forEach((a) => queryParams.append('authors[]', a));
   }
 
+  // authors[] holds git commit author addresses, so the filters are logged as
+  // counts instead of values.
   logger.info(
-    `Fetching insights for project ${projectId} with query params: ${queryParams.toString()}`
+    `Fetching insights for project ${projectId}: ${date_start} to ${date_end}, resolution ${resolution}, filters: ${tags?.length ?? 0} tags, ${branches?.length ?? 0} branches, ${groups?.length ?? 0} groups, ${authors?.length ?? 0} authors`
   );
 
-  const data = await fetchApi(
-    `/projects/${projectId}/insights?${queryParams.toString()}`
+  const result = await fetchApi(
+    `/projects/${encodeURIComponent(projectId)}/insights?${queryParams.toString()}`
   );
 
-  if (!data) {
-    return {
-      content: [
-        {
-          type: 'text' as const,
-          text: 'Failed to retrieve project insights',
-        },
-      ],
-    };
+  if (!result.ok) {
+    return apiFailureResult('Failed to retrieve project insights', result);
   }
 
   return {
     content: [
       {
         type: 'text' as const,
-        text: JSON.stringify(data, null, 2),
+        text: JSON.stringify(result.data, null, 2),
       },
     ],
   };
 };
 
 export const getProjectInsightsTool = {
+  scope: 'analytics:read',
   schema: zodSchema,
   handler,
-};
+} satisfies McpTool<typeof zodSchema>;

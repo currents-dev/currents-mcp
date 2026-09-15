@@ -1,6 +1,17 @@
 import { z } from 'zod';
-import { CURRENTS_API_KEY, CURRENTS_API_URL } from '../../lib/env';
 import { logger } from '../../lib/logger';
+import type { ApiFailure } from '../../lib/request';
+import {
+  apiHeaders,
+  callApiWithRetries,
+  failureFromBrokenBody,
+  failureFromError,
+  failureFromResponse,
+  logApiFailure,
+  parseBody,
+} from '../../lib/request';
+import { apiFailureResult } from '../../lib/toolResult';
+import type { McpTool } from '../../lib/tool';
 
 const zodSchema = z
   .object({
@@ -139,70 +150,72 @@ const handler = async (args: z.infer<typeof zodSchema>) => {
     queryParams.append('max_length', max_length.toString());
   }
 
-  const accept =
+  const headers = apiHeaders(
     format === 'md'
       ? 'text/markdown, application/json;q=0.1'
-      : 'application/json';
+      : 'application/json'
+  );
 
-  const headers: Record<string, string> = {
-    'User-Agent': 'currents-app/1.0',
-    Accept: accept,
-    Authorization: 'Bearer ' + CURRENTS_API_KEY,
+  const path = `/context?${queryParams.toString()}`;
+  logger.info(`Fetching failure context: ${path}`);
+
+  const refused = (failure: ApiFailure) => {
+    logApiFailure(failure);
+    return apiFailureResult('Failed to retrieve context', failure);
   };
 
-  const url = `${CURRENTS_API_URL}/context?${queryParams.toString()}`;
-  logger.info(`Fetching failure context: ${url}`);
-
+  // `callApiWithRetries` rather than `fetchApi`: this tool asks the API for
+  // markdown, and the verb helpers read every body as JSON. The retry is the
+  // one thing it does want from them — this is a read, and the call an agent
+  // makes most.
+  let read: Awaited<ReturnType<typeof callApiWithRetries>>;
   try {
-    const response = await fetch(url, { headers });
-    if (!response.ok) {
-      logger.error(`HTTP error! status: ${response.status}`);
-      return {
-        content: [
-          {
-            type: 'text' as const,
-            text: `Failed to retrieve context (HTTP ${response.status})`,
-          },
-        ],
-      };
-    }
-
-    const contentType = response.headers.get('content-type') ?? '';
-    if (contentType.includes('application/json')) {
-      const data = await response.json();
-      return {
-        content: [
-          {
-            type: 'text' as const,
-            text: JSON.stringify(data, null, 2),
-          },
-        ],
-      };
-    }
-
-    const text = await response.text();
-    return {
-      content: [
-        {
-          type: 'text' as const,
-          text,
-        },
-      ],
-    };
+    read = await callApiWithRetries({ method: 'GET', path, headers });
   } catch (error: unknown) {
-    logger.error(`Error making Currents context request: ${String(error)}`);
+    return refused(failureFromError('GET', path, error));
+  }
+
+  const { response } = read;
+  // A body that broke after the headers arrived, reported with the status the
+  // response did carry.
+  if ('bodyError' in read) {
+    return refused(
+      failureFromBrokenBody('GET', path, response, read.bodyError)
+    );
+  }
+
+  if (!response.ok) {
+    return refused(
+      failureFromResponse('GET', path, response, parseBody(read.text))
+    );
+  }
+
+  const contentType = response.headers.get('content-type') ?? '';
+  if (contentType.includes('application/json')) {
+    // `parseBody` rather than `JSON.parse`: an empty body is an empty document
+    // here, where a parse would throw and report a 200 as unreadable.
     return {
       content: [
         {
           type: 'text' as const,
-          text: 'Failed to retrieve context',
+          text: JSON.stringify(parseBody(read.text) ?? {}, null, 2),
         },
       ],
     };
   }
+
+  return {
+    content: [
+      {
+        type: 'text' as const,
+        text: read.text,
+      },
+    ],
+  };
 };
 
 export const getContextTool = {
+  scope: 'results:read',
   schema: zodSchema,
   handler,
-};
+} satisfies McpTool<typeof zodSchema>;

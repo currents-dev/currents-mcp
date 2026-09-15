@@ -1,38 +1,34 @@
 import { z } from 'zod';
 import { deleteApi } from '../../lib/request';
+import { apiFailureResult } from '../../lib/toolResult';
 import { logger } from '../../lib/logger';
+import type { McpTool } from '../../lib/tool';
 
 const zodSchema = z.object({
-  runId: z.string().describe('The run ID to delete.'),
+  runId: z.string().min(1).describe('The run ID to delete.'),
 });
 
 const handler = async ({ runId }: z.infer<typeof zodSchema>) => {
   logger.info(`Deleting run ${runId}`);
 
-  const data = await deleteApi(`/runs/${runId}`);
+  const result = await deleteApi(`/runs/${encodeURIComponent(runId)}`);
 
-  if (!data) {
-    return {
-      content: [
-        {
-          type: 'text' as const,
-          text: 'Failed to delete run',
-        },
-      ],
-    };
+  if (!result.ok) {
+    return apiFailureResult('Failed to delete run', result);
   }
 
   return {
     content: [
       {
         type: 'text' as const,
-        text: JSON.stringify(data, null, 2),
+        text: JSON.stringify(result.data, null, 2),
       },
     ],
   };
 };
 
 export const deleteRunTool = {
+  scope: 'runs:write',
   schema: zodSchema,
   handler,
-};
+} satisfies McpTool<typeof zodSchema>;

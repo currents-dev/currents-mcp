@@ -82,6 +82,16 @@ const instancePayload = {
 const parseManifest = (result: { content: { text: string }[] }) =>
   JSON.parse(result.content[0].text);
 
+const ok = <T>(data: T) => ({ ok: true as const, data });
+
+const failed = (path: string, status: number) => ({
+  ok: false as const,
+  method: 'GET' as const,
+  path,
+  status,
+  body: null,
+});
+
 describe('getTestEvidenceTool', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -95,10 +105,11 @@ describe('getTestEvidenceTool', () => {
 
   it('resolves the run via /runs/find when only projectId and branch are given', async () => {
     vi.mocked(request.fetchApi).mockImplementation(async (path: string) => {
-      if (path.startsWith('/runs/find')) return { data: { runId: 'run-1' } };
-      if (path === '/runs/run-1') return runPayload;
-      if (path.startsWith('/instances/')) return instancePayload;
-      return null;
+      if (path.startsWith('/runs/find'))
+        return ok({ data: { runId: 'run-1' } });
+      if (path === '/runs/run-1') return ok(runPayload);
+      if (path.startsWith('/instances/')) return ok(instancePayload);
+      return failed(path, 404);
     });
 
     const result = await getTestEvidenceTool.handler({
@@ -121,10 +132,11 @@ describe('getTestEvidenceTool', () => {
 
   it('omits branch from /runs/find when ciBuildId is given', async () => {
     vi.mocked(request.fetchApi).mockImplementation(async (path: string) => {
-      if (path.startsWith('/runs/find')) return { data: { runId: 'run-1' } };
-      if (path === '/runs/run-1') return runPayload;
-      if (path.startsWith('/instances/')) return instancePayload;
-      return null;
+      if (path.startsWith('/runs/find'))
+        return ok({ data: { runId: 'run-1' } });
+      if (path === '/runs/run-1') return ok(runPayload);
+      if (path.startsWith('/instances/')) return ok(instancePayload);
+      return failed(path, 404);
     });
 
     await getTestEvidenceTool.handler({
@@ -140,9 +152,9 @@ describe('getTestEvidenceTool', () => {
 
   it('groups artifacts by test and separates spec-level evidence', async () => {
     vi.mocked(request.fetchApi).mockImplementation(async (path: string) => {
-      if (path === '/runs/run-1') return runPayload;
-      if (path.startsWith('/instances/')) return instancePayload;
-      return null;
+      if (path === '/runs/run-1') return ok(runPayload);
+      if (path.startsWith('/instances/')) return ok(instancePayload);
+      return failed(path, 404);
     });
 
     const result = await getTestEvidenceTool.handler({
@@ -184,9 +196,9 @@ describe('getTestEvidenceTool', () => {
 
   it('filters tests by title and status', async () => {
     vi.mocked(request.fetchApi).mockImplementation(async (path: string) => {
-      if (path === '/runs/run-1') return runPayload;
-      if (path.startsWith('/instances/')) return instancePayload;
-      return null;
+      if (path === '/runs/run-1') return ok(runPayload);
+      if (path.startsWith('/instances/')) return ok(instancePayload);
+      return failed(path, 404);
     });
 
     const result = await getTestEvidenceTool.handler({
@@ -204,8 +216,8 @@ describe('getTestEvidenceTool', () => {
 
   it('lists available spec files when the spec filter matches nothing', async () => {
     vi.mocked(request.fetchApi).mockImplementation(async (path: string) => {
-      if (path === '/runs/run-1') return runPayload;
-      return null;
+      if (path === '/runs/run-1') return ok(runPayload);
+      return failed(path, 404);
     });
 
     const result = await getTestEvidenceTool.handler({
@@ -219,7 +231,7 @@ describe('getTestEvidenceTool', () => {
   });
 
   it('reports when no run is found', async () => {
-    vi.mocked(request.fetchApi).mockResolvedValue(null);
+    vi.mocked(request.fetchApi).mockResolvedValue(failed('/runs/find', 404));
 
     const result = await getTestEvidenceTool.handler({
       projectId: 'p1',
@@ -228,5 +240,33 @@ describe('getTestEvidenceTool', () => {
 
     expect(result.content[0].text).toContain('No run found');
     expect(result.content[0].text).toContain('ciBuildId=missing-build');
+  });
+
+  it('passes on a status other than 404 from the run lookup', async () => {
+    vi.mocked(request.fetchApi).mockResolvedValue(failed('/runs/find', 403));
+
+    const result = await getTestEvidenceTool.handler({
+      projectId: 'p1',
+      ciBuildId: 'build-42',
+    });
+
+    expect(result).toMatchObject({ isError: true });
+    expect(result.content[0].text).toContain('HTTP 403');
+  });
+
+  it('reports an unreadable instance in its own spec entry', async () => {
+    vi.mocked(request.fetchApi).mockImplementation(async (path: string) => {
+      if (path === '/runs/run-1') return ok(runPayload);
+      return failed(path, 500);
+    });
+
+    const result = await getTestEvidenceTool.handler({
+      runId: 'run-1',
+      spec: 'checkout',
+    });
+
+    const manifest = parseManifest(result);
+    expect(manifest.specs[0].error).toContain('HTTP 500');
+    expect(manifest.specs[0].instanceId).toBe('inst-1');
   });
 });

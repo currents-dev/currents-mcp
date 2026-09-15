@@ -1,35 +1,31 @@
 import { z } from 'zod';
 import { fetchApi } from '../../lib/request';
+import { apiFailureResult } from '../../lib/toolResult';
+import type { McpTool } from '../../lib/tool';
 
 const zodSchema = z.object({
-  runId: z.string().describe('The run ID to fetch details for.'),
+  runId: z.string().min(1).describe('The run ID to fetch details for.'),
 });
 
 const handler = async ({ runId }: z.infer<typeof zodSchema>) => {
-  const data = await fetchApi(`/runs/${runId}`);
+  const result = await fetchApi(`/runs/${encodeURIComponent(runId)}`);
 
-  if (!data) {
-    return {
-      content: [
-        {
-          type: 'text' as const,
-          text: 'Failed to retrieve run data',
-        },
-      ],
-    };
+  if (!result.ok) {
+    return apiFailureResult('Failed to retrieve run data', result);
   }
 
   return {
     content: [
       {
         type: 'text' as const,
-        text: JSON.stringify(data, null, 2),
+        text: JSON.stringify(result.data, null, 2),
       },
     ],
   };
 };
 
 export const getRunDetailsTool = {
+  scope: 'results:read',
   schema: zodSchema,
   handler,
-};
+} satisfies McpTool<typeof zodSchema>;

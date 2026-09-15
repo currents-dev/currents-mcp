@@ -1,11 +1,13 @@
 import { z } from 'zod';
 import { putApi } from '../../lib/request';
+import { apiFailureResult } from '../../lib/toolResult';
 import { logger } from '../../lib/logger';
+import type { McpTool } from '../../lib/tool';
 
 const zodSchema = z.object({
-  runId: z.string().describe('The run ID to reset.'),
+  runId: z.string().min(1).describe('The run ID to reset.'),
   machineId: z
-    .array(z.string())
+    .array(z.string().min(1))
     .min(1)
     .max(63)
     .describe('Machine ID(s) to reset.'),
@@ -40,33 +42,27 @@ const handler = async ({
     body.isBatchedOr8n = isBatchedOr8n;
   }
 
-  const data = await putApi<ResetRunResponse, ResetRunRequest>(
-    `/runs/${runId}/reset`,
+  const result = await putApi<ResetRunResponse, ResetRunRequest>(
+    `/runs/${encodeURIComponent(runId)}/reset`,
     body
   );
 
-  if (!data) {
-    return {
-      content: [
-        {
-          type: 'text' as const,
-          text: 'Failed to reset run',
-        },
-      ],
-    };
+  if (!result.ok) {
+    return apiFailureResult('Failed to reset run', result);
   }
 
   return {
     content: [
       {
         type: 'text' as const,
-        text: JSON.stringify(data, null, 2),
+        text: JSON.stringify(result.data, null, 2),
       },
     ],
   };
 };
 
 export const resetRunTool = {
+  scope: 'runs:write',
   schema: zodSchema,
   handler,
-};
+} satisfies McpTool<typeof zodSchema>;

@@ -1,9 +1,14 @@
 import { z } from 'zod';
 import { fetchApi } from '../../lib/request';
+import { apiFailureResult } from '../../lib/toolResult';
 import { logger } from '../../lib/logger';
+import type { McpTool } from '../../lib/tool';
 
 const zodSchema = z.object({
-  projectId: z.string().describe('The project ID to list pull requests for.'),
+  projectId: z
+    .string()
+    .min(1)
+    .describe('The project ID to list pull requests for.'),
   limit: z
     .number()
     .int()
@@ -100,23 +105,26 @@ const handler = async ({
 
   const qs = queryParams.toString();
   const path = `/projects/${encodeURIComponent(projectId)}/pull-requests${qs ? `?${qs}` : ''}`;
-  logger.info(`Fetching pull requests: ${path}`);
+  // authors[] holds git commit author patterns, so the filters are logged as
+  // counts instead of values.
+  logger.info(
+    `Fetching pull requests for project ${projectId}: filters: ${tags?.length ?? 0} tags, ${branches?.length ?? 0} branches, ${authors?.length ?? 0} authors, ${status?.length ?? 0} statuses`
+  );
 
-  const data = await fetchApi(path);
-  if (!data) {
-    return {
-      content: [
-        { type: 'text' as const, text: 'Failed to retrieve pull requests' },
-      ],
-    };
+  const result = await fetchApi(path);
+  if (!result.ok) {
+    return apiFailureResult('Failed to retrieve pull requests', result);
   }
 
   return {
-    content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }],
+    content: [
+      { type: 'text' as const, text: JSON.stringify(result.data, null, 2) },
+    ],
   };
 };
 
 export const listProjectPullRequestsTool = {
+  scope: 'results:read',
   schema: zodSchema,
   handler,
-};
+} satisfies McpTool<typeof zodSchema>;
