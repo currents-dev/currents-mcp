@@ -142,8 +142,16 @@ jobs:
             '' | *[!0-9a-f]*)
               echo "manifest sha is not a commit: '$SHA'" >&2; exit 1 ;;
           esac
-          if [ "${#SHA}" -lt 7 ]; then
-            echo "manifest sha is too short to identify a commit" >&2; exit 1
+          # A whole commit, not merely hex and long enough. The branch name is
+          # built from this and the guard on it treats one name as one sync, so
+          # an abbreviated value would restore the prefix collision that name
+          # exists to avoid — and an over-long one would reach `git push` as a
+          # ref nothing else can match. 40 because that is what GITHUB_SHA is;
+          # a repository moving to sha256 has to change this deliberately
+          # rather than have it quietly accept both.
+          if [ "${#SHA}" -ne 40 ]; then
+            echo "manifest sha is ${#SHA} characters, not a full commit" >&2
+            exit 1
           fi
           case "$REF" in
             '' | *[!A-Za-z0-9/._-]*)
