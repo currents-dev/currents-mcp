@@ -41,12 +41,18 @@ const serverSrc = readFileSync(join(root, "src", "server.ts"), "utf-8");
 
 // Quote-agnostic: the source is prettier-formatted with singleQuote, but the
 // monorepo copy this file's subject is synced from has been both.
-// `server.` is optional: registration moved behind a local wrapper that
-// applies scope filtering, so the call sites now read `registerTool('name',
-// ...)`. The wrapper's own `server.registerTool(name, ...)` passes a variable
-// rather than a literal, so it does not match and is not counted twice.
+// Anchored on the tool name and its description, not on whatever function
+// declares them. That call has been renamed three times — `server.registerTool`,
+// then a local `registerTool` wrapper applying scope filtering, then
+// `catalogTool` building a TOOL_CATALOG the server loops over — and each rename
+// silently found zero tools until someone noticed.
+//
+// `currents-` is the stable part: `server.test.ts` asserts every registered name
+// matches it, so a tool that stopped being found here would have to stop being a
+// tool. The loop that registers them passes variables, so it cannot match and
+// nothing is counted twice.
 const toolRegex =
-  /(?:server\.)?registerTool\(\s*\n?\s*(['"])(.+?)\1,\s*\n?\s*\{\s*\n?\s*description:\s*\n?\s*(['"])((?:\\.|(?!\3)[^\\])*)\3/g;
+  /(['"])(currents-[\w-]+)\1\s*,\s*\{\s*description:\s*(['"])((?:\\.|(?!\3)[^\\])*)\3/g;
 
 let match;
 while ((match = toolRegex.exec(serverSrc)) !== null) {
