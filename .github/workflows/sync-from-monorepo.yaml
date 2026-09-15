@@ -347,9 +347,6 @@ jobs:
           # Asked rather than inferred from a failure: `|| true` on the create
           # would report a PR that auth, validation or a rate limit stopped as
           # one that already existed, after the branch had been pushed.
-          # Not the cursor/currents-mcp-parity-* prefix: that one auto-bumps the
-          # version and dispatches a publish on merge, which a source sync
-          # should not do on its own.
           gh pr create --base main --head "$BRANCH" \
             --title "Sync MCP source from the monorepo (${SHORT})" \
             --body-file /tmp/body
