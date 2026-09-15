@@ -10,6 +10,7 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { requestContext } from '../lib/context';
 import { logger } from '../lib/logger';
 import { createMcpServer } from '../server';
+import { featuresFromLauncher } from './features';
 import './logging';
 
 const PORT = Number(process.env.PORT ?? 3000);
@@ -81,7 +82,9 @@ async function handleMcpPost(
   }
 
   const apiKey = extractApiKey(req);
-  const server = createMcpServer();
+  // The flags this process was started for, as with the stdio server: whoever
+  // launched it did so for one organization.
+  const server = createMcpServer({ orgFeatures: featuresFromLauncher() });
   const transport = new StreamableHTTPServerTransport({
     sessionIdGenerator: undefined,
   });

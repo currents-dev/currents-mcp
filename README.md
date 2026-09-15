@@ -124,6 +124,30 @@ Add the following to enable Currents MCP on Claude Desktop (edit `claude_desktop
 }
 ```
 
+### Organization features
+
+A few tools sit behind an organization feature flag. The hosted endpoint below
+reads the caller's flags on each request; a server you run yourself never loads
+an organization, so it withholds every gated tool unless you name the flag:
+
+```bash
+claude mcp add --transport stdio currents \
+  --env CURRENTS_API_KEY=<KEY> \
+  -- npx -y @currents/mcp --features evidenceSharing,aiAnalysis
+```
+
+`CURRENTS_MCP_FEATURES=evidenceSharing,aiAnalysis` does the same for a launcher
+that passes environment rather than arguments; the flag wins if you set both.
+The server exits at startup on a name it does not recognize, rather than
+carrying on without the tool you asked for.
+
+The names it takes are `traceArtifactAnalysis`, `aiAnalysis`,
+`aiAssistantEnabled` and `evidenceSharing`.
+
+Naming a flag is a claim about the organization your API key belongs to, not a
+grant. Currents still refuses a call the organization is not entitled to, so
+naming one it does not have buys a 403 instead of a hidden tool.
+
 ### Remote (hosted) MCP endpoint
 
 In addition to the local stdio transport above, the same server can run as a hosted
