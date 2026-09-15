@@ -1,5 +1,31 @@
 # Changelog
 
+# [2.5.0](https://github.com/currents-dev/currents-mcp/compare/v2.4.2...v2.5.0) (2026-09-15)
+
+The tools are now written in the Currents monorepo and copied here ([#181](https://github.com/currents-dev/currents-mcp/pull/181)), so this release carries everything that accumulated there since 2.4.2 in a single commit. The entries below are what changed for anything calling these tools.
+
+### Features
+
+* annotate every tool with `readOnlyHint`, `destructiveHint`, `idempotentHint` and `openWorldHint`, so a client can tell a read from a delete before it prompts
+* retry a 429 or a 5xx twice, 300ms then 600ms, honouring `Retry-After` up to 5s. A 5xx or a dead connection is retried for reads only, since it may follow work the API already did; a 429 is refused before anything runs, so writes are retried as well
+* give every API call a 30s timeout, rather than holding a tool call open for as long as the client waits for it
+* report the status and the body of a failed call, with `isError: true`, instead of one "Failed to ..." line — a 401, 403, 404 and 429 can now be told apart and acted on
+* name the surface, version and transport in the `User-Agent` sent to the Currents API
+
+### Bug Fixes
+
+* URL-encode every dynamic path segment, so an identifier holding `/` or `..` cannot change which route the request reaches
+* reject an empty required identifier locally instead of sending a malformed path, and require `hookId` to be a UUID, which the webhooks routes already demanded
+* validate date inputs against the contract of the route they reach, and reject a `date_start` later than its `date_end` in the affected-test tools
+* stop cursor pagination at 1000 items and say so, naming the cursor to resume from, rather than walking up to 100 pages into a model's context with no way to tell a truncated list from a complete one
+* log filter values as counts rather than values, since `authors[]` carries commit author addresses
+* bump nanoid to 3.3.18 to patch CVE-2026-67213 ([#174](https://github.com/currents-dev/currents-mcp/issues/174)) ([561db6f](https://github.com/currents-dev/currents-mcp/commit/561db6f45aab10eb64a319b50ae7b937b7b4fb54))
+
+### Worth knowing before upgrading
+
+* a failed tool call no longer answers with a single "Failed to ..." line. Anything matching on that text should read `isError` and the status instead
+* an empty string passed where an identifier is required now fails in the tool. It previously became a malformed request and failed at the API, so nothing that worked before stops working
+
 ## [2.4.2](https://github.com/currents-dev/currents-mcp/compare/v2.4.1...v2.4.2) (2026-08-16)
 
 ## [2.4.1](https://github.com/currents-dev/currents-mcp/compare/v2.4.0...v2.4.1) (2026-08-16)
