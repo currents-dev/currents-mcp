@@ -128,18 +128,16 @@ attestations API is not available to this organization for a private repository
 digest defeats a job whose purpose is to pull whatever was published last.
 
 What bounds it is what this job can do with what it pulls: push a branch and
-open a PR. It cannot merge or publish, the PR is reviewed by a person, and its
-branch prefix is deliberately outside the one `parity-pr-merged.yaml` turns
-into a release.
+open a PR. It cannot merge or publish, and the PR is reviewed by a person.
 
 **`test.yml` does not run on that PR.** GitHub starts no `push` or
-`pull_request` workflow runs for events caused by `GITHUB_TOKEN` — the parity
-workflow's own PRs (#149, #168, #171) show it, none carry a Test job. So this
-workflow runs format, types, build and the unit suite itself, before pushing:
-a failure means no PR rather than a PR whose green tick is absent for a reason
-nobody notices. If cryptographic provenance is
-wanted later, `cosign` keyless signing is not plan-gated — at the cost of the
-artifact digest appearing in a public transparency log.
+`pull_request` workflow runs for events caused by `GITHUB_TOKEN` — PRs #149,
+#168 and #171, each opened by a workflow, show it: none carry a Test job. So
+this workflow runs format, types, build and the unit suite itself, before
+pushing: a failure means no PR rather than a PR whose green tick is absent for
+a reason nobody notices. If cryptographic provenance is wanted later, `cosign`
+keyless signing is not plan-gated — at the cost of the artifact digest
+appearing in a public transparency log.
 
 **`prettier` is pinned to the exact version the monorepo uses.** Matching
 `.prettierrc` is not enough — 3.6 changed how it breaks union types, so a
