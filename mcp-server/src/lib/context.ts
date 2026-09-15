@@ -1,4 +1,4 @@
-import type { ApiKeyScope, OAuthApiScope } from '../host/scopes';
+import type { ApiKeyScope, OAuthApiScope, OrgFeatures } from '../host/scopes';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { CURRENTS_API_KEY } from './env';
 
@@ -56,6 +56,13 @@ export interface RequestContext {
    * registers every tool.
    */
   apiKeyScope?: ApiKeyScope;
+  /**
+   * The feature flags of the caller's organization, as the host read them.
+   * Only the tools whose `feature` these enable are registered
+   * (`lib/tool.ts`). The stdio server loads no organization and leaves this
+   * unset, which registers every tool and lets each route decide.
+   */
+  orgFeatures?: OrgFeatures;
   /**
    * Told about each tool call served under this context. A call the SDK
    * refuses before reaching the handler — an unknown tool name, arguments the
