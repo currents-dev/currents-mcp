@@ -1,5 +1,11 @@
 # Changelog
 
+# [2.5.0](https://github.com/currents-dev/currents-mcp/compare/v2.4.2...v2.5.0) (2026-09-15)
+
+### Bug Fixes
+
+* bump nanoid to 3.3.18 to patch CVE-2026-67213 ([#174](https://github.com/currents-dev/currents-mcp/issues/174)) ([561db6f](https://github.com/currents-dev/currents-mcp/commit/561db6f45aab10eb64a319b50ae7b937b7b4fb54))
+
 ## [2.4.2](https://github.com/currents-dev/currents-mcp/compare/v2.4.1...v2.4.2) (2026-08-16)
 
 ## [2.4.1](https://github.com/currents-dev/currents-mcp/compare/v2.4.0...v2.4.1) (2026-08-16)
