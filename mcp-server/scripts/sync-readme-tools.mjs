@@ -51,8 +51,16 @@ const serverSrc = readFileSync(join(root, "src", "server.ts"), "utf-8");
 // matches it, so a tool that stopped being found here would have to stop being a
 // tool. The loop that registers them passes variables, so it cannot match and
 // nothing is counted twice.
+//
+// The character class is the one `server.test.ts` allows, dots and slashes
+// included, rather than the narrower `\w`. A name outside it would be skipped
+// rather than reported: this only refuses to run when it finds *no* tools, so a
+// partial match writes a README missing a tool and says nothing. That would be
+// caught next by `host/readme.test.ts`, which fails when a registered tool is
+// absent from the table — one step later, and for a reason that does not name
+// the cause.
 const toolRegex =
-  /(['"])(currents-[\w-]+)\1\s*,\s*\{\s*description:\s*(['"])((?:\\.|(?!\3)[^\\])*)\3/g;
+  /(['"])(currents-[A-Za-z0-9_./-]+)\1\s*,\s*\{\s*description:\s*(['"])((?:\\.|(?!\3)[^\\])*)\3/g;
 
 let match;
 while ((match = toolRegex.exec(serverSrc)) !== null) {
