@@ -37,3 +37,29 @@ export type ApiKeyScope = 'read' | 'write';
 export function isOAuthWriteScope(scope: string): boolean {
   return scope.endsWith(':write') || scope === 'ai:invoke';
 }
+
+/**
+ * Boolean org-level feature flags, which gate a tool whose `/v1` route is
+ * behind one. Mirrors `packages/common/src/organization/` in the monorepo.
+ *
+ * Inert here for the same reason the scopes are: a stdio server is never told
+ * an organization's features, so `orgFeatures` is unset and every tool with a
+ * `feature` is registered, exactly as before. These exist so the shared code
+ * compiles.
+ */
+export interface OrgFeatures {
+  traceArtifactAnalysis?: boolean;
+  aiAnalysis?: boolean;
+  aiAssistantEnabled?: boolean;
+  evidenceSharing?: boolean;
+}
+
+export type OrgFeatureKey = keyof OrgFeatures;
+
+/** Opt-in: enabled only when the flag is explicitly `true`. */
+export function isOrgFeatureEnabled(
+  org: { features?: OrgFeatures } | null | undefined,
+  key: OrgFeatureKey
+): boolean {
+  return org?.features?.[key] === true;
+}

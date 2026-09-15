@@ -12,8 +12,13 @@ import { describe, expect, it, vi } from 'vitest';
  */
 const registeredTools = vi.hoisted(() => [] as Array<{ name: string }>);
 
+// Stands in for as much of `McpServer` as `createMcpServer` touches, which is
+// more than the two registration calls: it reaches through to the low-level
+// `server` to answer `tools/list` itself. A mock that omits it throws on a
+// property nobody here is testing, in a file that only wants the tool names.
 vi.mock('@modelcontextprotocol/sdk/server/mcp.js', () => ({
   McpServer: class {
+    server = { setRequestHandler() {} };
     registerTool(name: string) {
       registeredTools.push({ name });
     }
