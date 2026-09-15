@@ -254,19 +254,20 @@ jobs:
         run: |
           set -euo pipefail
           npm ci
-          # Formatting first: the two copies pin the same prettier, and a drift
-          # there rewrites files nobody edited.
-          npx prettier --check src ../skills
-          npx tsc --noEmit
-          npx tsdown
-          # Everything, including the packaging tests. They pack the tarball and
-          # install it on its own, which is the only place a dependency the
-          # monorepo declares and this package does not shows up: the synced
-          # source imports it, it resolves from the dev tree here, and a
-          # consumer's install has nothing to resolve it from. They also drive
-          # the packaged binary through an MCP handshake, so a sync that leaves
-          # the server unable to serve fails here rather than in a client.
-          npx vitest run
+          # `verify` rather than the steps spelled out: the monorepo runs this
+          # same gate over its own shared source before a sync can reach here
+          # (mcp-source-sync-check.yml there), and two copies of the list would
+          # let that check quietly test less than this one does. What this
+          # package considers good is defined in its own package.json.
+          #
+          # It covers format — the two copies pin the same prettier and a drift
+          # rewrites files nobody edited — types, the build, and every test
+          # including the packaging ones. Those pack the tarball and install it
+          # on its own, which is the only place a dependency the monorepo
+          # declares and this package does not shows up; they also drive the
+          # packaged binary through an MCP handshake, so a sync that leaves the
+          # server unable to serve fails here rather than in a client.
+          npm run verify
 
   open-pr:
     needs: validate
