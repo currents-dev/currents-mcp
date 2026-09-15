@@ -167,6 +167,20 @@ jobs:
             echo "previous=$PREVIOUS"
           } >> "$GITHUB_OUTPUT"
 
+          # The subjects of the monorepo commits this payload carries, so the
+          # commit below can say what it brought rather than "sync". Written by
+          # jq to a file, never through the shell, and stripped to printable
+          # ASCII with both the line length and the count capped: they are
+          # artifact-controlled and end up in a commit message and a PR body.
+          # [:print:] rather than a \u range: jq matches with Oniguruma, which
+          # reads \u0020 as the literal characters and quietly eats most of the
+          # subject.
+          jq -r '(.changes // [])[]
+                 | gsub("[^[:print:]]"; "")
+                 | .[0:120]' /tmp/payload/manifest.json \
+            | grep -v '^$' | head -50 > /tmp/changes.txt || true
+          echo "Carrying $(wc -l < /tmp/changes.txt) change(s)."
+
       - name: Apply it
         env:
           SHA: ${{ steps.manifest.outputs.sha }}
@@ -325,11 +339,28 @@ jobs:
           git checkout -b "$BRANCH"
           git add -A
 
-          cat > /tmp/message <<EOF
-          chore: sync MCP source from the monorepo at ${SHORT}
+          # Typed from what the payload carries. `chore` is dropped by the
+          # angular preset that generates this repository's changelog, so a
+          # sync committed as one would release its tools invisibly — 2.5.0
+          # changed every tool's failure shape and its changelog named a
+          # dependency bump.
+          TYPE=chore
+          if grep -qE '(^|[^a-z])feat[(!:]' /tmp/changes.txt; then
+            TYPE=feat
+          elif grep -qE '(^|[^a-z])fix[(!:]' /tmp/changes.txt; then
+            TYPE=fix
+          fi
 
-          Published by ${SOURCE_REF}. Previous sync: ${PREVIOUS}.
-          EOF
+          {
+            printf '%s: sync MCP source from the monorepo at %s\n\n' \
+              "$TYPE" "$SHORT"
+            printf 'Published by %s. Previous sync: %s.\n' \
+              "$SOURCE_REF" "$PREVIOUS"
+            if [ -s /tmp/changes.txt ]; then
+              printf '\nCarries:\n\n'
+              sed 's/^/  /' /tmp/changes.txt
+            fi
+          } > /tmp/message
           git commit --file /tmp/message
 
           {
@@ -337,6 +368,10 @@ jobs:
               "$SOURCE_REF" "$SHA"
             printf 'Previous sync: `%s`.\n\n' "$PREVIOUS"
             printf 'src/host/ is this copy own and is not touched.\n'
+            if [ -s /tmp/changes.txt ]; then
+              printf '\n### Carries\n\n'
+              sed 's/^/- /' /tmp/changes.txt
+            fi
             if [ -n "$REMOVED" ]; then
               printf '\n**This withdraws:** `%s`\n\n' "$REMOVED"
               printf 'Already-released tools and skill:// resources disappear '
