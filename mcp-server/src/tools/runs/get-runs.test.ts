@@ -10,7 +10,10 @@ describe('getRunsTool', () => {
   });
 
   it('serializes list runs query per OpenAPI (repeated status, completion_state, pr_id)', async () => {
-    vi.spyOn(request, 'fetchApi').mockResolvedValue({ status: 'OK', data: [] });
+    vi.spyOn(request, 'fetchApi').mockResolvedValue({
+      ok: true,
+      data: { status: 'OK', data: [] },
+    });
 
     await getRunsTool.handler({
       projectId: 'p1',

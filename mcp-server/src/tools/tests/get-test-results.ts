@@ -1,9 +1,11 @@
 import { z } from 'zod';
 import { fetchApi } from '../../lib/request';
+import { apiFailureResult } from '../../lib/toolResult';
 import { logger } from '../../lib/logger';
+import type { McpTool } from '../../lib/tool';
 
 const zodSchema = z.object({
-  signature: z.string().describe('The test signature.'),
+  signature: z.string().min(1).describe('The test signature.'),
   date_start: z.string().describe('Start date in ISO 8601 format (required).'),
   date_end: z.string().describe('End date in ISO 8601 format (required).'),
   limit: z
@@ -111,36 +113,32 @@ const handler = async ({
     queryParams.append('annotations', annotations);
   }
 
+  // authors[] holds git commit author addresses, so the filters are logged as
+  // counts instead of values.
   logger.info(
-    `Fetching test results for test ${signature} with query params: ${queryParams.toString()}`
+    `Fetching test results for test ${signature}: ${date_start} to ${date_end}, filters: ${tags?.length ?? 0} tags, ${branches?.length ?? 0} branches, ${groups?.length ?? 0} groups, ${authors?.length ?? 0} authors`
   );
 
-  const data = await fetchApi(
-    `/test-results/${signature}?${queryParams.toString()}`
+  const result = await fetchApi(
+    `/test-results/${encodeURIComponent(signature)}?${queryParams.toString()}`
   );
 
-  if (!data) {
-    return {
-      content: [
-        {
-          type: 'text' as const,
-          text: 'Failed to retrieve test results',
-        },
-      ],
-    };
+  if (!result.ok) {
+    return apiFailureResult('Failed to retrieve test results', result);
   }
 
   return {
     content: [
       {
         type: 'text' as const,
-        text: JSON.stringify(data, null, 2),
+        text: JSON.stringify(result.data, null, 2),
       },
     ],
   };
 };
 
 export const getTestResultsTool = {
+  scope: 'results:read',
   schema: zodSchema,
   handler,
-};
+} satisfies McpTool<typeof zodSchema>;

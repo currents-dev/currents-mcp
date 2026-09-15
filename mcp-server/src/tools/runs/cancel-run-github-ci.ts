@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import { putApi } from '../../lib/request';
+import { apiFailureResult } from '../../lib/toolResult';
 import { logger } from '../../lib/logger';
+import type { McpTool } from '../../lib/tool';
 
 const zodSchema = z.object({
   githubRunId: z.string().describe('GitHub Actions workflow run ID.'),
@@ -53,33 +55,27 @@ const handler = async ({
     body.ciBuildId = ciBuildId;
   }
 
-  const data = await putApi<RunCancellationResponse, CancelRunGithubCIRequest>(
-    `/runs/cancel-ci/github`,
-    body
-  );
+  const result = await putApi<
+    RunCancellationResponse,
+    CancelRunGithubCIRequest
+  >(`/runs/cancel-ci/github`, body);
 
-  if (!data) {
-    return {
-      content: [
-        {
-          type: 'text' as const,
-          text: 'Failed to cancel run by GitHub CI',
-        },
-      ],
-    };
+  if (!result.ok) {
+    return apiFailureResult('Failed to cancel run by GitHub CI', result);
   }
 
   return {
     content: [
       {
         type: 'text' as const,
-        text: JSON.stringify(data, null, 2),
+        text: JSON.stringify(result.data, null, 2),
       },
     ],
   };
 };
 
 export const cancelRunByGithubCITool = {
+  scope: 'runs:write',
   schema: zodSchema,
   handler,
-};
+} satisfies McpTool<typeof zodSchema>;

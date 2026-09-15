@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import { fetchApi } from '../../lib/request';
+import { apiFailureResult } from '../../lib/toolResult';
 import { logger } from '../../lib/logger';
+import type { McpTool } from '../../lib/tool';
 
 const termTypeEnum = z.enum([
   'tag',
@@ -16,7 +18,7 @@ const termTypeEnum = z.enum([
 ]);
 
 const zodSchema = z.object({
-  projectId: z.string().describe('The project ID.'),
+  projectId: z.string().min(1).describe('The project ID.'),
   termType: termTypeEnum.describe(
     'Term kind to list: tag, group, branch, authorName, authorEmail, framework, frameworkVersion, clientVersion, ann_type, or ann_desc.'
   ),
@@ -77,21 +79,20 @@ const handler = async ({
   const path = `/projects/${encodeURIComponent(projectId)}/terms/${encodeURIComponent(termType)}${qs ? `?${qs}` : ''}`;
   logger.info(`Fetching project terms: ${path}`);
 
-  const data = await fetchApi(path);
-  if (!data) {
-    return {
-      content: [
-        { type: 'text' as const, text: 'Failed to retrieve project terms' },
-      ],
-    };
+  const result = await fetchApi(path);
+  if (!result.ok) {
+    return apiFailureResult('Failed to retrieve project terms', result);
   }
 
   return {
-    content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }],
+    content: [
+      { type: 'text' as const, text: JSON.stringify(result.data, null, 2) },
+    ],
   };
 };
 
 export const listProjectTermsTool = {
+  scope: 'projects:read',
   schema: zodSchema,
   handler,
-};
+} satisfies McpTool<typeof zodSchema>;

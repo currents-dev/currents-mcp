@@ -1,49 +1,66 @@
 import { z } from 'zod';
 import { fetchApi } from '../../lib/request';
+import { apiFailureResult } from '../../lib/toolResult';
+import {
+  isOrderedDateRange,
+  isoDateString,
+  orderedDateRangeIssue,
+} from '../../lib/schema';
 import { logger } from '../../lib/logger';
+import type { McpTool } from '../../lib/tool';
 
-const zodSchema = z.object({
-  projectId: z
-    .string()
-    .describe('The project ID to fetch affected tests from.'),
-  date_start: z.string().describe('Start date in ISO 8601 format (required).'),
-  date_end: z.string().describe('End date in ISO 8601 format (required).'),
-  page: z
-    .number()
-    .int()
-    .min(0)
-    .optional()
-    .describe('Page number (0-indexed). Defaults to 0.'),
-  limit: z
-    .number()
-    .int()
-    .min(1)
-    .max(100)
-    .optional()
-    .describe('Maximum number of results (1-100). Defaults to 25.'),
-  search: z
-    .string()
-    .max(100)
-    .optional()
-    .describe(
-      'Search by spec file path, test title, or action name (case-insensitive).'
+const zodSchema = z
+  .object({
+    projectId: z
+      .string()
+      .min(1)
+      .describe('The project ID to fetch affected tests from.'),
+    date_start: isoDateString().describe(
+      'Start date in ISO 8601 format (required).'
     ),
-  action_type: z
-    .array(z.enum(['quarantine', 'skip', 'tag']))
-    .optional()
-    .describe('Filter by action types (can be specified multiple times).'),
-  action_id: z.string().optional().describe('Filter by a specific action ID.'),
-  dir: z
-    .enum(['asc', 'desc'])
-    .optional()
-    .describe("Sort direction for lastSeen. Defaults to 'desc'."),
-  status: z
-    .array(z.enum(['active', 'disabled', 'expired', 'archived']))
-    .optional()
-    .describe(
-      'Filter by action status. Accepts multiple values. Omit for all statuses.'
+    date_end: isoDateString().describe(
+      'End date in ISO 8601 format (required).'
     ),
-});
+    page: z
+      .number()
+      .int()
+      .min(0)
+      .optional()
+      .describe('Page number (0-indexed). Defaults to 0.'),
+    limit: z
+      .number()
+      .int()
+      .min(1)
+      .max(100)
+      .optional()
+      .describe('Maximum number of results (1-100). Defaults to 25.'),
+    search: z
+      .string()
+      .max(100)
+      .optional()
+      .describe(
+        'Search by spec file path, test title, or action name (case-insensitive).'
+      ),
+    action_type: z
+      .array(z.enum(['quarantine', 'skip', 'tag']))
+      .optional()
+      .describe('Filter by action types (can be specified multiple times).'),
+    action_id: z
+      .string()
+      .optional()
+      .describe('Filter by a specific action ID.'),
+    dir: z
+      .enum(['asc', 'desc'])
+      .optional()
+      .describe("Sort direction for lastSeen. Defaults to 'desc'."),
+    status: z
+      .array(z.enum(['active', 'disabled', 'expired', 'archived']))
+      .optional()
+      .describe(
+        'Filter by action status. Accepts multiple values. Omit for all statuses.'
+      ),
+  })
+  .refine(isOrderedDateRange, orderedDateRangeIssue);
 
 const handler = async ({
   projectId,
@@ -88,30 +105,24 @@ const handler = async ({
     `Fetching affected tests for project ${projectId} with query params: ${queryParams.toString()}`
   );
 
-  const data = await fetchApi(`/actions/tests?${queryParams.toString()}`);
+  const result = await fetchApi(`/actions/tests?${queryParams.toString()}`);
 
-  if (!data) {
-    return {
-      content: [
-        {
-          type: 'text' as const,
-          text: 'Failed to retrieve affected tests',
-        },
-      ],
-    };
+  if (!result.ok) {
+    return apiFailureResult('Failed to retrieve affected tests', result);
   }
 
   return {
     content: [
       {
         type: 'text' as const,
-        text: JSON.stringify(data, null, 2),
+        text: JSON.stringify(result.data, null, 2),
       },
     ],
   };
 };
 
 export const listAffectedTestsTool = {
+  scope: 'actions:read',
   schema: zodSchema,
   handler,
-};
+} satisfies McpTool<typeof zodSchema>;

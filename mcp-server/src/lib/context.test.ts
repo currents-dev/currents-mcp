@@ -5,6 +5,7 @@ import { getApiKey, requestContext } from './context';
 vi.mock('./env', () => ({
   CURRENTS_API_KEY: 'env-key',
   CURRENTS_API_URL: 'https://api.test.com',
+  CURRENTS_MCP_SURFACE: '',
 }));
 
 describe('getApiKey', () => {

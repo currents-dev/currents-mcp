@@ -4,7 +4,10 @@ import { listProjectPullRequestsTool } from './list-project-pull-requests';
 
 describe('listProjectPullRequestsTool', () => {
   it('serializes query per OpenAPI (repeated status, bracket arrays)', async () => {
-    vi.spyOn(request, 'fetchApi').mockResolvedValue({ status: 'OK', data: [] });
+    vi.spyOn(request, 'fetchApi').mockResolvedValue({
+      ok: true,
+      data: { status: 'OK', data: [] },
+    });
 
     await listProjectPullRequestsTool.handler({
       projectId: 'p1',

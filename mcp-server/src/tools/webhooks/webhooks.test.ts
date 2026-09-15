@@ -6,6 +6,21 @@ import { createWebhookTool } from './create-webhook';
 import { updateWebhookTool } from './update-webhook';
 import { deleteWebhookTool } from './delete-webhook';
 
+/** The 403 the API answers with when the caller's key lacks webhook access. */
+const refused = (
+  method: request.ApiFailure['method'],
+  path: string
+): request.ApiFailure => ({
+  ok: false,
+  method,
+  path,
+  status: 403,
+  body: { message: 'missing scope webhooks:read' },
+});
+
+const refusalText = (summary: string, method: string, path: string) =>
+  `${summary}: ${method} ${path}: HTTP 403 {"message":"missing scope webhooks:read"}`;
+
 vi.mock('../../lib/request');
 
 describe('listWebhooksTool', () => {
@@ -29,7 +44,10 @@ describe('listWebhooksTool', () => {
       },
     ];
 
-    vi.spyOn(request, 'fetchApi').mockResolvedValue(mockWebhooks);
+    vi.spyOn(request, 'fetchApi').mockResolvedValue({
+      ok: true,
+      data: mockWebhooks,
+    });
 
     const result = await listWebhooksTool.handler({ projectId: 'project-123' });
 
@@ -47,15 +65,22 @@ describe('listWebhooksTool', () => {
   });
 
   it('should return error message when API request fails', async () => {
-    vi.spyOn(request, 'fetchApi').mockResolvedValue(null);
+    vi.spyOn(request, 'fetchApi').mockResolvedValue(
+      refused('GET', '/webhooks?projectId=project-123')
+    );
 
     const result = await listWebhooksTool.handler({ projectId: 'project-123' });
 
     expect(result).toEqual({
+      isError: true,
       content: [
         {
           type: 'text',
-          text: 'Failed to retrieve webhooks',
+          text: refusalText(
+            'Failed to retrieve webhooks',
+            'GET',
+            '/webhooks?projectId=project-123'
+          ),
         },
       ],
     });
@@ -81,7 +106,10 @@ describe('getWebhookTool', () => {
       headers: '{"Authorization": "Bearer token"}',
     };
 
-    vi.spyOn(request, 'fetchApi').mockResolvedValue(mockWebhook);
+    vi.spyOn(request, 'fetchApi').mockResolvedValue({
+      ok: true,
+      data: mockWebhook,
+    });
 
     const result = await getWebhookTool.handler({ hookId: 'webhook-123' });
 
@@ -97,15 +125,22 @@ describe('getWebhookTool', () => {
   });
 
   it('should return error message when API request fails', async () => {
-    vi.spyOn(request, 'fetchApi').mockResolvedValue(null);
+    vi.spyOn(request, 'fetchApi').mockResolvedValue(
+      refused('GET', '/webhooks/webhook-123')
+    );
 
     const result = await getWebhookTool.handler({ hookId: 'webhook-123' });
 
     expect(result).toEqual({
+      isError: true,
       content: [
         {
           type: 'text',
-          text: 'Failed to retrieve webhook',
+          text: refusalText(
+            'Failed to retrieve webhook',
+            'GET',
+            '/webhooks/webhook-123'
+          ),
         },
       ],
     });
@@ -129,7 +164,10 @@ describe('createWebhookTool', () => {
       hookEvents: [],
     };
 
-    vi.spyOn(request, 'postApi').mockResolvedValue(mockResponse);
+    vi.spyOn(request, 'postApi').mockResolvedValue({
+      ok: true,
+      data: mockResponse,
+    });
 
     const result = await createWebhookTool.handler({
       projectId: 'project-123',
@@ -159,7 +197,10 @@ describe('createWebhookTool', () => {
       label: 'My Webhook',
     };
 
-    vi.spyOn(request, 'postApi').mockResolvedValue(mockResponse);
+    vi.spyOn(request, 'postApi').mockResolvedValue({
+      ok: true,
+      data: mockResponse,
+    });
 
     const result = await createWebhookTool.handler({
       projectId: 'project-123',
@@ -189,7 +230,9 @@ describe('createWebhookTool', () => {
   });
 
   it('should return error message when API request fails', async () => {
-    vi.spyOn(request, 'postApi').mockResolvedValue(null);
+    vi.spyOn(request, 'postApi').mockResolvedValue(
+      refused('POST', '/webhooks?projectId=project-123')
+    );
 
     const result = await createWebhookTool.handler({
       projectId: 'project-123',
@@ -197,10 +240,15 @@ describe('createWebhookTool', () => {
     });
 
     expect(result).toEqual({
+      isError: true,
       content: [
         {
           type: 'text',
-          text: 'Failed to create webhook',
+          text: refusalText(
+            'Failed to create webhook',
+            'POST',
+            '/webhooks?projectId=project-123'
+          ),
         },
       ],
     });
@@ -228,7 +276,10 @@ describe('updateWebhookTool', () => {
       hookEvents: ['RUN_FINISH'],
     };
 
-    vi.spyOn(request, 'putApi').mockResolvedValue(mockResponse);
+    vi.spyOn(request, 'putApi').mockResolvedValue({
+      ok: true,
+      data: mockResponse,
+    });
 
     const result = await updateWebhookTool.handler({
       hookId: 'webhook-123',
@@ -257,7 +308,10 @@ describe('updateWebhookTool', () => {
       label: 'Updated Webhook',
     };
 
-    vi.spyOn(request, 'putApi').mockResolvedValue(mockResponse);
+    vi.spyOn(request, 'putApi').mockResolvedValue({
+      ok: true,
+      data: mockResponse,
+    });
 
     const result = await updateWebhookTool.handler({
       hookId: 'webhook-123',
@@ -300,7 +354,9 @@ describe('updateWebhookTool', () => {
   });
 
   it('should return error message when API request fails', async () => {
-    vi.spyOn(request, 'putApi').mockResolvedValue(null);
+    vi.spyOn(request, 'putApi').mockResolvedValue(
+      refused('PUT', '/webhooks/webhook-123')
+    );
 
     const result = await updateWebhookTool.handler({
       hookId: 'webhook-123',
@@ -308,10 +364,15 @@ describe('updateWebhookTool', () => {
     });
 
     expect(result).toEqual({
+      isError: true,
       content: [
         {
           type: 'text',
-          text: 'Failed to update webhook',
+          text: refusalText(
+            'Failed to update webhook',
+            'PUT',
+            '/webhooks/webhook-123'
+          ),
         },
       ],
     });
@@ -335,7 +396,10 @@ describe('deleteWebhookTool', () => {
   it('should delete webhook successfully', async () => {
     const mockResponse = {};
 
-    vi.spyOn(request, 'deleteApi').mockResolvedValue(mockResponse);
+    vi.spyOn(request, 'deleteApi').mockResolvedValue({
+      ok: true,
+      data: mockResponse,
+    });
 
     const result = await deleteWebhookTool.handler({ hookId: 'webhook-123' });
 
@@ -356,7 +420,10 @@ describe('deleteWebhookTool', () => {
       hookId: 'webhook-123',
     };
 
-    vi.spyOn(request, 'deleteApi').mockResolvedValue(mockResponse);
+    vi.spyOn(request, 'deleteApi').mockResolvedValue({
+      ok: true,
+      data: mockResponse,
+    });
 
     const result = await deleteWebhookTool.handler({ hookId: 'webhook-123' });
 
@@ -371,15 +438,22 @@ describe('deleteWebhookTool', () => {
   });
 
   it('should return error message when API request fails', async () => {
-    vi.spyOn(request, 'deleteApi').mockResolvedValue(null);
+    vi.spyOn(request, 'deleteApi').mockResolvedValue(
+      refused('DELETE', '/webhooks/webhook-123')
+    );
 
     const result = await deleteWebhookTool.handler({ hookId: 'webhook-123' });
 
     expect(result).toEqual({
+      isError: true,
       content: [
         {
           type: 'text',
-          text: 'Failed to delete webhook',
+          text: refusalText(
+            'Failed to delete webhook',
+            'DELETE',
+            '/webhooks/webhook-123'
+          ),
         },
       ],
     });

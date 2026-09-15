@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import { fetchApi, fetchCursorBasedPaginatedApi } from '../../lib/request';
+import { apiFailureResult } from '../../lib/toolResult';
 import { logger } from '../../lib/logger';
+import type { McpTool } from '../../lib/tool';
 
 const zodSchema = z.object({
   limit: z
@@ -22,7 +24,7 @@ const zodSchema = z.object({
     .boolean()
     .optional()
     .describe(
-      'If true, fetches all projects using automatic pagination. Ignores limit, starting_after, and ending_before.'
+      'If true, walks the pages automatically and returns up to 1000 projects. Starts after starting_after when it is set, so a list that came back marked incomplete can be continued. Ignores limit and ending_before.'
     ),
 });
 
@@ -35,24 +37,26 @@ const handler = async ({
   // If fetchAll is true, use the automatic pagination
   if (fetchAll) {
     logger.info('Fetching all projects with automatic pagination');
-    const data = await fetchCursorBasedPaginatedApi('/projects');
+    const result = await fetchCursorBasedPaginatedApi(
+      '/projects',
+      starting_after
+    );
 
-    if (!data) {
-      return {
-        content: [
-          {
-            type: 'text' as const,
-            text: 'Failed to retrieve projects',
-          },
-        ],
-      };
+    if (!result.ok) {
+      return apiFailureResult('Failed to retrieve projects', result);
     }
 
+    const { items, truncated } = result.data;
     return {
       content: [
         {
           type: 'text' as const,
-          text: JSON.stringify(data, null, 2),
+          // The marker goes ahead of the list, not after it: a caller reading a
+          // thousand serialized projects has decided what the list says long
+          // before it reaches a trailing note saying the list is partial.
+          text: [truncated, JSON.stringify(items, null, 2)]
+            .filter(Boolean)
+            .join('\n\n'),
         },
       ],
     };
@@ -78,30 +82,24 @@ const handler = async ({
 
   logger.info(`Fetching projects with query params: ${queryString}`);
 
-  const data = await fetchApi(path);
+  const result = await fetchApi(path);
 
-  if (!data) {
-    return {
-      content: [
-        {
-          type: 'text' as const,
-          text: 'Failed to retrieve projects',
-        },
-      ],
-    };
+  if (!result.ok) {
+    return apiFailureResult('Failed to retrieve projects', result);
   }
 
   return {
     content: [
       {
         type: 'text' as const,
-        text: JSON.stringify(data, null, 2),
+        text: JSON.stringify(result.data, null, 2),
       },
     ],
   };
 };
 
 export const getProjectsTool = {
+  scope: 'projects:read',
   schema: zodSchema,
   handler,
-};
+} satisfies McpTool<typeof zodSchema>;

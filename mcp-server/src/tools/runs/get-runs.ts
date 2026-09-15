@@ -1,9 +1,11 @@
 import { z } from 'zod';
 import { fetchApi } from '../../lib/request';
+import { apiFailureResult } from '../../lib/toolResult';
 import { logger } from '../../lib/logger';
+import type { McpTool } from '../../lib/tool';
 
 const zodSchema = z.object({
-  projectId: z.string().describe('The project ID to fetch runs from.'),
+  projectId: z.string().min(1).describe('The project ID to fetch runs from.'),
   limit: z
     .number()
     .int()
@@ -150,34 +152,32 @@ const handler = async ({
     queryParams.append('date_end', date_end);
   }
 
-  logger.info(`Fetching runs with query params: ${queryParams.toString()}`);
-
-  const data = await fetchApi(
-    `/projects/${projectId}/runs?${queryParams.toString()}`
+  // authors[] holds git commit author addresses, so the filters are logged as
+  // counts instead of values.
+  logger.info(
+    `Fetching runs for project ${projectId}: filters: ${tags?.length ?? 0} tags, ${branches?.length ?? 0} branches, ${authors?.length ?? 0} authors, ${status?.length ?? 0} statuses`
   );
 
-  if (!data) {
-    return {
-      content: [
-        {
-          type: 'text' as const,
-          text: 'Failed to retrieve runs',
-        },
-      ],
-    };
+  const result = await fetchApi(
+    `/projects/${encodeURIComponent(projectId)}/runs?${queryParams.toString()}`
+  );
+
+  if (!result.ok) {
+    return apiFailureResult('Failed to retrieve runs', result);
   }
 
   return {
     content: [
       {
         type: 'text' as const,
-        text: JSON.stringify(data, null, 2),
+        text: JSON.stringify(result.data, null, 2),
       },
     ],
   };
 };
 
 export const getRunsTool = {
+  scope: 'results:read',
   schema: zodSchema,
   handler,
-};
+} satisfies McpTool<typeof zodSchema>;

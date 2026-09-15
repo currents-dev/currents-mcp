@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import { fetchApi } from '../../lib/request';
+import { apiFailureResult } from '../../lib/toolResult';
 import { logger } from '../../lib/logger';
+import type { McpTool } from '../../lib/tool';
 
 const zodSchema = z.object({
   jira_installation_id: z
@@ -47,21 +49,23 @@ const handler = async ({
   const path = `/integrations/jira/projects?${queryParams.toString()}`;
   logger.info(`Listing Jira projects: ${path}`);
 
-  const data = await fetchApi(path);
-  if (!data) {
-    return {
-      content: [
-        { type: 'text' as const, text: 'Failed to list Jira projects' },
-      ],
-    };
+  const result = await fetchApi(path);
+  if (!result.ok) {
+    return apiFailureResult('Failed to list Jira projects', result);
   }
 
   return {
-    content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }],
+    content: [
+      { type: 'text' as const, text: JSON.stringify(result.data, null, 2) },
+    ],
   };
 };
 
 export const listJiraProjectsTool = {
+  scope: 'issues:write',
+  // The route kept taking read keys when it moved to `issues:write`
+  // (`packages/api/src/api/integrations/jira/index.ts`).
+  apiKeyScope: 'read',
   schema: zodSchema,
   handler,
-};
+} satisfies McpTool<typeof zodSchema>;

@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import { fetchApi } from '../../lib/request';
+import { apiFailureResult, describeApiFailure } from '../../lib/toolResult';
 import { logger } from '../../lib/logger';
+import type { McpTool } from '../../lib/tool';
 
 const zodSchema = z.object({
   projectId: z
@@ -176,7 +178,12 @@ const handler = async ({
     const found = await fetchApi<{ data?: { runId?: string } }>(
       `/runs/find?${queryParams.toString()}`
     );
-    resolvedRunId = found?.data?.runId;
+    // A 404 is the lookup finding nothing, which the message below covers; any
+    // other status is the API refusing the call and has to reach the caller.
+    if (!found.ok && found.status !== 404) {
+      return apiFailureResult('Failed to look up the run', found);
+    }
+    resolvedRunId = found.ok ? found.data.data?.runId : undefined;
     if (!resolvedRunId) {
       return fail(
         `No run found for projectId=${projectId}${
@@ -186,10 +193,18 @@ const handler = async ({
     }
   }
 
-  const runResponse = await fetchApi<{ data?: any }>(`/runs/${resolvedRunId}`);
-  const run = runResponse?.data;
+  const runResponse = await fetchApi<{ data?: any }>(
+    `/runs/${encodeURIComponent(resolvedRunId)}`
+  );
+  if (!runResponse.ok) {
+    return apiFailureResult(
+      `Failed to retrieve run ${resolvedRunId}`,
+      runResponse
+    );
+  }
+  const run = runResponse.data.data;
   if (!run) {
-    return fail(`Failed to retrieve run ${resolvedRunId}`);
+    return fail(`Run ${resolvedRunId} returned no data`);
   }
 
   const allSpecs: any[] = run.specs ?? [];
@@ -219,14 +234,25 @@ const handler = async ({
   const specs = await Promise.all(
     selectedSpecs.map(async (specEntry) => {
       const instanceResponse = await fetchApi<{ data?: any }>(
-        `/instances/${specEntry.instanceId}`
+        `/instances/${encodeURIComponent(specEntry.instanceId)}`
       );
-      const results = instanceResponse?.data?.results;
+      // One unreadable instance leaves the other specs' evidence usable, so the
+      // reason goes in this entry rather than failing the whole tool call.
+      if (!instanceResponse.ok) {
+        return {
+          spec: specEntry.spec,
+          instanceId: specEntry.instanceId,
+          error: `Failed to retrieve instance data: ${describeApiFailure(
+            instanceResponse
+          )}`,
+        };
+      }
+      const results = instanceResponse.data.data?.results;
       if (!results) {
         return {
           spec: specEntry.spec,
           instanceId: specEntry.instanceId,
-          error: 'Failed to retrieve instance data',
+          error: 'Instance returned no results',
         };
       }
 
@@ -304,6 +330,7 @@ const handler = async ({
 };
 
 export const getTestEvidenceTool = {
+  scope: 'results:read',
   schema: zodSchema,
   handler,
-};
+} satisfies McpTool<typeof zodSchema>;

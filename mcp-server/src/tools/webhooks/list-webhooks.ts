@@ -1,9 +1,14 @@
 import { z } from 'zod';
 import { fetchApi } from '../../lib/request';
+import { apiFailureResult } from '../../lib/toolResult';
 import { logger } from '../../lib/logger';
+import type { McpTool } from '../../lib/tool';
 
 const zodSchema = z.object({
-  projectId: z.string().describe('The project ID to fetch webhooks from.'),
+  projectId: z
+    .string()
+    .min(1)
+    .describe('The project ID to fetch webhooks from.'),
 });
 
 const handler = async ({ projectId }: z.infer<typeof zodSchema>) => {
@@ -12,30 +17,24 @@ const handler = async ({ projectId }: z.infer<typeof zodSchema>) => {
 
   logger.info(`Fetching webhooks for project ${projectId}`);
 
-  const data = await fetchApi(`/webhooks?${queryParams.toString()}`);
+  const result = await fetchApi(`/webhooks?${queryParams.toString()}`);
 
-  if (!data) {
-    return {
-      content: [
-        {
-          type: 'text' as const,
-          text: 'Failed to retrieve webhooks',
-        },
-      ],
-    };
+  if (!result.ok) {
+    return apiFailureResult('Failed to retrieve webhooks', result);
   }
 
   return {
     content: [
       {
         type: 'text' as const,
-        text: JSON.stringify(data, null, 2),
+        text: JSON.stringify(result.data, null, 2),
       },
     ],
   };
 };
 
 export const listWebhooksTool = {
+  scope: 'webhooks:read',
   schema: zodSchema,
   handler,
-};
+} satisfies McpTool<typeof zodSchema>;
