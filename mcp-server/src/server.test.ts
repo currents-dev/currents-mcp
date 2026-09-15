@@ -20,6 +20,10 @@ const { registeredTools, registeredResources, serverOptions } = vi.hoisted(
 
 vi.mock('@modelcontextprotocol/sdk/server/mcp.js', () => ({
   McpServer: class {
+    // The factory replaces the SDK's `tools/list` handler through this; what
+    // it serves is `lib/toolList.test.ts`.
+    server = { setRequestHandler: vi.fn() };
+
     constructor(opts: Record<string, unknown>) {
       serverOptions.push(opts);
     }
