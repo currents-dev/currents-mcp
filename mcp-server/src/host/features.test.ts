@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   featuresFromLauncher,
+  MissingFeaturesValueError,
   parseFeatures,
   UnknownFeatureError,
 } from './features';
@@ -78,5 +79,25 @@ describe('featuresFromLauncher', () => {
 
   it('is an empty set when the launcher says nothing', () => {
     expect(featuresFromLauncher(['node', 'mcp'], {})).toEqual({});
+  });
+
+  // Read as an empty set it would override the environment and withhold every
+  // gated tool while reporting nothing — the one outcome a launcher asking for
+  // features cannot have meant.
+  it.each([
+    ['nothing follows it', ['node', 'mcp', '--features']],
+    ['another option follows it', ['node', 'mcp', '--features', '--verbose']],
+  ])('refuses a bare flag when %s', (_name, argv) => {
+    expect(() =>
+      featuresFromLauncher(argv, { CURRENTS_MCP_FEATURES: 'aiAnalysis' })
+    ).toThrow(MissingFeaturesValueError);
+  });
+
+  it('takes an empty value after the equals sign as asking for none', () => {
+    expect(
+      featuresFromLauncher(['node', 'mcp', '--features='], {
+        CURRENTS_MCP_FEATURES: 'aiAnalysis',
+      })
+    ).toEqual({});
   });
 });

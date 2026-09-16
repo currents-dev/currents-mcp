@@ -1,13 +1,21 @@
 #!/usr/bin/env node
 import { MISSING_CURRENTS_API_KEY_MESSAGE } from '../lib/env';
 import { logger } from '../lib/logger';
-import { UnknownFeatureError } from './features';
+import { FeaturesError, featuresFromLauncher } from './features';
 import { startMcpServer } from './stdioServer';
 
-startMcpServer().catch((error) => {
-  if (error instanceof UnknownFeatureError) {
+// Inside the async function so a `featuresFromLauncher` that throws
+// synchronously still reaches the handler below rather than escaping as an
+// uncaught exception with a stack.
+async function main(): Promise<void> {
+  await startMcpServer({ orgFeatures: featuresFromLauncher() });
+}
+
+main().catch((error) => {
+  if (error instanceof FeaturesError) {
     // Its own branch, without a stack: the launcher mistyped something and the
-    // message names the valid values, which is the whole of what is useful.
+    // message names what it should have said, which is the whole of what is
+    // useful.
     logger.error(error.message);
   } else if (
     error instanceof Error &&

@@ -20,7 +20,10 @@ import type { OrgFeatureKey, OrgFeatures } from './scopes';
 export const FEATURES_FLAG = '--features';
 export const FEATURES_ENV = 'CURRENTS_MCP_FEATURES';
 
-export class UnknownFeatureError extends Error {
+/** Anything wrong with what the launcher asked for. Reported without a stack. */
+export class FeaturesError extends Error {}
+
+export class UnknownFeatureError extends FeaturesError {
   constructor(unknown: string[]) {
     super(
       `Unknown ${unknown.length === 1 ? 'feature' : 'features'}: ` +
@@ -28,6 +31,17 @@ export class UnknownFeatureError extends Error {
         `${ORG_FEATURE_KEYS.join(', ')}.`
     );
     this.name = 'UnknownFeatureError';
+  }
+}
+
+export class MissingFeaturesValueError extends FeaturesError {
+  constructor() {
+    super(
+      `${FEATURES_FLAG} needs a comma-separated list, e.g. ` +
+        `${FEATURES_FLAG} ${ORG_FEATURE_KEYS[0]}. ` +
+        `Use ${FEATURES_FLAG}= to ask for none.`
+    );
+    this.name = 'MissingFeaturesValueError';
   }
 }
 
@@ -70,7 +84,15 @@ export function featuresFromLauncher(
 ): OrgFeatures {
   const at = argv.indexOf(FEATURES_FLAG);
   if (at !== -1) {
-    return parseFeatures(argv[at + 1]);
+    // A bare `--features`, or one followed by another option, is refused
+    // rather than read as an empty set: taken as empty it would override a
+    // valid CURRENTS_MCP_FEATURES and hide every gated tool, saying nothing.
+    // `--features=` is still an explicit way to ask for none.
+    const value = argv[at + 1];
+    if (value === undefined || value.startsWith('-')) {
+      throw new MissingFeaturesValueError();
+    }
+    return parseFeatures(value);
   }
   const inline = argv.find((arg) => arg.startsWith(`${FEATURES_FLAG}=`));
   if (inline) {
