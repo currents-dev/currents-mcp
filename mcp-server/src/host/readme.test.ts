@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
-import { KNOWN_FEATURES } from './features';
+import { ORG_FEATURE_KEYS } from '../lib/orgFeatures';
 
 /**
  * The published README documents the tool and skill catalogs, and
@@ -106,6 +106,6 @@ describe('README.md feature flag names', () => {
       sentence,
       'the "names it takes" sentence is gone from README'
     ).not.toBeNull();
-    expect([...namesInReadme].sort()).toEqual([...KNOWN_FEATURES].sort());
+    expect([...namesInReadme].sort()).toEqual([...ORG_FEATURE_KEYS].sort());
   });
 });

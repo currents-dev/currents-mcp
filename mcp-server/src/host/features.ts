@@ -1,3 +1,4 @@
+import { ORG_FEATURE_KEYS } from '../lib/orgFeatures';
 import type { OrgFeatureKey, OrgFeatures } from './scopes';
 
 /**
@@ -16,18 +17,6 @@ import type { OrgFeatureKey, OrgFeatures } from './scopes';
  * organization is not entitled to.
  */
 
-/**
- * Every flag that can be named, and the only place this list lives here — the
- * README table is checked against it by `host/readme.test.ts`. A key
- * outside it is refused rather than ignored — see `parseFeatures`.
- */
-export const KNOWN_FEATURES: readonly OrgFeatureKey[] = [
-  'traceArtifactAnalysis',
-  'aiAnalysis',
-  'aiAssistantEnabled',
-  'evidenceSharing',
-];
-
 export const FEATURES_FLAG = '--features';
 export const FEATURES_ENV = 'CURRENTS_MCP_FEATURES';
 
@@ -36,7 +25,7 @@ export class UnknownFeatureError extends Error {
     super(
       `Unknown ${unknown.length === 1 ? 'feature' : 'features'}: ` +
         `${unknown.join(', ')}. Known features are ` +
-        `${KNOWN_FEATURES.join(', ')}.`
+        `${ORG_FEATURE_KEYS.join(', ')}.`
     );
     this.name = 'UnknownFeatureError';
   }
@@ -57,7 +46,7 @@ export function parseFeatures(list: string | undefined): OrgFeatures {
     .filter(Boolean);
 
   const unknown = named.filter(
-    (name) => !KNOWN_FEATURES.includes(name as OrgFeatureKey)
+    (name) => !ORG_FEATURE_KEYS.includes(name as OrgFeatureKey)
   );
   if (unknown.length > 0) {
     throw new UnknownFeatureError(unknown);
