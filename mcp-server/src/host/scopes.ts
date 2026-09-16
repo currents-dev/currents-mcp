@@ -52,6 +52,7 @@ export interface OrgFeatures {
   aiAnalysis?: boolean;
   aiAssistantEnabled?: boolean;
   evidenceSharing?: boolean;
+  pullRequestsPage?: boolean;
 }
 
 export type OrgFeatureKey = keyof OrgFeatures;

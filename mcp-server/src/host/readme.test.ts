@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
+import { ORG_FEATURE_KEYS } from '../lib/orgFeatures';
 
 /**
  * The published README documents the tool and skill catalogs, and
@@ -85,5 +86,26 @@ describe('README.md skills table', () => {
     const names = getSkills().map((s) => s.name);
     const stale = skillNamesInReadme.filter((name) => !names.includes(name));
     expect(stale, `stale skills in README: ${stale.join(', ')}`).toEqual([]);
+  });
+});
+
+describe('README.md feature flag names', () => {
+  const readme = readFileSync(
+    new URL('../../../README.md', import.meta.url),
+    'utf-8'
+  );
+  // The sentence listing them, so an unrelated backticked word elsewhere in
+  // the section does not count as a name.
+  const sentence = readme.match(/The names it takes are ([^.]+)\./);
+  const namesInReadme = [...(sentence?.[1] ?? '').matchAll(/`([\w]+)`/g)].map(
+    (m) => m[1]
+  );
+
+  it('lists exactly the flags the launcher accepts', () => {
+    expect(
+      sentence,
+      'the "names it takes" sentence is gone from README'
+    ).not.toBeNull();
+    expect([...namesInReadme].sort()).toEqual([...ORG_FEATURE_KEYS].sort());
   });
 });

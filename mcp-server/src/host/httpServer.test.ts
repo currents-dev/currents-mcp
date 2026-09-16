@@ -2,7 +2,8 @@ import type { IncomingMessage } from 'node:http';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { requestContext } from '../lib/context';
 import { fetchApi } from '../lib/request';
-import { extractApiKey } from './httpServer';
+import { MissingFeaturesValueError, UnknownFeatureError } from './features';
+import { createHttpServer, extractApiKey } from './httpServer';
 
 /*
  * Spread over the real modules rather than replacing them. `lib/` is shared
@@ -99,5 +100,40 @@ describe('API key passthrough via request context', () => {
 
     expect(authByKey['https://api.test.com/a']).toBe('Bearer key-a');
     expect(authByKey['https://api.test.com/b']).toBe('Bearer key-b');
+  });
+});
+
+describe('createHttpServer feature resolution', () => {
+  const withArgv = (argv: string[], run: () => void) => {
+    const original = process.argv;
+    process.argv = argv;
+    try {
+      run();
+    } finally {
+      process.argv = original;
+    }
+  };
+
+  // Resolved once here rather than per request. Left in `handleMcpPost` the
+  // throw landed inside a `void`ed promise, so the server bound its port and
+  // answered /healthz while every /mcp POST died with no response.
+  it('refuses to build a server for an unknown feature', () => {
+    withArgv(['node', 'http', '--features', 'evidenceShareing'], () => {
+      expect(() => createHttpServer()).toThrow(UnknownFeatureError);
+    });
+  });
+
+  it('refuses to build a server for a valueless flag', () => {
+    withArgv(['node', 'http', '--features'], () => {
+      expect(() => createHttpServer()).toThrow(MissingFeaturesValueError);
+    });
+  });
+
+  it('builds a server when the launcher named nothing', () => {
+    withArgv(['node', 'http'], () => {
+      const server = createHttpServer();
+      expect(server.listening).toBe(false);
+      server.close();
+    });
   });
 });

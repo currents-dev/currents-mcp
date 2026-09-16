@@ -10,6 +10,8 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { requestContext } from '../lib/context';
 import { logger } from '../lib/logger';
 import { createMcpServer } from '../server';
+import { FeaturesError, featuresFromLauncher } from './features';
+import type { OrgFeatures } from './scopes';
 import './logging';
 
 const PORT = Number(process.env.PORT ?? 3000);
@@ -70,7 +72,8 @@ function jsonRpcError(code: number, message: string) {
  */
 async function handleMcpPost(
   req: IncomingMessage,
-  res: ServerResponse
+  res: ServerResponse,
+  orgFeatures: OrgFeatures
 ): Promise<void> {
   let body: unknown;
   try {
@@ -81,7 +84,7 @@ async function handleMcpPost(
   }
 
   const apiKey = extractApiKey(req);
-  const server = createMcpServer();
+  const server = createMcpServer({ orgFeatures });
   const transport = new StreamableHTTPServerTransport({
     sessionIdGenerator: undefined,
   });
@@ -108,7 +111,16 @@ async function handleMcpPost(
   }
 }
 
-export function createHttpServer(): Server {
+/**
+ * @param orgFeatures the flags this process was started for, as with the stdio
+ * server: whoever launched it did so for one organization. Resolved here
+ * rather than per request so a bad `CURRENTS_MCP_FEATURES` fails the server
+ * instead of rejecting inside a `void`ed handler, where it would leave
+ * `/healthz` answering for a server that cannot serve `/mcp`.
+ */
+export function createHttpServer(
+  orgFeatures: OrgFeatures = featuresFromLauncher()
+): Server {
   return createServer((req, res) => {
     const url = new URL(
       req.url ?? '/',
@@ -122,7 +134,7 @@ export function createHttpServer(): Server {
 
     if (url.pathname === MCP_PATH) {
       if (req.method === 'POST') {
-        void handleMcpPost(req, res);
+        void handleMcpPost(req, res, orgFeatures);
         return;
       }
       // Stateless: no standalone SSE stream (GET) or session teardown (DELETE).
@@ -151,5 +163,13 @@ export function start(port: number = PORT): Server {
 
 // Only start listening when executed directly (not when imported by tests).
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
-  start();
+  try {
+    start();
+  } catch (error) {
+    if (error instanceof FeaturesError) {
+      logger.error(error.message);
+      process.exit(1);
+    }
+    throw error;
+  }
 }
