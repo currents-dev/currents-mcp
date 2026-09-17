@@ -91,6 +91,18 @@ export function loadSkills() {
         `skills/${dirName}/SKILL.md declares name "${name}"; it must match the directory`,
       );
     }
+    // The name is put into a `skill://` URI and into a markdown link in the
+    // README, so it has to be safe in both. Letters, digits, `_` and `-` are,
+    // and encoding at the point of use would not be enough: `encodeURIComponent`
+    // leaves `(` and `)` alone and those close a markdown link destination
+    // early. It is also the class `host/readme.test.ts` reads a name back with,
+    // so a name outside it would be absent from the table it was just written
+    // to.
+    if (!/^[\w-]+$/.test(name)) {
+      throw new Error(
+        `skills/${dirName} must be named with letters, digits, "_" or "-"`,
+      );
+    }
 
     return { name, description, files };
   });

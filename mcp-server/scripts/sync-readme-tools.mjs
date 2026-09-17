@@ -75,12 +75,20 @@ const toolRegex =
  * skill's continues into the phrases that make an agent reach for it — and
  * neither belongs in a table of contents.
  *
+ * A break is `.`, `!` or `?`, then space, then a capital. The capital is what
+ * keeps "based on conditions like test title, file path, git branch, etc.
+ * Requires projectId" splitting where it should while leaving "e.g. the runId"
+ * and "1.5 times" alone — an abbreviation and a decimal continue in lower case
+ * or in a digit, where a new sentence does not. It is a rule about the shape of
+ * the text rather than a list of abbreviations, which the next abbreviation
+ * would not be on.
+ *
  * @param {string} description
  * @returns {string}
  */
 function firstSentence(description) {
-  const lead = description.split(/\.\s/)[0];
-  return lead.endsWith(".") ? lead : lead + ".";
+  const lead = description.split(/(?<=[.!?])\s+(?=[A-Z])/)[0].trimEnd();
+  return /[.!?]$/.test(lead) ? lead : lead + ".";
 }
 
 let match;
@@ -102,15 +110,20 @@ if (registeredTools.length === 0) {
 const pad = (s, w) => s + " ".repeat(Math.max(0, w - s.length));
 
 function markdownTable(headings, rows) {
+  // A `|` in a cell would close it early and add a column, which no test here
+  // would catch: `host/readme.test.ts` reads names out of the first cell and
+  // never looks at the shape of the row. Nothing in either catalog carries one
+  // today, and a description is free text that one day will.
+  const cells = rows.map((row) => row.map((cell) => cell.replaceAll("|", "\\|")));
   const widths = headings.map((heading, column) =>
-    Math.max(heading.length, ...rows.map((row) => row[column].length)),
+    Math.max(heading.length, ...cells.map((row) => row[column].length)),
   );
-  const line = (cells) =>
-    `| ${cells.map((cell, column) => pad(cell, widths[column])).join(" | ")} |`;
+  const line = (row) =>
+    `| ${row.map((cell, column) => pad(cell, widths[column])).join(" | ")} |`;
   return [
     line(headings),
     `| ${widths.map((width) => "-".repeat(width)).join(" | ")} |`,
-    ...rows.map(line),
+    ...cells.map(line),
   ].join("\n");
 }
 
