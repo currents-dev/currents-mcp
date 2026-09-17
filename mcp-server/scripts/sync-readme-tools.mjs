@@ -114,7 +114,13 @@ function markdownTable(headings, rows) {
   // would catch: `host/readme.test.ts` reads names out of the first cell and
   // never looks at the shape of the row. Nothing in either catalog carries one
   // today, and a description is free text that one day will.
-  const cells = rows.map((row) => row.map((cell) => cell.replaceAll("|", "\\|")));
+  //
+  // The backslash goes first, or escaping a description that already reads
+  // `a\|b` would write `a\\|b`, which is a literal backslash followed by a
+  // live delimiter — the corruption this is here to prevent.
+  const cells = rows.map((row) =>
+    row.map((cell) => cell.replaceAll("\\", "\\\\").replaceAll("|", "\\|")),
+  );
   const widths = headings.map((heading, column) =>
     Math.max(heading.length, ...cells.map((row) => row[column].length)),
   );
