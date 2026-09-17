@@ -63,6 +63,7 @@ Agent skills that teach AI agents multi-step Currents workflows.
 | Skill                                        | Description                                                                                                                     |
 | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | [`collect-evidence`](skills/collect-evidence) | Show that implemented work works, or demo it, using CI test artifacts — before/after screenshots, text attachments, videos, traces. |
+| [`browser-evidence`](skills/browser-evidence) | Reproduce a bug in a browser you drive yourself, fix it, and post before/after evidence — for a change no CI test covers. |
 
 The server publishes every skill as an MCP resource, so a connected agent can
 list and read them without a local copy:

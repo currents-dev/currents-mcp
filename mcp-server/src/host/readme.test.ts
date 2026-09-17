@@ -14,9 +14,11 @@ import { ORG_FEATURE_KEYS } from '../lib/orgFeatures';
 const registeredTools = vi.hoisted(() => [] as Array<{ name: string }>);
 
 // Stands in for as much of `McpServer` as `createMcpServer` touches, which is
-// more than the two registration calls: it reaches through to the low-level
+// more than the registration calls: it reaches through to the low-level
 // `server` to answer `tools/list` itself. A mock that omits it throws on a
 // property nobody here is testing, in a file that only wants the tool names.
+// `registerPrompt` is one the monorepo calls and this copy does not yet, so it
+// is here to keep the next sync from failing on a mock rather than on itself.
 vi.mock('@modelcontextprotocol/sdk/server/mcp.js', () => ({
   McpServer: class {
     server = { setRequestHandler() {} };
@@ -24,6 +26,7 @@ vi.mock('@modelcontextprotocol/sdk/server/mcp.js', () => ({
       registeredTools.push({ name });
     }
     registerResource() {}
+    registerPrompt() {}
   },
 }));
 
