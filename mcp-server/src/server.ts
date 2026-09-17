@@ -6,6 +6,7 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import { getLogoDataUri, MCP_SERVER_VERSION } from './host/assets';
 import type { RequestContext } from './lib/context';
+import { buildServerInstructions } from './lib/instructions';
 import { isToolGranted, McpTool } from './lib/tool';
 import { reportToolCall } from './lib/toolCallReport';
 import { listTools, type CatalogTool } from './lib/toolList';
@@ -53,6 +54,8 @@ import { getTestSignatureTool } from './tools/tests/get-tests-signature';
 import { getErrorsExplorerTool } from './tools/errors/get-errors-explorer';
 // Evidence tools
 import { getTestEvidenceTool } from './tools/evidence/get-test-evidence';
+// Traces tools
+import { createTraceLinkTool } from './tools/traces/create-trace-link';
 // Webhooks tools
 import { createWebhookTool } from './tools/webhooks/create-webhook';
 import { deleteWebhookTool } from './tools/webhooks/delete-webhook';
@@ -255,7 +258,7 @@ export const TOOL_CATALOG: CatalogTool[] = [
     'currents-list-pull-requests',
     {
       description:
-        'List pull-request cards for a project (runs grouped by meta.pr.id). Supports cursor pagination, runs_per_pr preview count, and filters by tags, branches, authors, and latest-run status. Requires projectId.',
+        "List pull-request cards for a project (runs grouped by meta.pr.id). Run filters (date range, tags, branches, authors, environments, pr_id, search) choose which runs count; status, completion_state and pr_search are checked on each PR's latest run among those runs. Supports order and dir, cursor pagination, runs_per_pr preview count, and include_total. Requires projectId.",
       annotations: readOnly,
     },
     listProjectPullRequestsTool
@@ -448,6 +451,15 @@ export const TOOL_CATALOG: CatalogTool[] = [
     },
     getTestEvidenceTool
   ),
+  catalogTool(
+    'currents-create-trace-link',
+    {
+      description:
+        "Create a shareable link that serves a test attempt's Playwright trace: a markdown digest of what the attempt did and what failed, a filmstrip, an animated screencast, DOM snapshots, network requests and attachments. Use it to read a trace without downloading it, and to put evidence in a pull request comment or an issue — the link reads without a Currents credential and expires. Start from the digest it returns. Requires instanceId and testId.",
+      annotations: additiveWrite,
+    },
+    createTraceLinkTool
+  ),
   // Webhooks API tools
   catalogTool(
     'currents-list-webhooks',
@@ -520,6 +532,10 @@ export const TOOL_CATALOG: CatalogTool[] = [
  *
  * A tool gated on an organization feature flag is withheld the same way, from
  * the flags in `orgFeatures`.
+ *
+ * `instructions` names what the credential holds (`lib/instructions.ts`). The
+ * filtered list on its own leaves an agent to read a missing tool as a missing
+ * feature and tell the user Currents has no webhooks.
  */
 export function createMcpServer(
   context: Pick<
@@ -528,19 +544,22 @@ export function createMcpServer(
   > = {}
 ): McpServer {
   const logoDataUri = getLogoDataUri();
-  const server = new McpServer({
-    name: 'currents',
-    version: MCP_SERVER_VERSION,
-    icons: logoDataUri
-      ? [
-          {
-            src: logoDataUri,
-            mimeType: 'image/png',
-            sizes: ['256x256', '128x128', '64x64', '32x32', '16x16'],
-          },
-        ]
-      : undefined,
-  });
+  const server = new McpServer(
+    {
+      name: 'currents',
+      version: MCP_SERVER_VERSION,
+      icons: logoDataUri
+        ? [
+            {
+              src: logoDataUri,
+              mimeType: 'image/png',
+              sizes: ['256x256', '128x128', '64x64', '32x32', '16x16'],
+            },
+          ]
+        : undefined,
+    },
+    { instructions: buildServerInstructions(context) }
+  );
 
   const granted = TOOL_CATALOG.filter((entry) =>
     isToolGranted(entry.tool, context)

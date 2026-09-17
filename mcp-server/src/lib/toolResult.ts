@@ -1,5 +1,15 @@
 import { ApiFailure } from './request';
 
+export interface ApiFailureOptions {
+  /**
+   * Set by a tool whose POST changes nothing on the API —
+   * `currents-get-tests-signatures` computes a signature from what it is
+   * given — so a call that may or may not have arrived is reported as one the
+   * caller may simply send again.
+   */
+  safeToRepeat?: boolean;
+}
+
 /**
  * How much of a response body `describeApiFailure` passes on. A 5xx can return
  * an HTML page, and the whole of one would crowd out the rest of a tool result.
@@ -12,10 +22,16 @@ const MAX_BODY_LENGTH = 1000;
  * the scope a 403 names, retry after a 429, correct an id after a 404 - which
  * a single "failed" message left it unable to tell apart.
  */
-export function describeApiFailure(failure: ApiFailure): string {
+export function describeApiFailure(
+  failure: ApiFailure,
+  options: ApiFailureOptions = {}
+): string {
   const call = `${failure.method} ${failure.path}`;
   if (failure.status === null) {
-    return `${call}: request failed (${failure.error})`;
+    return `${call}: request failed (${failure.error})${repeatAdvice(
+      failure,
+      options
+    )}`;
   }
   // `error` alongside a status means the response arrived and its body did
   // not, so there is no body to quote and the reason takes its place.
@@ -26,6 +42,36 @@ export function describeApiFailure(failure: ApiFailure): string {
     ? `${call}: HTTP ${failure.status} ${detail}`
     : `${call}: HTTP ${failure.status}`;
   return `${described}${remediation(failure)}`;
+}
+
+/**
+ * Whether to call the tool again, for a call that produced no response.
+ *
+ * Without this the caller reads one "request failed" for two situations it has
+ * to tell apart, and an agent that retries the wrong one gets a second action
+ * or a second Jira issue: neither `POST /actions` nor
+ * `POST /projects/:id/jira/issues` dedupes repeated posts, so the duplicate
+ * stands.
+ *
+ * A POST is the only method that can duplicate. `PUT /runs/:id/cancel` and
+ * `DELETE /webhooks/:id` land on the same state however many times they
+ * arrive, and a GET changes nothing at all — which is what the caller is told,
+ * rather than that it gets the same answer back: a replayed `DELETE` reaching
+ * a route whose first one landed is a 404, and the resource is still gone.
+ */
+function repeatAdvice(
+  failure: ApiFailure,
+  { safeToRepeat }: ApiFailureOptions
+): string {
+  if (failure.received === 'no') {
+    return ' The request never reached the API, so nothing happened. Call this tool again.';
+  }
+  if (failure.received !== 'unknown') {
+    return '';
+  }
+  return failure.method !== 'POST' || safeToRepeat
+    ? ' Whether the API received the request is unknown, but repeating this call cannot carry it out twice. Call this tool again.'
+    : ' Whether the API received the request is unknown, so it may have been carried out. Check whether it took effect before calling this tool again: a repeat would create a duplicate.';
 }
 
 /**
@@ -116,13 +162,17 @@ function safeStringify(value: unknown): string {
  * status and body, so the caller can tell a missing scope from a wrong id from
  * an outage instead of reading one "Failed to ..." line for all three.
  */
-export function apiFailureResult(summary: string, failure: ApiFailure) {
+export function apiFailureResult(
+  summary: string,
+  failure: ApiFailure,
+  options: ApiFailureOptions = {}
+) {
   return {
     isError: true,
     content: [
       {
         type: 'text' as const,
-        text: `${summary}: ${describeApiFailure(failure)}`,
+        text: `${summary}: ${describeApiFailure(failure, options)}`,
       },
     ],
   };

@@ -49,7 +49,11 @@ const handler = async ({
   );
 
   if (!result.ok) {
-    return apiFailureResult('Failed to generate test signature', result);
+    // A POST that reads nothing and writes nothing: the signature is derived
+    // from the body it was sent.
+    return apiFailureResult('Failed to generate test signature', result, {
+      safeToRepeat: true,
+    });
   }
 
   return {
