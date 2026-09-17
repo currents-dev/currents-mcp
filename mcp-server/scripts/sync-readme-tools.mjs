@@ -91,10 +91,30 @@ function firstSentence(description) {
   return /[.!?]$/.test(lead) ? lead : lead + ".";
 }
 
+/**
+ * A string literal's source text as the string it declares.
+ *
+ * The regex above captures what is between the quotes, so every escape in it
+ * is still two characters. Decoding the quotes alone left `\\` as a pair, which
+ * the markdown escape below then doubled again — a description declaring
+ * `C:\Users` reached the README as two backslashes.
+ *
+ * One pass rather than chained replaces, so a decoded backslash is not read
+ * again as the start of the next escape.
+ *
+ * @param {string} literal
+ * @returns {string}
+ */
+function decodeStringLiteral(literal) {
+  return literal.replace(/\\(.)/g, (_, char) =>
+    char === "n" ? "\n" : char === "t" ? "\t" : char,
+  );
+}
+
 let match;
 while ((match = toolRegex.exec(serverSrc)) !== null) {
   const name = match[2];
-  const description = match[4].replace(/\\(['"])/g, '$1');
+  const description = decodeStringLiteral(match[4]);
   registeredTools.push({ name, shortDesc: firstSentence(description) });
 }
 
@@ -118,8 +138,17 @@ function markdownTable(headings, rows) {
   // The backslash goes first, or escaping a description that already reads
   // `a\|b` would write `a\\|b`, which is a literal backslash followed by a
   // live delimiter — the corruption this is here to prevent.
+  //
+  // A run of whitespace becomes one space last: a row is one line, and a
+  // newline in a cell ends the row wherever it falls.
   const cells = rows.map((row) =>
-    row.map((cell) => cell.replaceAll("\\", "\\\\").replaceAll("|", "\\|")),
+    row.map((cell) =>
+      cell
+        .replaceAll("\\", "\\\\")
+        .replaceAll("|", "\\|")
+        .replace(/\s+/g, " ")
+        .trim(),
+    ),
   );
   const widths = headings.map((heading, column) =>
     Math.max(heading.length, ...cells.map((row) => row[column].length)),
