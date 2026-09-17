@@ -13,7 +13,10 @@ const { registeredTools, registeredResources, serverOptions } = vi.hoisted(
       mimeType?: string;
       read: () => { contents: Array<{ uri: string; text: string }> };
     }> = [];
-    const serverOptions: Array<Record<string, unknown>> = [];
+    const serverOptions: Array<{
+      info: Record<string, unknown>;
+      options?: Record<string, unknown>;
+    }> = [];
     return { registeredTools, registeredResources, serverOptions };
   }
 );
@@ -24,8 +27,11 @@ vi.mock('@modelcontextprotocol/sdk/server/mcp.js', () => ({
     // it serves is `lib/toolList.test.ts`.
     server = { setRequestHandler: vi.fn() };
 
-    constructor(opts: Record<string, unknown>) {
-      serverOptions.push(opts);
+    constructor(
+      info: Record<string, unknown>,
+      options?: Record<string, unknown>
+    ) {
+      serverOptions.push({ info, options });
     }
 
     registerTool(
@@ -57,6 +63,11 @@ vi.mock('@modelcontextprotocol/sdk/server/mcp.js', () => ({
 
 // Building the server triggers all registerTool / registerResource calls
 import type { RequestContext } from './lib/context';
+import {
+  buildServerInstructions,
+  SCOPE_ORDER,
+  SCOPES_WITHOUT_TOOLS,
+} from './lib/instructions';
 import { createMcpServer } from './server';
 import { getSkills, skillFileUri } from './skills';
 
@@ -124,6 +135,9 @@ const EXPECTED_ANNOTATIONS: Record<string, Record<string, boolean>> = {
   'currents-get-context': { r: true, d: false, i: true, o: false },
   'currents-get-errors-explorer': { r: true, d: false, i: true, o: false },
   'currents-get-test-evidence': { r: true, d: false, i: true, o: false },
+  // Each call mints another link to the same trace, and the ones already
+  // handed out keep working.
+  'currents-create-trace-link': { r: false, d: false, i: false, o: false },
   'currents-list-webhooks': { r: true, d: false, i: true, o: false },
   'currents-create-webhook': { r: false, d: false, i: false, o: true },
   'currents-get-webhook': { r: true, d: false, i: true, o: false },
@@ -246,10 +260,12 @@ describe('annotations agree with the tool name', () => {
 
 describe('tools registered by scope', () => {
   const everyTool = registeredTools.map((t) => t.name);
+  /** On `requireAnyScope`, so it is in every list whatever the grant holds. */
+  const ANY_SCOPE_TOOL = 'currents-get-tests-signatures';
 
   /** Rebuilds the server for one caller and returns the names it registered. */
   const toolsFor = (
-    context: Pick<RequestContext, 'oauthScopes' | 'apiKeyScope'>
+    context: Pick<RequestContext, 'oauthScopes' | 'apiKeyScope' | 'orgFeatures'>
   ) => {
     registeredTools.length = 0;
     const resourceCount = registeredResources.length;
@@ -259,6 +275,60 @@ describe('tools registered by scope', () => {
     registeredResources.length = resourceCount;
     return registeredTools.map((t) => t.name);
   };
+
+  // `currents-create-trace-link` is the one tool behind an org feature flag;
+  // the rest of this suite passes no flags, which is the stdio case.
+  describe('a tool behind an org feature flag', () => {
+    const FLAGGED = 'currents-create-trace-link';
+
+    it('is listed to a results:read token when the flag is on', () => {
+      expect(
+        toolsFor({
+          oauthScopes: ['results:read'],
+          orgFeatures: { evidenceSharing: true },
+        })
+      ).toContain(FLAGGED);
+    });
+
+    it('is listed to an API key when the flag is on', () => {
+      expect(
+        toolsFor({
+          apiKeyScope: 'read',
+          orgFeatures: { evidenceSharing: true },
+        })
+      ).toContain(FLAGGED);
+      expect(
+        toolsFor({
+          apiKeyScope: 'write',
+          orgFeatures: { evidenceSharing: true },
+        })
+      ).toContain(FLAGGED);
+    });
+
+    it('is withheld when the flag is off, whatever the credential', () => {
+      expect(
+        toolsFor({ oauthScopes: ['results:read'], orgFeatures: {} })
+      ).not.toContain(FLAGGED);
+      expect(toolsFor({ apiKeyScope: 'write', orgFeatures: {} })).not.toContain(
+        FLAGGED
+      );
+    });
+
+    // The flag does not stand in for the scope its route names.
+    it('is withheld from a token without results:read, flag or not', () => {
+      expect(
+        toolsFor({
+          oauthScopes: ['webhooks:read'],
+          orgFeatures: { evidenceSharing: true },
+        })
+      ).not.toContain(FLAGGED);
+    });
+
+    // The stdio server loads no organization, so the route decides each call.
+    it('is listed to a caller carrying no flags at all', () => {
+      expect(toolsFor({})).toContain(FLAGGED);
+    });
+  });
 
   it('registers every tool for a caller with neither credential', () => {
     expect(toolsFor({})).toEqual(everyTool);
@@ -310,6 +380,48 @@ describe('tools registered by scope', () => {
     expect(names).not.toContain('currents-create-webhook');
     expect(names).not.toContain('currents-get-runs');
   });
+
+  // `lib/instructions.ts` tells a token holding one of these that no tool uses
+  // it. Tagging a tool with one of them turns that line into a denial of a
+  // tool the agent has been handed.
+  it('leaves exactly the scopes the instructions call toolless without tools', () => {
+    const toolless = SCOPE_ORDER.filter(
+      (scope) =>
+        toolsFor({ oauthScopes: [scope] }).filter(
+          (name) => name !== ANY_SCOPE_TOOL
+        ).length === 0
+    );
+
+    expect([...toolless].sort()).toEqual([...SCOPES_WITHOUT_TOOLS].sort());
+  });
+});
+
+describe('instructions passed to the client', () => {
+  /** Rebuilds the server for one caller and returns the instructions it set. */
+  const instructionsFor = (
+    context: Pick<RequestContext, 'oauthScopes' | 'apiKeyScope'>
+  ) => {
+    const resourceCount = registeredResources.length;
+    createMcpServer(context);
+    registeredResources.length = resourceCount;
+    return serverOptions.at(-1)?.options?.instructions;
+  };
+
+  it('describes the credential the server was built for', () => {
+    expect(instructionsFor({ oauthScopes: ['results:read'] })).toBe(
+      buildServerInstructions({ oauthScopes: ['results:read'] })
+    );
+    expect(instructionsFor({ apiKeyScope: 'read' })).toBe(
+      buildServerInstructions({ apiKeyScope: 'read' })
+    );
+  });
+
+  // The stdio server passes no context, and a client that gets an empty
+  // `instructions` back learns nothing about the key it is calling with.
+  it('is set for a caller with neither credential', () => {
+    expect(instructionsFor({})).toEqual(expect.any(String));
+    expect(instructionsFor({})).not.toBe('');
+  });
 });
 
 describe('skills registered as resources', () => {
@@ -355,7 +467,7 @@ describe('skills registered as resources', () => {
 
 describe('server metadata', () => {
   it('advertises the logo as a png data URI', () => {
-    const icons = serverOptions[0]?.icons as
+    const icons = serverOptions[0]?.info.icons as
       | Array<{ src: string; mimeType: string }>
       | undefined;
 
@@ -374,8 +486,8 @@ describe('server metadata', () => {
   // Each checks its own in its `host/` tests; what both owe a client is a
   // version at all.
   it('advertises a name and version', () => {
-    expect(serverOptions[0]?.name).toBe('currents');
-    expect(serverOptions[0]?.version).toEqual(expect.any(String));
-    expect(serverOptions[0]?.version).not.toBe('');
+    expect(serverOptions[0]?.info.name).toBe('currents');
+    expect(serverOptions[0]?.info.version).toEqual(expect.any(String));
+    expect(serverOptions[0]?.info.version).not.toBe('');
   });
 });

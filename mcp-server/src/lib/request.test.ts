@@ -188,6 +188,7 @@ describe('fetchApi', () => {
       status: null,
       body: null,
       error: 'Network error',
+      received: 'unknown',
     });
   });
 
@@ -459,6 +460,107 @@ describe('retries', () => {
   });
 });
 
+/**
+ * What `fetch` throws when the connection fails: a TypeError whose `cause`
+ * carries the socket's code.
+ */
+const connectionError = (code: string) =>
+  Object.assign(new TypeError('fetch failed'), {
+    cause: Object.assign(new Error(code), { code }),
+  });
+
+describe('whether the API received the request', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    runThroughBackoff();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('says no when the connection was never established', async () => {
+    global.fetch = vi.fn().mockRejectedValue(connectionError('ECONNREFUSED'));
+
+    expect(await postApi('/actions', { name: 'flaky' })).toMatchObject({
+      status: null,
+      received: 'no',
+    });
+  });
+
+  it('says unknown when the connection died with the request already out', async () => {
+    global.fetch = vi.fn().mockRejectedValue(connectionError('ECONNRESET'));
+
+    expect(await postApi('/actions', { name: 'flaky' })).toMatchObject({
+      status: null,
+      received: 'unknown',
+    });
+  });
+
+  it('reads the code undici nests below the one fetch throws', async () => {
+    const nested = Object.assign(new TypeError('fetch failed'), {
+      cause: Object.assign(new Error('connect failed'), {
+        cause: Object.assign(new Error('getaddrinfo ENOTFOUND api.test.com'), {
+          code: 'ENOTFOUND',
+        }),
+      }),
+    });
+    global.fetch = vi.fn().mockRejectedValue(nested);
+
+    expect(await postApi('/actions', { name: 'flaky' })).toMatchObject({
+      received: 'no',
+    });
+  });
+
+  // The question it answers is whether the API got the request, and a
+  // response is proof that it did.
+  it('leaves it unanswered when the body broke after the headers', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers(),
+      text: async () => {
+        throw new Error('terminated');
+      },
+    });
+
+    expect(await postApi('/actions', { name: 'flaky' })).not.toHaveProperty(
+      'received'
+    );
+  });
+
+  it('sends a write again when its request never left', async () => {
+    global.fetch = vi
+      .fn()
+      .mockRejectedValueOnce(connectionError('ECONNREFUSED'))
+      .mockResolvedValueOnce(okJson({ status: 'OK' }));
+
+    expect(await postApi('/actions', { name: 'flaky' })).toEqual({
+      ok: true,
+      data: { status: 'OK' },
+    });
+    expect(backoffs).toEqual([300]);
+  });
+
+  it('does not send a write again once the request may have gone out', async () => {
+    global.fetch = vi.fn().mockRejectedValue(connectionError('ECONNRESET'));
+
+    await postApi('/actions', { name: 'flaky' });
+
+    expect(global.fetch).toHaveBeenCalledOnce();
+  });
+
+  it('names an unsent request as such in the log', async () => {
+    global.fetch = vi.fn().mockRejectedValue(connectionError('ECONNREFUSED'));
+
+    await postApi('/actions?projectId=p1', { name: 'flaky' });
+
+    expect(String(vi.mocked(logger.error).mock.calls[0][0])).toContain(
+      'request not sent'
+    );
+  });
+});
+
 describe('timeouts', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -568,6 +670,20 @@ describe('the dispatch deadline', () => {
     await pending;
 
     expect(dispatch).toHaveBeenCalledOnce();
+  });
+
+  // The handler has the request, so the question `received` answers — did the
+  // API get it — is not open. Answering it `unknown` would put "call this tool
+  // again" on the result, and the repeat would start a second handler.
+  it('leaves an abandoned read unclassified rather than unknown', async () => {
+    const dispatch = neverAnswers();
+
+    const pending = requestContext.run({ dispatch }, () =>
+      fetchApi('/runs/run-1')
+    );
+    await vi.advanceTimersByTimeAsync(REQUEST_TIMEOUT_MS);
+
+    expect(await pending).not.toHaveProperty('received');
   });
 
   it('says in the log that the handler outlived the call', async () => {

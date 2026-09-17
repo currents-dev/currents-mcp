@@ -48,9 +48,62 @@ export interface ApiFailure {
    * asking a human what to change.
    */
   challenge?: string;
+  /**
+   * Whether the API received the request, for a call that produced no response
+   * to say so.
+   *
+   * `'no'` when the request never left this process: the host did not resolve,
+   * the connection was refused, the route to it was down. `'unknown'` for
+   * everything else, including a reset and a timeout — either can land after
+   * the request was written and the API acted on it, and calling a reset
+   * "not sent" is how a retry of `POST /actions` creates a second action.
+   *
+   * Absent when the API plainly received it: a status arrived, or a
+   * `DispatchTimeout` left a handler running with it.
+   */
+  received?: 'no' | 'unknown';
 }
 
 export type ApiResult<T> = { ok: true; data: T } | ApiFailure;
+
+/**
+ * The codes a connection fails with before any of the request is written:
+ * name resolution, the connect itself, and the routing failures in between.
+ * `fetch` reports them as the `cause` of the TypeError it throws.
+ *
+ * Nothing after the connect is here. A TLS or protocol failure is left
+ * `'unknown'` for the same reason a reset is: the list has to be wrong in the
+ * direction that costs a retry rather than a duplicate.
+ */
+const UNSENT_CODES = new Set([
+  'ENOTFOUND',
+  'EAI_AGAIN',
+  'ECONNREFUSED',
+  'EHOSTUNREACH',
+  'ENETUNREACH',
+  'EHOSTDOWN',
+  'ENETDOWN',
+  'UND_ERR_CONNECT_TIMEOUT',
+]);
+
+/** How far down `cause` to look: undici nests one level below fetch's own. */
+const MAX_CAUSE_DEPTH = 5;
+
+/** What a thrown `fetch` says about whether the API got the request. */
+function receivedByApi(error: unknown): 'no' | 'unknown' {
+  let current: unknown = error;
+  for (let depth = 0; depth < MAX_CAUSE_DEPTH; depth++) {
+    if (typeof current !== 'object' || current === null) {
+      return 'unknown';
+    }
+    const { code, cause } = current as { code?: unknown; cause?: unknown };
+    if (typeof code === 'string' && UNSENT_CODES.has(code)) {
+      return 'no';
+    }
+    current = cause;
+  }
+  return 'unknown';
+}
 
 /**
  * Sends one `/v1` request, in this process when the host serves the REST API
@@ -200,6 +253,12 @@ export function failureFromError(
     status: null,
     body: null,
     error: describeError(error),
+    // An abandoned dispatch is left unclassified: the handler has the request
+    // and is still running it, so `'unknown'` would put "call this tool again"
+    // on a result whose repeat starts a second handler beside the first.
+    ...(error instanceof DispatchTimeout
+      ? {}
+      : { received: receivedByApi(error) }),
   };
 }
 
@@ -229,8 +288,14 @@ export function failureFromBrokenBody(
   error: unknown
 ): ApiFailure {
   return {
-    ...failureFromError(method, path, error),
+    ok: false,
+    method,
+    path,
+    // A response is proof the API received the request, so `received` is left
+    // off: what it would say about the broken stream is not the question.
     status: response.status,
+    body: null,
+    error: describeError(error),
     ...challengeOf(response),
   };
 }
@@ -246,7 +311,9 @@ export function logApiFailure(failure: ApiFailure): void {
     failure.status === null
       ? // A fetch rejection quotes the URL it was given, so this message is cut
         // at the query string for the same reason the path is.
-        `request failed (${failure.error?.split('?')[0]})`
+        `${
+          failure.received === 'no' ? 'request not sent' : 'request failed'
+        } (${failure.error?.split('?')[0]})`
       : `HTTP ${failure.status}`;
   logger.error(
     `Currents API call failed: ${failure.method} ${pathname}: ${outcome}`
@@ -348,7 +415,7 @@ export async function callApiWithRetries(
       const delay =
         error instanceof DispatchTimeout
           ? null
-          : retryDelay(method, attempt, null);
+          : retryDelay(method, attempt, null, receivedByApi(error));
       if (delay === null) {
         throw error;
       }
@@ -388,21 +455,28 @@ export async function callApiWithRetries(
  * with the failure.
  *
  * A 429 is refused before the API acts on the request, so repeating it is safe
- * whatever the method. A 5xx or a connection that died may follow work the API
- * already did, so only a read is sent again — a retried `POST /runs/:id/cancel`
- * or `create-jira-issue` would otherwise happen twice.
+ * whatever the method. A 5xx or a connection that died after the request went
+ * out may follow work the API already did, so only a read is sent again — a
+ * retried `PUT /runs/:id/cancel` or `create-jira-issue` would otherwise happen
+ * twice.
+ *
+ * A write whose request never left this process is the exception: it changed
+ * nothing, so sending it is the first attempt rather than a second.
  */
 function retryDelay(
   method: Method,
   attempt: number,
-  response: Response | null
+  response: Response | null,
+  received: 'no' | 'unknown' = 'unknown'
 ): number | null {
   if (attempt >= MAX_RETRIES) {
     return null;
   }
   const status = response?.status ?? null;
   const transient =
-    status === 429 || (method === 'GET' && (status === null || status >= 500));
+    status === 429 ||
+    (method === 'GET' && (status === null || status >= 500)) ||
+    (status === null && received === 'no');
   if (!transient) {
     return null;
   }

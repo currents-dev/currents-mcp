@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { ApiFailure } from './request';
 import { apiFailureResult, describeApiFailure } from './toolResult';
 
 describe('describeApiFailure', () => {
@@ -204,6 +205,63 @@ describe('describeApiFailure', () => {
 
     expect(described).toContain('[truncated]');
     expect(described.length).toBeLessThan(1100);
+  });
+});
+
+describe('what to do about a call that got no response', () => {
+  const unanswered = (
+    method: ApiFailure['method'],
+    received: ApiFailure['received']
+  ): ApiFailure => ({
+    ok: false,
+    method,
+    path: '/actions?projectId=p1',
+    status: null,
+    body: null,
+    error: 'fetch failed',
+    received,
+  });
+
+  it('sends the caller straight back when the request never left', () => {
+    expect(describeApiFailure(unanswered('POST', 'no'))).toBe(
+      'POST /actions?projectId=p1: request failed (fetch failed) The request never reached the API, so nothing happened. Call this tool again.'
+    );
+  });
+
+  // The failure ENG-1201 was opened for: `POST /actions` and
+  // `POST /projects/:id/jira/issues` both create on every post.
+  it('warns a create off a retry it cannot tell is safe', () => {
+    expect(describeApiFailure(unanswered('POST', 'unknown'))).toContain(
+      'it may have been carried out. Check whether it took effect before calling this tool again: a repeat would create a duplicate.'
+    );
+  });
+
+  // The advice is that a repeat cannot do it twice, not that it answers the
+  // same — a replayed DELETE whose first one landed reads 404, and the
+  // resource is still gone.
+  it('sends a method that lands on the same state back without the warning', () => {
+    for (const method of ['GET', 'PUT', 'DELETE'] as const) {
+      const described = describeApiFailure(unanswered(method, 'unknown'));
+      expect(described).toContain('Call this tool again.');
+      expect(described).not.toContain('duplicate');
+    }
+  });
+
+  it('spares a POST that changes nothing the warning', () => {
+    const described = describeApiFailure(unanswered('POST', 'unknown'), {
+      safeToRepeat: true,
+    });
+
+    expect(described).toContain('Call this tool again.');
+    expect(described).not.toContain('duplicate');
+  });
+
+  // The field is absent on every failure the API answered, and on one built
+  // before this existed.
+  it('says nothing when the outcome was never classified', () => {
+    expect(describeApiFailure(unanswered('POST', undefined))).toBe(
+      'POST /actions?projectId=p1: request failed (fetch failed)'
+    );
   });
 });
 

@@ -1,0 +1,140 @@
+import type { ApiKeyScope, OAuthApiScope } from '../host/scopes';
+import type { RequestContext } from './context';
+
+/**
+ * What the tools behind each scope let an agent do. The consent screen writes
+ * the same vocabulary for the person granting it, in the second person
+ * (`packages/dashboard/src/oauth/scopeLabels.ts`).
+ *
+ * `null` for a scope no tool here is tagged with: a grant naming it reaches
+ * the REST API and no tool, and an agent told it holds `projects:write` would
+ * otherwise go looking for the tool that edits a project. `server.test.ts`
+ * builds a server per scope and fails when that pair and the catalog
+ * disagree.
+ *
+ * A `Record` over the whole union, so a scope added to
+ * `packages/common/src/oauth/scopes.ts` is a compile error here rather than a
+ * grant the instructions silently omit.
+ */
+const SCOPE_SUMMARIES: Record<OAuthApiScope, string | null> = {
+  'projects:read':
+    "list projects, and read a project's settings, tags, branches and authors",
+  'projects:write': null,
+  'results:read':
+    'read runs, spec instances, test results, failure evidence and the runs on a pull request',
+  'analytics:read':
+    'read aggregate metrics: project insights, error counts, and spec-file and test performance',
+  'actions:read':
+    'read quarantine, skip and tag rules, and the tests they affected',
+  'actions:write': 'create, edit, enable, disable and archive those rules',
+  'issues:write':
+    'create and link Jira issues, and list Jira projects and issue types',
+  'runs:write': 'cancel, reset and delete runs',
+  'webhooks:read': 'read webhook configuration, including destination URLs',
+  'webhooks:write': 'create, edit and delete webhooks',
+  'ai:invoke': null,
+};
+
+/**
+ * Fixed order, so two tokens holding the same scopes get the same text.
+ *
+ * Every scope in the vocabulary, and usable as such: `SCOPE_SUMMARIES` is a
+ * `Record` over the union, so a key missing from it or extra in it is a
+ * compile error. `server.test.ts` walks this rather than `OAUTH_API_SCOPES`
+ * because `@currents/common` is reachable from `host/` only (#3741).
+ */
+export const SCOPE_ORDER = Object.keys(SCOPE_SUMMARIES) as OAuthApiScope[];
+
+/** The scopes no tool is tagged with, which `server.test.ts` checks. */
+export const SCOPES_WITHOUT_TOOLS: readonly OAuthApiScope[] =
+  SCOPE_ORDER.filter((scope) => SCOPE_SUMMARIES[scope] === null);
+
+/**
+ * Six tools reach outside the organization, which is why they carry
+ * `openWorldHint: true` in `server.ts`. A preamble claiming everything stays
+ * inside Currents would contradict the annotation the host reads per tool.
+ */
+const ORGANIZATION_LINE =
+  "Every tool acts on the one Currents organization this connection is authorized for. Two groups reach beyond it: the Jira tools read and write issues in that organization's connected Jira, and the webhook tools store a URL Currents will later POST run data to.";
+
+/**
+ * What an agent should do when it wants something the tool list does not
+ * cover. Filtering the list (ENG-1301) removes the tool and leaves nothing in
+ * its place, and an agent that finds no webhook tool reports that Currents has
+ * no webhooks — a worse answer than the 403 the filtering replaced.
+ *
+ * The re-authorization half is conditioned on the scope being absent, because
+ * the grant is not the only reason a tool is withheld: `isToolGranted` also
+ * withholds one whose `feature` flag the organization does not hold, and
+ * re-authorizing adds no tool for that. Those two are the whole of it, so the
+ * listed-scope branch can name the flag as the cause rather than leaving an
+ * agent to guess — `currents-create-trace-link` is the live case, tagged
+ * `results:read` and gated on `evidenceSharing`.
+ *
+ * The toolless scopes are named whether or not the grant carries them. Naming
+ * them only when granted left the commoner case wrong: a token without
+ * `projects:write` asked to edit a project finds no tool, reads the sentence
+ * above, and sends the user to a re-authorization that adds none.
+ */
+const MISSING_TOOL_LINE = [
+  'The tool list is filtered to the scopes above, so a task with no tool is access this connection lacks, not something Currents cannot do: if its scope is not listed above, say so and that the user can re-authorize with it added; if it is listed, the tool is off for this organization and re-authorizing will not add it.',
+  SCOPES_WITHOUT_TOOLS.length
+    ? `Exception: ${SCOPES_WITHOUT_TOOLS.join(' and ')} reach no tool here, granted or not.`
+    : '',
+]
+  .filter(Boolean)
+  .join(' ');
+
+const API_KEY_LINE =
+  'This connection uses a Currents API key, which carries no scopes: it is read or write, and that decides every call at the REST API.';
+
+/**
+ * The `instructions` a client gets back from `initialize` and a host puts in
+ * front of the model — Claude Code renders it into the system prompt beside the
+ * tool list.
+ *
+ * `initialize` runs after authorization, so this is built per credential: it is
+ * the only channel that states what the credential holds before any tool is
+ * called.
+ */
+export function buildServerInstructions(
+  context: Pick<RequestContext, 'oauthScopes' | 'apiKeyScope'>
+): string {
+  if (context.oauthScopes !== undefined) {
+    return tokenInstructions(context.oauthScopes);
+  }
+  if (context.apiKeyScope !== undefined) {
+    return keyInstructions(context.apiKeyScope);
+  }
+  return [
+    ORGANIZATION_LINE,
+    `${API_KEY_LINE} The key's access level was not known when the tool list was built, so every tool this organization has is listed: a write tool called with a read key is refused with a 403, and the user changes that on the key in Currents.`,
+  ].join('\n\n');
+}
+
+function tokenInstructions(scopes: readonly OAuthApiScope[]): string {
+  const granted = SCOPE_ORDER.filter((scope) => scopes.includes(scope));
+  const lines = granted.map((scope) => {
+    const summary = SCOPE_SUMMARIES[scope];
+    return summary
+      ? `- ${scope} — ${summary}`
+      : `- ${scope} — REST API only, no tool`;
+  });
+
+  return [
+    ORGANIZATION_LINE,
+    granted.length
+      ? ['Granted scopes:', ...lines].join('\n')
+      : 'The access token carries no scopes that name a tool.',
+    MISSING_TOOL_LINE,
+  ].join('\n\n');
+}
+
+function keyInstructions(scope: ApiKeyScope): string {
+  return [
+    ORGANIZATION_LINE,
+    scope === 'write'
+      ? `${API_KEY_LINE} This key is write, so every tool this organization has is listed.`
+      : `${API_KEY_LINE} This key is read, so the tool list holds only the tools a read key may call. Creating, changing or deleting anything through them needs a key with write access, set on the key in Currents — nothing to re-authorize.`,
+  ].join('\n\n');
+}
