@@ -38,6 +38,7 @@
     "rm": "rm -rf dist",
     "prepare": "git config core.hooksPath mcp-server/scripts/hooks",
     "sync-readme": "node scripts/sync-readme-tools.mjs",
+    "sync-readme:check": "node scripts/sync-readme-tools.mjs --check",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "npm run build && vitest run",
@@ -46,7 +47,7 @@
     "release:dry": "release-it --dry-run",
     "format": "prettier --check src ../skills",
     "format-fix": "prettier --write src ../skills",
-    "verify": "npm run format && tsc --noEmit && npm run build && vitest run"
+    "verify": "npm run format && npm run sync-readme:check && tsc --noEmit && npm run build && vitest run"
   },
   "author": "Currents Software Inc",
   "homepage": "https://currents.dev",

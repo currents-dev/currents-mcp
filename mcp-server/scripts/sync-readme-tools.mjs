@@ -1,5 +1,12 @@
 /**
- * Regenerates the tools table in README.md from the actual registered tools.
+ * Regenerates the tools and skills tables in README.md from the source of
+ * truth for each: the registrations in `server.ts`, and the skill directories
+ * `loadSkills` reads.
+ *
+ * Both tables are generated because both are checked. `host/readme.test.ts`
+ * fails when either drifts from what the server carries, and a sync applies
+ * this script, so a tool or skill arriving from the monorepo updates its row
+ * here rather than needing one written by hand in this repository.
  *
  * Usage:  node scripts/sync-readme-tools.mjs [--check]
  *   --check   exit with code 1 if the README is out of date (useful in CI)
@@ -8,7 +15,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { register } from "node:module";
+import { loadSkills } from "./load-skills.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const readmePath = join(root, "..", "README.md");
@@ -62,15 +69,53 @@ const serverSrc = readFileSync(join(root, "src", "server.ts"), "utf-8");
 const toolRegex =
   /(['"])(currents-[A-Za-z0-9_./-]+)\1\s*,\s*\{\s*description:\s*(['"])((?:\\.|(?!\3)[^\\])*)\3/g;
 
+/**
+ * The lead sentence of a description, for a table cell. Both catalogs carry
+ * more than that in their descriptions — a tool's names its arguments, a
+ * skill's continues into the phrases that make an agent reach for it — and
+ * neither belongs in a table of contents.
+ *
+ * A break is `.`, `!` or `?`, then space, then a capital. The capital is what
+ * keeps "based on conditions like test title, file path, git branch, etc.
+ * Requires projectId" splitting where it should while leaving "e.g. the runId"
+ * and "1.5 times" alone — an abbreviation and a decimal continue in lower case
+ * or in a digit, where a new sentence does not. It is a rule about the shape of
+ * the text rather than a list of abbreviations, which the next abbreviation
+ * would not be on.
+ *
+ * @param {string} description
+ * @returns {string}
+ */
+function firstSentence(description) {
+  const lead = description.split(/(?<=[.!?])\s+(?=[A-Z])/)[0].trimEnd();
+  return /[.!?]$/.test(lead) ? lead : lead + ".";
+}
+
+/**
+ * A string literal's source text as the string it declares.
+ *
+ * The regex above captures what is between the quotes, so every escape in it
+ * is still two characters. Decoding the quotes alone left `\\` as a pair, which
+ * the markdown escape below then doubled again — a description declaring
+ * `C:\Users` reached the README as two backslashes.
+ *
+ * One pass rather than chained replaces, so a decoded backslash is not read
+ * again as the start of the next escape.
+ *
+ * @param {string} literal
+ * @returns {string}
+ */
+function decodeStringLiteral(literal) {
+  return literal.replace(/\\(.)/g, (_, char) =>
+    char === "n" ? "\n" : char === "t" ? "\t" : char,
+  );
+}
+
 let match;
 while ((match = toolRegex.exec(serverSrc)) !== null) {
   const name = match[2];
-  const description = match[4].replace(/\\(['"])/g, '$1');
-  const firstSentence = description.split(/\.\s/)[0];
-  const shortDesc = firstSentence.endsWith(".")
-    ? firstSentence
-    : firstSentence + ".";
-  registeredTools.push({ name, shortDesc });
+  const description = decodeStringLiteral(match[4]);
+  registeredTools.push({ name, shortDesc: firstSentence(description) });
 }
 
 if (registeredTools.length === 0) {
@@ -78,56 +123,101 @@ if (registeredTools.length === 0) {
   process.exit(1);
 }
 
-// ── Build the markdown table ────────────────────────────────────
-const nameColWidth = Math.max(
-  "Tool".length,
-  ...registeredTools.map((t) => `\`${t.name}\``.length)
-);
-const descColWidth = Math.max(
-  "Description".length,
-  ...registeredTools.map((t) => t.shortDesc.length)
-);
-
+// ── Build the markdown tables ───────────────────────────────────
+// Padded to the widest cell, which is what the tables in this README already
+// look like. Nothing reformats them afterwards: `npm run format` covers `src`
+// and `../skills`, not the README.
 const pad = (s, w) => s + " ".repeat(Math.max(0, w - s.length));
 
-const header = `| ${pad("Tool", nameColWidth)} | ${pad("Description", descColWidth)} |`;
-const separator = `| ${"-".repeat(nameColWidth)} | ${"-".repeat(descColWidth)} |`;
-const rows = registeredTools.map(
-  (t) =>
-    `| ${pad(`\`${t.name}\``, nameColWidth)} | ${pad(t.shortDesc, descColWidth)} |`
-);
-
-const table = [header, separator, ...rows].join("\n");
-
-// ── Splice the table into README.md ─────────────────────────────
-const readme = readFileSync(readmePath, "utf-8");
-const tableStart = readme.indexOf("| Tool");
-
-if (tableStart === -1) {
-  const msg = 'Cannot find tools table anchor ("| Tool") in README.md';
-  if (checkOnly) {
-    console.error(`${msg} — cannot verify table freshness.`);
-  } else {
-    console.error(`${msg} — cannot update.`);
-  }
-  process.exit(1);
+function markdownTable(headings, rows) {
+  // A `|` in a cell would close it early and add a column, which no test here
+  // would catch: `host/readme.test.ts` reads names out of the first cell and
+  // never looks at the shape of the row. Nothing in either catalog carries one
+  // today, and a description is free text that one day will.
+  //
+  // The backslash goes first, or escaping a description that already reads
+  // `a\|b` would write `a\\|b`, which is a literal backslash followed by a
+  // live delimiter — the corruption this is here to prevent.
+  //
+  // A run of whitespace becomes one space last: a row is one line, and a
+  // newline in a cell ends the row wherever it falls.
+  const cells = rows.map((row) =>
+    row.map((cell) =>
+      cell
+        .replaceAll("\\", "\\\\")
+        .replaceAll("|", "\\|")
+        .replace(/\s+/g, " ")
+        .trim(),
+    ),
+  );
+  const widths = headings.map((heading, column) =>
+    Math.max(heading.length, ...cells.map((row) => row[column].length)),
+  );
+  const line = (row) =>
+    `| ${row.map((cell, column) => pad(cell, widths[column])).join(" | ")} |`;
+  return [
+    line(headings),
+    `| ${widths.map((width) => "-".repeat(width)).join(" | ")} |`,
+    ...cells.map(line),
+  ].join("\n");
 }
 
-const tableEndMarker = readme.indexOf("\n\n", tableStart);
-const tableEnd = tableEndMarker === -1 ? readme.length : tableEndMarker;
+const toolsTable = markdownTable(
+  ["Tool", "Description"],
+  registeredTools.map((tool) => [`\`${tool.name}\``, tool.shortDesc]),
+);
 
-const oldTable = readme.slice(tableStart, tableEnd);
+// The name is the directory name — `load-skills.mjs` refuses a skill whose
+// frontmatter disagrees with it — so the link cannot point at a directory that
+// is not there. `host/readme.test.ts` reads the name back out of this link.
+const skillsTable = markdownTable(
+  ["Skill", "Description"],
+  loadSkills().map((skill) => [
+    `[\`${skill.name}\`](skills/${skill.name})`,
+    firstSentence(skill.description),
+  ]),
+);
 
-if (oldTable === table) {
-  console.log("README.md tools table is up to date.");
+// ── Splice the tables into README.md ────────────────────────────
+let readme = readFileSync(readmePath, "utf-8");
+const stale = [];
+
+for (const [heading, table, label] of [
+  ["Tool", toolsTable, "tools"],
+  ["Skill", skillsTable, "skills"],
+]) {
+  // Anchored to the start of a line, so a description that happens to contain
+  // the heading cannot be mistaken for the table it belongs to.
+  const anchor = new RegExp(`^\\| ${heading}[ |]`, "m").exec(readme);
+  if (!anchor) {
+    console.error(
+      `Cannot find the ${label} table header ("| ${heading}") in README.md.`,
+    );
+    process.exit(1);
+  }
+  const start = anchor.index;
+  const blankLine = readme.indexOf("\n\n", start);
+  const end = blankLine === -1 ? readme.length : blankLine;
+  if (readme.slice(start, end) === table) {
+    continue;
+  }
+  stale.push(label);
+  readme = readme.slice(0, start) + table + readme.slice(end);
+}
+
+if (stale.length === 0) {
+  console.log("README.md tools and skills tables are up to date.");
   process.exit(0);
 }
 
 if (checkOnly) {
-  console.error("README.md tools table is out of date. Run: npm run sync-readme");
+  console.error(
+    `README.md ${stale.join(" and ")} table out of date. Run: npm run sync-readme`,
+  );
   process.exit(1);
 }
 
-const updated = readme.slice(0, tableStart) + table + readme.slice(tableEnd);
-writeFileSync(readmePath, updated);
-console.log(`README.md updated with ${registeredTools.length} tools.`);
+writeFileSync(readmePath, readme);
+console.log(
+  `README.md updated: ${registeredTools.length} tools, ${loadSkills().length} skills.`,
+);
