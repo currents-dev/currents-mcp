@@ -7,6 +7,9 @@ export {
   type RequestContext,
   type ToolCallReport,
 } from './lib/context';
+// Part of the same contract: the host marks a dispatched read its own deadline
+// stopped, and the retry loop here reads the mark.
+export { DEADLINE_EXCEEDED_HEADER } from './lib/request';
 export { setLogger, type LogSink } from './lib/logger';
 export { handleMcpRequest } from './http';
 export { isToolGranted, type McpTool, type ToolScope } from './lib/tool';

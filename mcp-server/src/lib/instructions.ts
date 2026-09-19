@@ -1,4 +1,5 @@
 import type { ApiKeyScope, OAuthApiScope } from '../host/scopes';
+import type { Skill } from '../skills';
 import type { RequestContext } from './context';
 
 /**
@@ -89,6 +90,26 @@ const API_KEY_LINE =
   'This connection uses a Currents API key, which carries no scopes: it is read or write, and that decides every call at the REST API.';
 
 /**
+ * Names the skills, which `prompts/list` carries but nothing puts in front of
+ * the model before it has called anything.
+ *
+ * Named whatever the credential holds, unlike the tools above: a skill
+ * declares no scopes, so the alternative is withholding a workflow that is
+ * mostly readable from a connection missing one step. The caveat is stated
+ * instead, because a step refused halfway through is the confusing outcome —
+ * `currents-create-trace-link` is the live case, gated on a scope and an
+ * organization flag.
+ */
+const skillsLine = (skills: readonly Pick<Skill, 'name'>[]): string =>
+  skills.length
+    ? `Multi-step workflows are published as prompts, one per skill: ${skills
+        .map((skill) => skill.name)
+        .join(
+          ', '
+        )}. A prompt returns the whole workflow. Read the one that fits the task before calling tools for it, because the steps have an order. A workflow may name a tool this connection does not reach.`
+    : '';
+
+/**
  * The `instructions` a client gets back from `initialize` and a host puts in
  * front of the model — Claude Code renders it into the system prompt beside the
  * tool list.
@@ -98,6 +119,15 @@ const API_KEY_LINE =
  * called.
  */
 export function buildServerInstructions(
+  context: Pick<RequestContext, 'oauthScopes' | 'apiKeyScope'>,
+  skills: readonly Pick<Skill, 'name'>[] = []
+): string {
+  return [credentialInstructions(context), skillsLine(skills)]
+    .filter(Boolean)
+    .join('\n\n');
+}
+
+function credentialInstructions(
   context: Pick<RequestContext, 'oauthScopes' | 'apiKeyScope'>
 ): string {
   if (context.oauthScopes !== undefined) {
