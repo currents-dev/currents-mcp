@@ -169,3 +169,25 @@ describe('scopes that reach no tool', () => {
     expect(SCOPES_WITHOUT_TOOLS).not.toContain('results:read');
   });
 });
+
+describe('the skills line', () => {
+  it('names every skill and warns that a step may be out of reach', () => {
+    const text = buildServerInstructions({ apiKeyScope: 'write' }, [
+      { name: 'collect-evidence' },
+      { name: 'browser-evidence' },
+    ]);
+
+    expect(text).toContain('collect-evidence, browser-evidence');
+    expect(text).toContain('does not reach');
+  });
+
+  // A deployment whose skills did not ship serves every tool and no skill
+  // (`host/assets.ts`), and must not answer with a sentence naming none.
+  it('is left out when no skill shipped', () => {
+    const text = buildServerInstructions({ apiKeyScope: 'write' }, []);
+
+    expect(text).not.toContain('prompts');
+    expect(text).toBe(text.trimEnd());
+    expect(text).toBe(buildServerInstructions({ apiKeyScope: 'write' }));
+  });
+});

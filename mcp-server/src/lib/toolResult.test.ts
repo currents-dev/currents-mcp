@@ -40,6 +40,52 @@ describe('describeApiFailure', () => {
     ).toBe('GET /runs/run-1: HTTP 502 body unreadable (terminated)');
   });
 
+  // A 504 alone reads as an outage, and a caller that takes it for one calls
+  // the identical tool again for the identical answer.
+  it('says what a caller can narrow when the API stopped the query', () => {
+    expect(
+      describeApiFailure({
+        ok: false,
+        method: 'GET',
+        path: '/tests/p1?date_start=2020-01-01',
+        status: 504,
+        body: { status: 'FAILED', error: 'Timeout error.' },
+        deadlineMs: 25_000,
+      })
+    ).toBe(
+      'GET /tests/p1?date_start=2020-01-01: HTTP 504 {"status":"FAILED","error":"Timeout error."}' +
+        ' The API stopped this query after 25s. Narrow it - a shorter date range,' +
+        ' fewer branches or tags, a smaller limit - and call this tool again.'
+    );
+  });
+
+  // A deadline set below a second, which only a test environment does, would
+  // otherwise report itself as no time at all.
+  it('never reports the query as having had no time', () => {
+    expect(
+      describeApiFailure({
+        ok: false,
+        method: 'GET',
+        path: '/tests/p1',
+        status: 504,
+        body: null,
+        deadlineMs: 1,
+      })
+    ).toContain('stopped this query after 1s');
+  });
+
+  it('leaves a 504 the host did not mark to speak for itself', () => {
+    expect(
+      describeApiFailure({
+        ok: false,
+        method: 'GET',
+        path: '/tests/p1',
+        status: 504,
+        body: null,
+      })
+    ).toBe('GET /tests/p1: HTTP 504');
+  });
+
   it('reports a request that never got a response', () => {
     expect(
       describeApiFailure({

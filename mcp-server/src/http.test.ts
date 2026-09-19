@@ -5,6 +5,7 @@ import { AddressInfo } from 'node:net';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { handleMcpRequest } from './http';
 import { ApiDispatch, RequestContext } from './lib/context';
+import { getSkills } from './skills';
 
 vi.mock('./lib/logger', () => ({
   logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn() },
@@ -86,6 +87,45 @@ describe('handleMcpRequest', () => {
       expect.objectContaining({ method: 'GET', path: '/runs/run-1' })
     );
     expect(JSON.stringify(result.content)).toContain('run-1');
+  });
+
+  // Both halves over the transport, which is where a host meets them:
+  // `instructions` comes back from `initialize`, and `prompts/list` needs the
+  // capability the registration declares.
+  describe('skills', () => {
+    it('names them in the instructions the handshake returns', () => {
+      expect(client.getInstructions()).toContain('collect-evidence');
+    });
+
+    it('lists one prompt per skill', async () => {
+      const expected = getSkills().map((skill) => skill.name);
+      // Both sides are empty if no skill shipped, which would pass without
+      // serving anything.
+      expect(expected.length).toBeGreaterThan(0);
+
+      const { prompts } = await client.listPrompts();
+
+      expect(prompts.map((prompt) => prompt.name)).toEqual(expected);
+    });
+
+    // The references are the half a second fetch would lose. `skills.test.ts`
+    // covers the ordering against a fixture, which this cannot: the order
+    // `getSkills` returns depends on the collation of the machine it runs on.
+    it('carries the whole skill in the prompt, entry point first', async () => {
+      const skill = getSkills()[0];
+      const { messages } = await client.getPrompt({ name: skill.name });
+      const text = messages
+        .map((message) =>
+          message.content.type === 'text' ? message.content.text : ''
+        )
+        .join('');
+
+      for (const file of skill.files) {
+        expect(text).toContain(`<file path="${file.path}">`);
+        expect(text).toContain(file.content);
+      }
+      expect(text.startsWith('<file path="SKILL.md">')).toBe(true);
+    });
   });
 
   // Each exchange gets a server and a transport of its own, so nothing may
