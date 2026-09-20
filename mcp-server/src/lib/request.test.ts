@@ -8,6 +8,7 @@ import {
   fetchCursorBasedPaginatedApi,
   postApi,
   putApi,
+  DEADLINE_EXCEEDED_HEADER,
   REQUEST_TIMEOUT_MS,
 } from './request';
 
@@ -457,6 +458,121 @@ describe('retries', () => {
     expect(logged).toContain('/tests/p1');
     expect(logged).toContain('HTTP 500');
     expect(logged).not.toContain('author@example.com');
+  });
+
+  // The host ran this query for its whole deadline. A second attempt gets a
+  // fresh one and runs the same query again, which is the 51s against a 25s
+  // deadline ENG-1480 measured.
+  it('does not send a read again that the host stopped at its deadline', async () => {
+    global.fetch = vi.fn().mockResolvedValue(
+      respondWith(504, '{"status":"FAILED","error":"Timeout error."}', {
+        [DEADLINE_EXCEEDED_HEADER]: '25000',
+      })
+    );
+
+    expect(await fetchApi('/tests/p1')).toMatchObject({
+      ok: false,
+      status: 504,
+      deadlineMs: 25000,
+    });
+    expect(global.fetch).toHaveBeenCalledOnce();
+    expect(backoffs).toEqual([]);
+  });
+
+  // The refusal above is the marker's and not the status's: a 504 from a proxy
+  // in front of the API ran nothing for 25s, and a later attempt may get past
+  // it.
+  it('retries a 504 that carries no marker', async () => {
+    global.fetch = vi
+      .fn()
+      .mockResolvedValueOnce(respondWith(504, ''))
+      .mockResolvedValueOnce(okJson({ id: 1 }));
+
+    expect(await fetchApi('/tests/p1')).toEqual({ ok: true, data: { id: 1 } });
+    expect(backoffs).toEqual([300]);
+  });
+
+  // The broken stream says nothing a 401 or a 404 has not already settled, so
+  // the status is kept rather than weighed as no response at all.
+  it.each([401, 403, 404])(
+    'does not send a read again whose %i had an unreadable body',
+    async (status) => {
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: false,
+        status,
+        headers: new Headers(),
+        text: async () => {
+          throw new Error('terminated');
+        },
+      });
+
+      expect(await fetchApi('/tests/p1')).toMatchObject({
+        ok: false,
+        status,
+        error: 'terminated',
+      });
+      expect(global.fetch).toHaveBeenCalledOnce();
+      expect(backoffs).toEqual([]);
+    }
+  );
+
+  // The body breaking says nothing about why the API gave up, and the marker
+  // says the host already spent its whole deadline — so a second attempt buys
+  // the same 25s of query it just abandoned.
+  it('does not send a read again whose marked response broke mid-body', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 504,
+      headers: new Headers({ [DEADLINE_EXCEEDED_HEADER]: '25000' }),
+      text: async () => {
+        throw new Error('terminated');
+      },
+    });
+
+    expect(await fetchApi('/tests/p1')).toMatchObject({
+      ok: false,
+      status: 504,
+      error: 'terminated',
+      deadlineMs: 25000,
+    });
+    expect(global.fetch).toHaveBeenCalledOnce();
+    expect(backoffs).toEqual([]);
+  });
+
+  // The marker and not the response is what makes it terminal: a stream that
+  // broke under a 200 is the likeliest transient failure on a large read, and
+  // still gets its attempts.
+  it('still sends a read again whose unmarked response broke mid-body', async () => {
+    const broken = {
+      ok: false,
+      status: 504,
+      headers: new Headers(),
+      text: async () => {
+        throw new Error('terminated');
+      },
+    };
+    global.fetch = vi
+      .fn()
+      .mockResolvedValueOnce(broken)
+      .mockResolvedValueOnce(okJson({ id: 1 }));
+
+    expect(await fetchApi('/tests/p1')).toEqual({ ok: true, data: { id: 1 } });
+    expect(backoffs).toEqual([300]);
+  });
+
+  // The marker is what stops it, so a value that says nothing about how long
+  // the query got still stops it.
+  it('does not send one again whose marker carries no readable deadline', async () => {
+    global.fetch = vi
+      .fn()
+      .mockResolvedValue(
+        respondWith(504, '', { [DEADLINE_EXCEEDED_HEADER]: '' })
+      );
+
+    const failure = await fetchApi('/tests/p1');
+
+    expect(global.fetch).toHaveBeenCalledOnce();
+    expect(failure).not.toHaveProperty('deadlineMs');
   });
 });
 

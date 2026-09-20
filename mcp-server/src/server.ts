@@ -10,7 +10,7 @@ import { buildServerInstructions } from './lib/instructions';
 import { isToolGranted, McpTool } from './lib/tool';
 import { reportToolCall } from './lib/toolCallReport';
 import { listTools, type CatalogTool } from './lib/toolList';
-import { registerSkills } from './skills';
+import { getSkills, registerSkills } from './skills';
 // Actions tools
 import { createActionTool } from './tools/actions/create-action';
 import { deleteActionTool } from './tools/actions/delete-action';
@@ -54,6 +54,8 @@ import { getTestSignatureTool } from './tools/tests/get-tests-signature';
 import { getErrorsExplorerTool } from './tools/errors/get-errors-explorer';
 // Evidence tools
 import { getTestEvidenceTool } from './tools/evidence/get-test-evidence';
+// Sessions tools
+import { createSessionTool } from './tools/sessions/create-session';
 // Traces tools
 import { createTraceLinkTool } from './tools/traces/create-trace-link';
 // Webhooks tools
@@ -460,6 +462,15 @@ export const TOOL_CATALOG: CatalogTool[] = [
     },
     createTraceLinkTool
   ),
+  catalogTool(
+    'currents-create-session',
+    {
+      description:
+        "Record a browser session you drove as a Currents run, so its evidence can be read and shared like a CI run's. Use it when there is no test to run — a bug reproduced by hand, a fix demonstrated in a browser. Returns the run and an upload URL per file you declared; PUT the bytes to those, and the response says what to do next. A trace attached this way can then be turned into a link that needs no Currents credential.",
+      annotations: additiveWrite,
+    },
+    createSessionTool
+  ),
   // Webhooks API tools
   catalogTool(
     'currents-list-webhooks',
@@ -558,7 +569,7 @@ export function createMcpServer(
           ]
         : undefined,
     },
-    { instructions: buildServerInstructions(context) }
+    { instructions: buildServerInstructions(context, getSkills()) }
   );
 
   const granted = TOOL_CATALOG.filter((entry) =>
@@ -588,6 +599,10 @@ export function createMcpServer(
     tools: listTools(granted),
   }));
 
+  // After any handler the factory sets by hand, and it has to stay there: the
+  // SDK throws when `registerPrompt` finds `prompts/get` already handled, and
+  // the server is built per request, so that would be a 500 on every one. The
+  // tools override above has the opposite constraint.
   registerSkills(server);
 
   return server;

@@ -41,7 +41,29 @@ export function describeApiFailure(
   const described = detail
     ? `${call}: HTTP ${failure.status} ${detail}`
     : `${call}: HTTP ${failure.status}`;
-  return `${described}${remediation(failure)}`;
+  return `${described}${remediation(failure)}${deadlineAdvice(failure)}`;
+}
+
+/**
+ * What the caller can change about a read the API stopped at its deadline.
+ *
+ * The status alone reads as an outage, and a caller that takes it for one calls
+ * the identical tool again — which gets the same deadline and the same answer.
+ * Nothing retries it on the caller's behalf: `retryDelay` refuses a read the
+ * host already spent its whole deadline on, so this sentence is the only place
+ * the caller is told that a narrower request is what makes it answerable.
+ *
+ * Never set alongside `remediation`: a deadline is not a refusal, so the
+ * response carries no `WWW-Authenticate` for that to read.
+ */
+function deadlineAdvice(failure: ApiFailure): string {
+  if (failure.deadlineMs === undefined) {
+    return '';
+  }
+  // Seconds, with a floor, so a deadline set below a second in a test
+  // environment does not report itself as no time at all.
+  const seconds = Math.max(1, Math.round(failure.deadlineMs / 1000));
+  return ` The API stopped this query after ${seconds}s. Narrow it - a shorter date range, fewer branches or tags, a smaller limit - and call this tool again.`;
 }
 
 /**
