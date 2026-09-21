@@ -144,7 +144,7 @@ The server exits at startup on a name it does not recognize, rather than
 carrying on without the tool you asked for.
 
 The names it takes are `traceArtifactAnalysis`, `aiAnalysis`,
-`aiAssistantEnabled`, `evidenceSharing` and `pullRequestsPage`.
+`aiAssistantEnabled` and `evidenceSharing`.
 
 Naming a flag is a claim about the organization your API key belongs to, not a
 grant. Currents still refuses a call the organization is not entitled to, so
