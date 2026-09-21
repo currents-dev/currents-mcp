@@ -45,7 +45,9 @@ const zodSchema = z.object({
     .string()
     .max(200)
     .optional()
-    .describe('Search runs by ciBuildId or commit message. Case-insensitive.'),
+    .describe(
+      "Case-insensitive substring search over a run's CI build id, commit message, branch, sha, author name and email, pull request id/title/source/destination, tags, environments, framework and browser."
+    ),
   pr_id: z
     .string()
     .min(1)

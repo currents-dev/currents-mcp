@@ -270,3 +270,76 @@ describe('getTestEvidenceTool', () => {
     expect(manifest.specs[0].instanceId).toBe('inst-1');
   });
 });
+
+/**
+ * The reads are bounded so one tool call cannot fan out to 25 concurrent `/v1`
+ * dispatches. Against a host that caps dispatches, an unbounded fan-out filled
+ * the cap and then refused its own reads, which land in the manifest as an
+ * `error` on the spec rather than as a failed tool call.
+ */
+describe('the instance read fan-out', () => {
+  const manySpecs = (count: number) => ({
+    data: {
+      ...runPayload.data,
+      specs: Array.from({ length: count }, (_, i) => ({
+        instanceId: `inst-${i}`,
+        spec: `e2e/spec-${i}.spec.ts`,
+      })),
+    },
+  });
+
+  it('keeps at most five instance reads in flight', async () => {
+    let running = 0;
+    let peak = 0;
+    vi.mocked(request.fetchApi).mockImplementation(async (path: string) => {
+      if (path === '/runs/run-1') return ok(manySpecs(25));
+      if (!path.startsWith('/instances/')) return failed(path, 404);
+      running += 1;
+      peak = Math.max(peak, running);
+      await new Promise((resolve) => setTimeout(resolve, 1));
+      running -= 1;
+      return ok(instancePayload);
+    });
+
+    await getTestEvidenceTool.handler({ runId: 'run-1', maxInstances: 25 });
+
+    expect(peak).toBe(5);
+  });
+
+  it('still reads every selected spec', async () => {
+    vi.mocked(request.fetchApi).mockImplementation(async (path: string) => {
+      if (path === '/runs/run-1') return ok(manySpecs(12));
+      if (path.startsWith('/instances/')) return ok(instancePayload);
+      return failed(path, 404);
+    });
+
+    const result = await getTestEvidenceTool.handler({
+      runId: 'run-1',
+      maxInstances: 12,
+    });
+
+    const manifest = parseManifest(result);
+    expect(manifest.specs).toHaveLength(12);
+    expect(manifest.specs.every((s: any) => !s.error)).toBe(true);
+  });
+
+  it('keeps the manifest in the order the specs were selected', async () => {
+    vi.mocked(request.fetchApi).mockImplementation(async (path: string) => {
+      if (path === '/runs/run-1') return ok(manySpecs(8));
+      if (!path.startsWith('/instances/')) return failed(path, 404);
+      // Later specs answer first, so the order cannot come from timing.
+      const index = Number(path.split('inst-')[1]);
+      await new Promise((resolve) => setTimeout(resolve, (8 - index) % 4));
+      return ok(instancePayload);
+    });
+
+    const result = await getTestEvidenceTool.handler({
+      runId: 'run-1',
+      maxInstances: 8,
+    });
+
+    expect(parseManifest(result).specs.map((s: any) => s.spec)).toEqual(
+      Array.from({ length: 8 }, (_, i) => `e2e/spec-${i}.spec.ts`)
+    );
+  });
+});

@@ -1,8 +1,20 @@
 import { z } from 'zod';
+import { mapWithConcurrency } from '../../lib/concurrency';
 import { fetchApi } from '../../lib/request';
 import { apiFailureResult, describeApiFailure } from '../../lib/toolResult';
 import { logger } from '../../lib/logger';
 import type { McpTool } from '../../lib/tool';
+
+/**
+ * How many instance reads this tool has in flight at once.
+ *
+ * `maxInstances` allows 25, and issuing them together was 25 `/v1` calls from
+ * one tool call. Two concurrent calls of it saturated the staging task in the
+ * ENG-1385 load test, which is a load one caller can produce on its own. The
+ * manifest still covers every selected spec; only how many are read at once
+ * changes.
+ */
+const MAX_CONCURRENT_INSTANCE_READS = 5;
 
 const zodSchema = z.object({
   projectId: z
@@ -231,8 +243,10 @@ const handler = async ({
   const titleFilter = testTitle?.toLowerCase();
   const statusFilter = testStatus && testStatus.length > 0 ? testStatus : null;
 
-  const specs = await Promise.all(
-    selectedSpecs.map(async (specEntry) => {
+  const specs = await mapWithConcurrency(
+    selectedSpecs,
+    MAX_CONCURRENT_INSTANCE_READS,
+    async (specEntry) => {
       const instanceResponse = await fetchApi<{ data?: any }>(
         `/instances/${encodeURIComponent(specEntry.instanceId)}`
       );
@@ -296,7 +310,7 @@ const handler = async ({
         tests,
         ...(hasEvidence(specLevel) ? { specLevelEvidence: specLevel } : {}),
       };
-    })
+    }
   );
 
   const manifest = {
