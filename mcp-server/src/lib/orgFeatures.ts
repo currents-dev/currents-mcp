@@ -19,7 +19,6 @@ const ORG_FEATURES: { [K in OrgFeatureKey]: K } = {
   aiAnalysis: 'aiAnalysis',
   aiAssistantEnabled: 'aiAssistantEnabled',
   evidenceSharing: 'evidenceSharing',
-  pullRequestsPage: 'pullRequestsPage',
 };
 
 export const ORG_FEATURE_KEYS = Object.values(ORG_FEATURES);
