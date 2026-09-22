@@ -6,6 +6,12 @@ import type { McpTool } from './tool';
 /** A tool as `server.ts` declares it, before any server registers it. */
 export type CatalogTool = {
   name: string;
+  /**
+   * What a host shows in place of the tool name. A client that renders one
+   * (Claude's tool-call cards, the connector directory's listing) has nothing
+   * but `currents-get-spec-instance` to print otherwise.
+   */
+  title: string;
   description: string;
   annotations: ToolAnnotations;
   tool: McpTool;
@@ -75,6 +81,7 @@ export function listTools(granted: CatalogTool[]): Tool[] {
 
 function toolDefinition({
   name,
+  title,
   description,
   annotations,
   tool,
@@ -82,6 +89,7 @@ function toolDefinition({
   const schema = normalizeObjectSchema(tool.schema);
   return {
     name,
+    title,
     description,
     inputSchema: schema
       ? (toJsonSchemaCompat(schema, JSON_SCHEMA_OPTIONS) as Tool['inputSchema'])

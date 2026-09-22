@@ -71,7 +71,6 @@ describe('listProjectPullRequestsTool', () => {
       pr_id: 'github:currents-dev/currents#3665',
       order: 'run_count',
       dir: 'asc',
-      include_total: true,
     });
 
     const params = url.searchParams;
@@ -84,18 +83,12 @@ describe('listProjectPullRequestsTool', () => {
     expect(params.get('pr_id')).toBe('github:currents-dev/currents#3665');
     expect(params.get('order')).toBe('run_count');
     expect(params.get('dir')).toBe('asc');
-    expect(params.get('include_total')).toBe('true');
   });
 
-  it('sends runs_per_pr 0 and include_total false', async () => {
-    const url = await requestedUrl({
-      projectId: 'p1',
-      runs_per_pr: 0,
-      include_total: false,
-    });
+  it('sends runs_per_pr 0', async () => {
+    const url = await requestedUrl({ projectId: 'p1', runs_per_pr: 0 });
 
     expect(url.searchParams.get('runs_per_pr')).toBe('0');
-    expect(url.searchParams.get('include_total')).toBe('false');
   });
 });
 

@@ -32,10 +32,10 @@ const listFrom = async (server: McpServer) => {
  */
 const sdkBuiltServer = () => {
   const server = new McpServer({ name: 'currents', version: 'test' });
-  for (const { name, description, annotations, tool } of TOOL_CATALOG) {
+  for (const { name, title, description, annotations, tool } of TOOL_CATALOG) {
     server.registerTool<never, AnySchema>(
       name,
-      { description, annotations, inputSchema: tool.schema },
+      { title, description, annotations, inputSchema: tool.schema },
       tool.handler
     );
   }
@@ -72,6 +72,7 @@ describe('the cached tools/list', () => {
 /** A tool gated on an organization feature flag, which the catalog has none of yet. */
 const flaggedTool: CatalogTool = {
   name: 'currents-flagged-tool',
+  title: 'Flagged Tool',
   description: 'A tool gated on an organization feature flag.',
   annotations: {
     readOnlyHint: true,

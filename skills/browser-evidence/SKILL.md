@@ -48,13 +48,21 @@ Ask at the start. Asked later, the question arrives with a finished recording in
 
 Stop tracing without a path. The trace is left in the server's output directory, `.playwright-mcp/traces` unless it was started with `--output-dir`.
 
-Empty that directory before you start, every time. It is reused across captures, and step 2 reads whatever it finds: leave the first recording in place and the second trace carries both, so the fixed run replays the bug and the link serves the earlier session's page resources.
+Empty that directory before you start, every time. It is reused across captures, and step 2 zips whatever it finds: leave the first recording in place and the second archive carries both, so the fixed run replays the bug and the link serves the earlier session's page resources.
 
-### 2. Normalise and zip the trace
+### 2. Zip the trace
 
-A trace left in that directory names each frame by the path it was streamed to, and the trace API drops every frame it cannot name — the digest then reports a recording with no screenshots.
+From the directory holding the recording, with `screencast/` in the archive — that is where the frames are, and a trace API asked for a filmstrip has nowhere else to read them from. Name the archive after the capture so the two do not overwrite each other.
 
-Run the normalisation in [references/normalise-trace.md](references/normalise-trace.md) before zipping. It is a few lines, and without it the filmstrip and the animation come back empty.
+```bash
+NAME=before
+cat trace-*.trace   > trace.trace
+cat trace-*.network > trace.network 2>/dev/null || true
+# zip adds to an archive that already exists, which would put the first
+# capture inside the second one.
+rm -f "/tmp/$NAME-trace.zip"
+zip -qr "/tmp/$NAME-trace.zip" trace.trace trace.network screencast resources
+```
 
 ### 3. Record the session
 
@@ -105,6 +113,6 @@ Lead with what changed for the user.
 - **404 from the session tool**: the project id does not belong to this organization.
 - **422 from the session tool**: recording is suspended for the organization, or its subscription has expired.
 - **The upload URL is refused**: more than ten minutes passed since step 3. Record the session again.
-- **The digest reports no frames**: step 2 was skipped, or tracing ran without screenshots.
+- **The digest reports no frames**: the archive has no `screencast/`, or tracing ran without screenshots.
 - **`No trace found for this test attempt`**: wrong `instanceId` or `testId`, or an `artifactName` no trace carries. Creating the link never reads the file, so this is not an upload that is still in flight.
 - **The digest fails with a 404 from storage**: the trace bytes are not there. Check that step 4 got a 200.

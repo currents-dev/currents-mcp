@@ -62,6 +62,11 @@ export interface ApiFailure {
    * `DispatchTimeout` left a handler running with it.
    */
   received?: 'no' | 'unknown';
+  /**
+   * The deadline the host stopped this read at, in milliseconds. Set from
+   * `DEADLINE_EXCEEDED_HEADER`, and absent for every other failure.
+   */
+  deadlineMs?: number;
 }
 
 export type ApiResult<T> = { ok: true; data: T } | ApiFailure;
@@ -177,13 +182,54 @@ export class DispatchTimeout extends Error {
 }
 
 /**
+ * Set by the host on a dispatched read its own deadline stopped, carrying that
+ * deadline in milliseconds.
+ *
+ * `DispatchTimeout` above refuses to re-send a read that never came back at
+ * all. This one did come back, as a 5xx like any other — which on a read
+ * `retryDelay` sends again, twice, each attempt getting a fresh deadline and
+ * running the query the first one already proved too slow. Measured on staging
+ * as 51s against a 25s deadline, and as three `TIMEOUT_EXCEEDED` rows in
+ * ClickHouse for one tool call (ENG-1480).
+ *
+ * A header rather than the 504 it comes with, because a 504 from a proxy in
+ * front of the API is a different failure: nothing ran for 25s behind it, and
+ * a second attempt may well get past it.
+ */
+export const DEADLINE_EXCEEDED_HEADER = 'x-currents-deadline-exceeded';
+
+/**
+ * Whether the host marked this response as one its own deadline stopped.
+ *
+ * Separate from `deadlineMsOf` because the two questions have different
+ * answers: a marker carrying nothing readable still says the work was spent,
+ * and only the sentence the caller reads needs the number.
+ */
+function deadlineExceeded(response: Response): boolean {
+  return response.headers.has(DEADLINE_EXCEEDED_HEADER);
+}
+
+/** The deadline off a response the host marked, or null for anything else. */
+function deadlineMsOf(response: Response): number | null {
+  const header = response.headers.get(DEADLINE_EXCEEDED_HEADER);
+  if (header === null) {
+    return null;
+  }
+  const ms = Number(header);
+  // Absent or unreadable, the refusal above still stands: `retryDelay` reads
+  // the header itself, and only the sentence the caller reads needs the number.
+  return Number.isFinite(ms) && ms > 0 ? ms : null;
+}
+
+/**
  * Answers the dispatch, or fails the call once the deadline passes.
  *
  * What this frees is the caller, not the process: nothing here can stop the
- * handler, which goes on holding whatever it holds until it finishes on its
- * own. Bounding the work itself is the query timeout in `connection.ts`
- * (ENG-1427), and this logs so that a stall leaves a trace either way — the
- * dispatched request is answered by nothing that writes an access log.
+ * handler. Bounding the work itself is the host's job — the hosted server puts
+ * a shorter deadline on the request that the mongo and ClickHouse clients read,
+ * so the queries stop before this fires. This logs so that a stall leaves a
+ * trace either way: the dispatched request is answered by nothing that writes
+ * an access log.
  */
 function withDeadline(
   request: ApiRequest,
@@ -233,7 +279,13 @@ export function failureFromResponse(
     status: response.status,
     body,
     ...challengeOf(response),
+    ...deadlineOf(response),
   };
+}
+
+function deadlineOf(response: Response): Pick<ApiFailure, 'deadlineMs'> {
+  const deadlineMs = deadlineMsOf(response);
+  return deadlineMs === null ? {} : { deadlineMs };
 }
 
 function challengeOf(response: Response): Pick<ApiFailure, 'challenge'> {
@@ -297,6 +349,10 @@ export function failureFromBrokenBody(
     body: null,
     error: describeError(error),
     ...challengeOf(response),
+    // Carried here as well as in `failureFromResponse`: the body breaking says
+    // nothing about why the API gave up, and without this the caller reads a
+    // 504 with no sentence telling it what to narrow.
+    ...deadlineOf(response),
   };
 }
 
@@ -437,10 +493,22 @@ export async function callApiWithRetries(
     try {
       return { response, text: await response.text() };
     } catch (error: unknown) {
-      // Weighed as a call that produced no response at all, which is the
-      // failure it is: nothing usable arrived, and the status that did cannot
-      // say whether sending it again is safe.
-      const delay = retryDelay(method, attempt, null);
+      // A 2xx whose body broke is weighed as a call that produced no response
+      // at all: nothing usable arrived, and a 200 cannot say whether the write
+      // it acknowledged was carried out. On a large read that break is the
+      // commonest transient failure there is, and the status check cannot see
+      // it, so it keeps its attempts.
+      //
+      // A non-2xx reaching here was already weighed by the status check above
+      // and left unretried, so handing the response back keeps that answer: a
+      // 401 or a 404 says the same thing on the next attempt. `null` would
+      // discard it and turn the refusal into a retriable "no response".
+      //
+      // The marker is read first and separately from either, because whether
+      // the host spent its whole deadline does not depend on the body arriving.
+      const delay = deadlineExceeded(response)
+        ? null
+        : retryDelay(method, attempt, response.ok ? null : response);
       if (delay === null) {
         return { response, bodyError: error };
       }
@@ -472,6 +540,12 @@ function retryDelay(
   if (attempt >= MAX_RETRIES) {
     return null;
   }
+  // Before the rules below rather than as an exception to them: the host ran
+  // this query for its whole deadline, so there is no attempt left that could
+  // get past what stopped it. See `DEADLINE_EXCEEDED_HEADER`.
+  if (response && deadlineExceeded(response)) {
+    return null;
+  }
   const status = response?.status ?? null;
   const transient =
     status === 429 ||
@@ -492,7 +566,7 @@ function retryDelay(
 
 /**
  * `Retry-After` as delta-seconds, which is the form the API sends it in
- * (`api/aiShare/rateLimit.ts`). An HTTP-date is left unread and the backoff
+ * (`api/share/rateLimit.ts`). An HTTP-date is left unread and the backoff
  * stands in for it.
  */
 function retryAfterMs(response: Response): number | null {

@@ -150,12 +150,6 @@ const paramsSchema = z.object({
     .describe(
       'Sort direction (default: desc). Keep order and dir the same across pages: a cursor returned for another order or dir is rejected.'
     ),
-  include_total: z
-    .boolean()
-    .optional()
-    .describe(
-      'When true, the response has total: the number of PRs that match all filters over all pages. Takes one more query.'
-    ),
 });
 
 const zodSchema = paramsSchema.refine(
@@ -186,7 +180,6 @@ const handler = async ({
   pr_id,
   order,
   dir,
-  include_total,
 }: z.infer<typeof zodSchema>) => {
   const queryParams = new URLSearchParams();
 
@@ -245,9 +238,6 @@ const handler = async ({
   }
   if (dir) {
     queryParams.append('dir', dir);
-  }
-  if (include_total !== undefined) {
-    queryParams.append('include_total', String(include_total));
   }
 
   const qs = queryParams.toString();

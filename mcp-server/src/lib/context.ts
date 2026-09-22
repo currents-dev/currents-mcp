@@ -37,6 +37,9 @@ export interface ToolCallReport {
   apiStatus: number | null;
 }
 
+/** The two credentials that carry a scope set. An API key carries none. */
+export type ScopedCredential = 'access-token' | 'personal-access-token';
+
 export interface RequestContext {
   /** Per-request Currents API key (e.g. from the inbound Authorization header). */
   apiKey?: string;
@@ -47,6 +50,15 @@ export interface RequestContext {
    * an API key.
    */
   oauthScopes?: readonly OAuthApiScope[];
+  /**
+   * Which credential `oauthScopes` came off, which only the `instructions`
+   * read: the tool list is the same either way. An access token is widened by
+   * re-authorizing it, a personal access token by issuing another, and an
+   * agent that gives the wrong one sends the user somewhere they cannot go.
+   * Unset reads as an access token, which is what every caller before personal
+   * access tokens reached this mount with.
+   */
+  scopesFrom?: ScopedCredential;
   /**
    * The `read`/`write` of the caller's API key, as the host resolved it. Only
    * the tools a key of that scope may call are registered (`lib/tool.ts`). A
@@ -63,6 +75,18 @@ export interface RequestContext {
    * unset, which registers every tool and lets each route decide.
    */
   orgFeatures?: OrgFeatures;
+  /**
+   * Asked whether the host can send a response of these bytes, and answering
+   * with what to tell the caller when it cannot.
+   *
+   * The api Lambda answers through an ALB, which caps a response at 1MB, and a
+   * tool result over that is dropped as a 502 carrying nothing the agent can
+   * act on. Only the host knows what its own transport costs — the base64 an
+   * ALB response pays for compressed bytes, for one — so it measures, and this
+   * turns the answer into a JSON-RPC error naming what to narrow. Unset for the
+   * published package, whose responses cross no such cap.
+   */
+  responseTooLarge?: (body: Buffer) => string | undefined;
   /**
    * Told about each tool call served under this context. A call the SDK
    * refuses before reaching the handler — an unknown tool name, arguments the

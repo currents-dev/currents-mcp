@@ -10,7 +10,7 @@ import { buildServerInstructions } from './lib/instructions';
 import { isToolGranted, McpTool } from './lib/tool';
 import { reportToolCall } from './lib/toolCallReport';
 import { listTools, type CatalogTool } from './lib/toolList';
-import { registerSkills } from './skills';
+import { getSkills, registerSkills } from './skills';
 // Actions tools
 import { createActionTool } from './tools/actions/create-action';
 import { deleteActionTool } from './tools/actions/delete-action';
@@ -54,6 +54,8 @@ import { getTestSignatureTool } from './tools/tests/get-tests-signature';
 import { getErrorsExplorerTool } from './tools/errors/get-errors-explorer';
 // Evidence tools
 import { getTestEvidenceTool } from './tools/evidence/get-test-evidence';
+// Sessions tools
+import { createSessionTool } from './tools/sessions/create-session';
 // Traces tools
 import { createTraceLinkTool } from './tools/traces/create-trace-link';
 // Webhooks tools
@@ -121,7 +123,14 @@ const destructiveWrite: ToolAnnotations = {
  */
 const catalogTool = <Schema extends AnySchema>(
   name: string,
-  config: { description: string; annotations: ToolAnnotations },
+  /**
+   * `description` comes first in every entry below, and has to. The README
+   * table in `currents-dev/currents-mcp` is generated from this file by a
+   * regex anchored on `'currents-…', { description:`, and it fails the sync
+   * check with "No tools found in server.ts" when anything sits between the
+   * name and that key.
+   */
+  config: { title: string; description: string; annotations: ToolAnnotations },
   tool: McpTool<Schema>
 ): CatalogTool => ({ name, ...config, tool: tool as McpTool });
 
@@ -139,6 +148,7 @@ export const TOOL_CATALOG: CatalogTool[] = [
     {
       description:
         'List all actions for a project with optional filtering. Actions are rules that automatically modify test behavior (skip, quarantine, tag). Supports filtering by status (active/disabled/archived/expired) and search by name. Requires a projectId.',
+      title: 'List Actions',
       annotations: readOnly,
     },
     listActionsTool
@@ -148,6 +158,7 @@ export const TOOL_CATALOG: CatalogTool[] = [
     {
       description:
         'Create a new action for a project. Actions define rules that automatically skip, quarantine, or tag tests based on conditions like test title, file path, git branch, etc. Requires projectId, name, action array, and matcher object.',
+      title: 'Create Action',
       annotations: additiveWrite,
     },
     createActionTool
@@ -157,6 +168,7 @@ export const TOOL_CATALOG: CatalogTool[] = [
     {
       description:
         'Get a single action by ID. The actionId is globally unique, so projectId is not required. Returns full action details including matcher conditions and current status.',
+      title: 'Get Action',
       annotations: readOnly,
     },
     getActionTool
@@ -168,6 +180,7 @@ export const TOOL_CATALOG: CatalogTool[] = [
         'Update an existing action. The actionId is globally unique. You can update name, description, action array, matcher, or expiration date. All fields are optional.',
       // Not idempotent: `upsertRule` pushes an `updated` history entry and
       // sets `updatedAt`/`updatedBy` on every call, identical body or not.
+      title: 'Update Action',
       annotations: { ...destructiveWrite, idempotentHint: false },
     },
     updateActionTool
@@ -177,6 +190,7 @@ export const TOOL_CATALOG: CatalogTool[] = [
     {
       description:
         'Delete (archive) an action. This is a soft delete - the action will be marked as archived but not permanently removed. The actionId is globally unique.',
+      title: 'Archive Action',
       annotations: destructiveWrite,
     },
     deleteActionTool
@@ -186,6 +200,7 @@ export const TOOL_CATALOG: CatalogTool[] = [
     {
       description:
         'Enable a disabled action. Changes the action status from disabled to active, making it apply to matching tests again. The actionId is globally unique.',
+      title: 'Enable Action',
       annotations: idempotentWrite,
     },
     enableActionTool
@@ -195,6 +210,7 @@ export const TOOL_CATALOG: CatalogTool[] = [
     {
       description:
         'Disable an active action. Changes the action status to disabled, temporarily preventing it from applying to tests. The actionId is globally unique.',
+      title: 'Disable Action',
       annotations: idempotentWrite,
     },
     disableActionTool
@@ -204,6 +220,7 @@ export const TOOL_CATALOG: CatalogTool[] = [
     {
       description:
         'List tests affected by actions (quarantine, skip, tag) for a project within a date range. Returns aggregated data grouped by test signature. Supports filtering by action types, action ID, status, and search. Requires projectId, date_start, and date_end. Preview endpoint: fields and path may change.',
+      title: 'List Tests Affected by Actions',
       annotations: readOnly,
     },
     listAffectedTestsTool
@@ -212,16 +229,18 @@ export const TOOL_CATALOG: CatalogTool[] = [
     'currents-get-affected-test-executions',
     {
       description:
-        'Get execution details for a specific affected test (by signature) within a date range. Returns individual test execution records with action info. Uses cursor-based pagination. Requires projectId, signature, date_start, and date_end.',
+        "Keyed on a test: lists the executions of one test that an action applied to, within a date range, with the run, branch and commit of each. Requires projectId, signature, date_start and date_end; if the signature is not known, first call 'currents-get-tests-signatures'. For the executions of one rule across every test it touched, call 'currents-get-action-executions' instead. Uses cursor-based pagination.",
+      title: 'Get Executions of an Affected Test',
       annotations: readOnly,
     },
     getAffectedTestExecutionsTool
   ),
   catalogTool(
-    'currents-get-affected-executions',
+    'currents-get-action-executions',
     {
       description:
-        'List test executions where a specific action/rule was applied, within a date range. Uses cursor-based pagination. Requires actionId, date_start, and date_end.',
+        "Keyed on an action: lists the test executions one rule was applied to, across every test it touched, within a date range. Requires actionId, date_start and date_end; if the actionId is not known, first call 'currents-list-actions'. For the executions of one test, call 'currents-get-affected-test-executions' instead. Uses cursor-based pagination.",
+      title: 'List Executions an Action Applied To',
       annotations: readOnly,
     },
     getAffectedTestExecutionsByActionTool
@@ -232,6 +251,7 @@ export const TOOL_CATALOG: CatalogTool[] = [
     {
       description:
         'Retrieves projects available in the Currents platform. Supports cursor-based pagination with limit, starting_after, ending_before parameters, or set fetchAll=true for automatic pagination. This is a prerequisite for using any other tools that require project-specific information.',
+      title: 'List Projects',
       annotations: readOnly,
     },
     getProjectsTool
@@ -241,6 +261,7 @@ export const TOOL_CATALOG: CatalogTool[] = [
     {
       description:
         'Get a single project by ID. Returns project details including name, creation date, failFast setting, inactivity timeout, and default branch name.',
+      title: 'Get Project',
       annotations: readOnly,
     },
     getProjectTool
@@ -250,6 +271,7 @@ export const TOOL_CATALOG: CatalogTool[] = [
     {
       description:
         'Get aggregated run and test metrics for a project within a date range. Returns overall metrics and timeline data with configurable resolution (1h/1d/1w). Supports filtering by tags, branches, groups, and authors. Requires projectId, date_start, and date_end.',
+      title: 'Get Project Insights',
       annotations: readOnly,
     },
     getProjectInsightsTool
@@ -258,7 +280,8 @@ export const TOOL_CATALOG: CatalogTool[] = [
     'currents-list-pull-requests',
     {
       description:
-        "List pull-request cards for a project (runs grouped by meta.pr.id). Run filters (date range, tags, branches, authors, environments, pr_id, search) choose which runs count; status, completion_state and pr_search are checked on each PR's latest run among those runs. Supports order and dir, cursor pagination, runs_per_pr preview count, and include_total. Requires projectId.",
+        "List pull-request cards for a project (runs grouped by meta.pr.id). Run filters (date range, tags, branches, authors, environments, pr_id, search) choose which runs count; status, completion_state and pr_search are checked on each PR's latest run among those runs. Supports order and dir, cursor pagination and the runs_per_pr preview count. Requires projectId.",
+      title: 'List Pull Requests',
       annotations: readOnly,
     },
     listProjectPullRequestsTool
@@ -268,6 +291,7 @@ export const TOOL_CATALOG: CatalogTool[] = [
     {
       description:
         'List cursor-paginated project terms for one type (tag, branch, authorName, etc.). Supports search, sort direction, and starting_after or ending_before cursors. Requires projectId and termType.',
+      title: 'List Project Terms',
       annotations: readOnly,
     },
     listProjectTermsTool
@@ -277,6 +301,7 @@ export const TOOL_CATALOG: CatalogTool[] = [
     {
       description:
         'Create a Jira issue from a run test using the organization Jira integration. Requires projectId, runId, testId, jiraInstallationId, jiraProjectId, and jiraIssueType. Optional customFields array.',
+      title: 'Create Jira Issue',
       annotations: { ...additiveWrite, openWorldHint: true },
     },
     createJiraIssueFromRunTestTool
@@ -286,6 +311,7 @@ export const TOOL_CATALOG: CatalogTool[] = [
     {
       description:
         'Link an existing Jira issue to a run test using the organization Jira integration. Requires projectId, jiraIssueKey, runId, testId, jiraInstallationId, jiraProjectId, and jiraIssueType. Optional comment and includeContextInComment.',
+      title: 'Link Jira Issue',
       annotations: { ...additiveWrite, openWorldHint: true },
     },
     linkJiraIssueFromRunTestTool
@@ -295,6 +321,7 @@ export const TOOL_CATALOG: CatalogTool[] = [
     {
       description:
         'List Jira projects available for the organization integration. Use returned project IDs as jiraProjectId when creating issues. Requires jira_installation_id.',
+      title: 'List Jira Projects',
       annotations: { ...readOnly, openWorldHint: true },
     },
     listJiraProjectsTool
@@ -304,6 +331,7 @@ export const TOOL_CATALOG: CatalogTool[] = [
     {
       description:
         'List Jira issue types and custom fields for a Jira project. Requires jiraProjectId and jira_installation_id.',
+      title: 'List Jira Issue Types',
       annotations: { ...readOnly, openWorldHint: true },
     },
     listJiraIssueTypesTool
@@ -313,7 +341,8 @@ export const TOOL_CATALOG: CatalogTool[] = [
     'currents-get-runs',
     {
       description:
-        "Retrieves a list of runs for a specific project with optional filtering. Supports filtering by branch, tags (with AND/OR operators), status (PASSED/FAILED/RUNNING/FAILING), completion state, date range, commit author, and search by ciBuildId or commit message. Requires a projectId. If the projectId is not known, first call 'currents-get-projects' and ask the user to select the project.",
+        "Retrieves a list of runs for a specific project with optional filtering. Supports filtering by branch, tags (with AND/OR operators), status (PASSED/FAILED/RUNNING/FAILING), completion state, date range, commit author, and free-text search over the run's CI build id, commit message, branch, sha, author, pull request title/number/branches, tags, environments, framework and browser. Requires a projectId. If the projectId is not known, first call 'currents-get-projects' and ask the user to select the project.",
+      title: 'List Runs',
       annotations: readOnly,
     },
     getRunsTool
@@ -323,6 +352,7 @@ export const TOOL_CATALOG: CatalogTool[] = [
     {
       description:
         'Retrieves details of a specific test run. Requires a user-provided runId.',
+      title: 'Get Run',
       annotations: readOnly,
     },
     getRunDetailsTool
@@ -332,6 +362,7 @@ export const TOOL_CATALOG: CatalogTool[] = [
     {
       description:
         'Find a run by query parameters. Returns the most recent completed run matching the criteria. Can search by ciBuildId (exact match) or by branch/tags. Supports pwLastRun flag for Playwright last run info. Requires projectId.',
+      title: 'Find Run',
       annotations: readOnly,
     },
     findRunTool
@@ -341,6 +372,7 @@ export const TOOL_CATALOG: CatalogTool[] = [
     {
       description:
         'Cancel a run in progress. This will stop the run and mark it as cancelled. Requires runId.',
+      title: 'Cancel Run',
       annotations: destructiveWrite,
     },
     cancelRunTool
@@ -352,6 +384,7 @@ export const TOOL_CATALOG: CatalogTool[] = [
         'Reset failed spec files in a run to allow re-execution. Requires runId and machineId array (1-63 machine IDs). Optionally supports batched orchestration.',
       // Not idempotent: a reset re-queues the incomplete items, which the next
       // call finds incomplete again and resets a second time.
+      title: 'Reset Failed Specs in a Run',
       annotations: { ...destructiveWrite, idempotentHint: false },
     },
     resetRunTool
@@ -361,6 +394,7 @@ export const TOOL_CATALOG: CatalogTool[] = [
     {
       description:
         'Delete a run and all associated data. This is a permanent deletion. Requires runId.',
+      title: 'Delete Run',
       annotations: destructiveWrite,
     },
     deleteRunTool
@@ -370,6 +404,7 @@ export const TOOL_CATALOG: CatalogTool[] = [
     {
       description:
         'Cancel a run by GitHub Actions workflow run ID and attempt number. Optionally scope by projectId or ciBuildId. Requires githubRunId and githubRunAttempt.',
+      title: 'Cancel Run by GitHub Workflow',
       annotations: destructiveWrite,
     },
     cancelRunByGithubCITool
@@ -380,6 +415,7 @@ export const TOOL_CATALOG: CatalogTool[] = [
     {
       description:
         'Retrieves debugging data from a specific execution of a test spec file by instanceId.',
+      title: 'Get Spec Execution',
       annotations: readOnly,
     },
     getSpecInstancesTool
@@ -389,6 +425,7 @@ export const TOOL_CATALOG: CatalogTool[] = [
     {
       description:
         "Retrieves spec files performance metrics for a specific project within a date range. Supports ordering by avgDuration, failedExecutions, failureRate, flakeRate, flakyExecutions, fullyReported, overallExecutions, suiteSize, timeoutExecutions, or timeoutRate. Supports filtering by tags, branches, groups, and authors. Requires a projectId. If the projectId is not known, first call 'currents-get-projects' and ask the user to select the project.",
+      title: 'Get Spec File Performance',
       annotations: readOnly,
     },
     getSpecFilesPerformanceTool
@@ -399,6 +436,7 @@ export const TOOL_CATALOG: CatalogTool[] = [
     {
       description:
         "Retrieves aggregated test metrics for a specific project within a date range. Supports ordering by failures, passes, flakiness, duration, executions, title, and various delta metrics. Supports filtering by spec name, test title, tags, branches, groups, authors, minimum executions, test state, and annotations. Requires a projectId. If the projectId is not known, first call 'currents-get-projects' and ask the user to select the project.",
+      title: 'Get Test Performance',
       annotations: readOnly,
     },
     getTestsPerformanceTool
@@ -408,6 +446,7 @@ export const TOOL_CATALOG: CatalogTool[] = [
     {
       description:
         "Generates a unique test signature based on project, spec file path, and test title. The test title can be a string or array of strings (for nested describe blocks). Requires a projectId. If the projectId is not known, first call 'currents-get-projects' and ask the user to select the project.",
+      title: 'Get Test Signature',
       annotations: readOnly,
     },
     getTestSignatureTool
@@ -417,6 +456,7 @@ export const TOOL_CATALOG: CatalogTool[] = [
     {
       description:
         "Retrieves historical test execution results for a specific test signature. Supports filtering by date range, branch, tags, git author, test status (passed/failed/pending/skipped), run group, flaky status, and annotations. Requires the test signature. If the signature is not known, first call 'currents-get-tests-signatures'.",
+      title: 'Get Test History',
       annotations: readOnly,
     },
     getTestResultsTool
@@ -427,6 +467,7 @@ export const TOOL_CATALOG: CatalogTool[] = [
     {
       description:
         'Get test failure context for AI debugging at run, instance, or test level. Supports json or md format, detail level, and pagination for failed tests. Requires run_id for run-level, or instance_id with optional test_id.',
+      title: 'Get Failure Context',
       annotations: readOnly,
     },
     getContextTool
@@ -437,6 +478,7 @@ export const TOOL_CATALOG: CatalogTool[] = [
     {
       description:
         'Get aggregated error metrics for a project within a date range. Supports filtering by error_target, error_message, error_category, error_action, tags, branches, authors, and groups. Supports grouping by target, action, category, or message. Returns error counts, affected tests and branches, with timeline data. Requires projectId, date_start, and date_end.',
+      title: 'Explore Errors',
       annotations: readOnly,
     },
     getErrorsExplorerTool
@@ -447,6 +489,7 @@ export const TOOL_CATALOG: CatalogTool[] = [
     {
       description:
         'Collect evidence artifacts (screenshots, videos, traces, attachments) produced by tests in a CI run, with signed download URLs grouped per test. Use to gather proof or a demo of an implemented feature from CI — e.g. before/after screenshots, text output stored as test attachments, or Playwright videos and traces — instead of running tests locally. Locates the run by runId, or by projectId with ciBuildId or branch (latest run). Supports filtering by spec file, test title, and test status. URLs are signed and time-limited, so download the files promptly.',
+      title: 'Collect Test Evidence',
       annotations: readOnly,
     },
     getTestEvidenceTool
@@ -456,9 +499,20 @@ export const TOOL_CATALOG: CatalogTool[] = [
     {
       description:
         "Create a shareable link that serves a test attempt's Playwright trace: a markdown digest of what the attempt did and what failed, a filmstrip, an animated screencast, DOM snapshots, network requests and attachments. Use it to read a trace without downloading it, and to put evidence in a pull request comment or an issue — the link reads without a Currents credential and expires. Start from the digest it returns. Requires instanceId and testId.",
+      title: 'Create Trace Link',
       annotations: additiveWrite,
     },
     createTraceLinkTool
+  ),
+  catalogTool(
+    'currents-create-session',
+    {
+      description:
+        "Record a browser session you drove as a Currents run, so its evidence can be read and shared like a CI run's. Use it when there is no test to run — a bug reproduced by hand, a fix demonstrated in a browser. Returns the run and an upload URL per file you declared; PUT the bytes to those, and the response says what to do next. A trace attached this way can then be turned into a link that needs no Currents credential.",
+      title: 'Record Browser Session',
+      annotations: additiveWrite,
+    },
+    createSessionTool
   ),
   // Webhooks API tools
   catalogTool(
@@ -466,6 +520,7 @@ export const TOOL_CATALOG: CatalogTool[] = [
     {
       description:
         'List all webhooks for a project. Webhooks allow you to receive HTTP POST notifications when certain events occur in your test runs: RUN_FINISH (run completed), RUN_START (run started), RUN_TIMEOUT (run timed out), RUN_CANCELED (run was cancelled). Requires a projectId.',
+      title: 'List Webhooks',
       annotations: readOnly,
     },
     listWebhooksTool
@@ -475,6 +530,7 @@ export const TOOL_CATALOG: CatalogTool[] = [
     {
       description:
         'Create a new webhook for a project. Specify the URL to receive POST notifications, optional custom headers (as JSON string), events to trigger on (RUN_FINISH, RUN_START, RUN_TIMEOUT, RUN_CANCELED), and an optional label. Requires projectId and url.',
+      title: 'Create Webhook',
       annotations: { ...additiveWrite, openWorldHint: true },
     },
     createWebhookTool
@@ -484,6 +540,7 @@ export const TOOL_CATALOG: CatalogTool[] = [
     {
       description:
         'Get a single webhook by ID. The hookId is a UUID. Returns full webhook details including url, headers, events, label, and timestamps.',
+      title: 'Get Webhook',
       annotations: readOnly,
     },
     getWebhookTool
@@ -495,6 +552,7 @@ export const TOOL_CATALOG: CatalogTool[] = [
         'Update an existing webhook. You can update the url, headers (as JSON string), hookEvents array, or label. All fields are optional. The hookId is a UUID.',
       // Not idempotent: `updateGenericHook` writes `updatedAt: new Date()`
       // whether or not the body changed anything.
+      title: 'Update Webhook',
       annotations: {
         ...destructiveWrite,
         idempotentHint: false,
@@ -508,6 +566,7 @@ export const TOOL_CATALOG: CatalogTool[] = [
     {
       description:
         'Delete a webhook. This permanently removes the webhook. The hookId is a UUID.',
+      title: 'Delete Webhook',
       annotations: destructiveWrite,
     },
     deleteWebhookTool
@@ -540,7 +599,7 @@ export const TOOL_CATALOG: CatalogTool[] = [
 export function createMcpServer(
   context: Pick<
     RequestContext,
-    'oauthScopes' | 'apiKeyScope' | 'orgFeatures'
+    'oauthScopes' | 'apiKeyScope' | 'orgFeatures' | 'scopesFrom'
   > = {}
 ): McpServer {
   const logoDataUri = getLogoDataUri();
@@ -558,7 +617,7 @@ export function createMcpServer(
           ]
         : undefined,
     },
-    { instructions: buildServerInstructions(context) }
+    { instructions: buildServerInstructions(context, getSkills()) }
   );
 
   const granted = TOOL_CATALOG.filter((entry) =>
@@ -568,10 +627,10 @@ export function createMcpServer(
   // Every handler goes through `reportToolCall`, so the host hears about each
   // call (`RequestContext.onToolCall`); one registered with the bare handler
   // would be served and never counted.
-  for (const { name, description, annotations, tool } of granted) {
+  for (const { name, title, description, annotations, tool } of granted) {
     server.registerTool<never, AnySchema>(
       name,
-      { description, annotations, inputSchema: tool.schema },
+      { title, description, annotations, inputSchema: tool.schema },
       reportToolCall(name, tool.handler)
     );
   }
@@ -588,6 +647,10 @@ export function createMcpServer(
     tools: listTools(granted),
   }));
 
+  // After any handler the factory sets by hand, and it has to stay there: the
+  // SDK throws when `registerPrompt` finds `prompts/get` already handled, and
+  // the server is built per request, so that would be a 500 on every one. The
+  // tools override above has the opposite constraint.
   registerSkills(server);
 
   return server;

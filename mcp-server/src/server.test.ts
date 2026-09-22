@@ -4,6 +4,7 @@ const { registeredTools, registeredResources, serverOptions } = vi.hoisted(
   () => {
     const registeredTools: Array<{
       name: string;
+      title: string;
       description: string;
       annotations?: Record<string, unknown>;
     }> = [];
@@ -13,11 +14,23 @@ const { registeredTools, registeredResources, serverOptions } = vi.hoisted(
       mimeType?: string;
       read: () => { contents: Array<{ uri: string; text: string }> };
     }> = [];
+    const registeredPrompts: Array<{
+      name: string;
+      description?: string;
+      get: () => {
+        messages: Array<{ content: { type: string; text: string } }>;
+      };
+    }> = [];
     const serverOptions: Array<{
       info: Record<string, unknown>;
       options?: Record<string, unknown>;
     }> = [];
-    return { registeredTools, registeredResources, serverOptions };
+    return {
+      registeredTools,
+      registeredResources,
+      registeredPrompts,
+      serverOptions,
+    };
   }
 );
 
@@ -37,6 +50,7 @@ vi.mock('@modelcontextprotocol/sdk/server/mcp.js', () => ({
     registerTool(
       name: string,
       opts: {
+        title: string;
         description: string;
         inputSchema: unknown;
         annotations?: Record<string, unknown>;
@@ -45,6 +59,7 @@ vi.mock('@modelcontextprotocol/sdk/server/mcp.js', () => ({
     ) {
       registeredTools.push({
         name,
+        title: opts.title,
         description: opts.description,
         annotations: opts.annotations,
       });
@@ -58,6 +73,10 @@ vi.mock('@modelcontextprotocol/sdk/server/mcp.js', () => ({
     ) {
       registeredResources.push({ name, uri, mimeType: opts.mimeType, read });
     }
+
+    // What the prompts are is `http.test.ts`, over the transport. Without the
+    // method the factory throws here and every test in this file fails.
+    registerPrompt() {}
   },
 }));
 
@@ -79,6 +98,9 @@ const TOOL_NAME_MAX_LENGTH = 64;
 const TOOL_NAME_PATTERN = /^[a-zA-Z0-9_\-./]+$/;
 // No hard spec limit; 1024 is the practical ceiling across major LLM providers
 const TOOL_DESCRIPTION_MAX_LENGTH = 1024;
+// A title is rendered in a tool-call card beside the server name, which is
+// where it gets cut off rather than wrapped.
+const TOOL_TITLE_MAX_LENGTH = 60;
 // Cursor IDE prefixes tool names with "extension-<server>:" when displaying them.
 // Combined length must stay ≤ 60 to avoid filtering warnings.
 const CURSOR_SERVER_PREFIX = 'extension-currents:';
@@ -105,7 +127,7 @@ const EXPECTED_ANNOTATIONS: Record<string, Record<string, boolean>> = {
     i: true,
     o: false,
   },
-  'currents-get-affected-executions': { r: true, d: false, i: true, o: false },
+  'currents-get-action-executions': { r: true, d: false, i: true, o: false },
   'currents-get-projects': { r: true, d: false, i: true, o: false },
   'currents-get-project': { r: true, d: false, i: true, o: false },
   'currents-get-project-insights': { r: true, d: false, i: true, o: false },
@@ -138,6 +160,8 @@ const EXPECTED_ANNOTATIONS: Record<string, Record<string, boolean>> = {
   // Each call mints another link to the same trace, and the ones already
   // handed out keep working.
   'currents-create-trace-link': { r: false, d: false, i: false, o: false },
+  // Each call records another run; the ones already recorded are untouched.
+  'currents-create-session': { r: false, d: false, i: false, o: false },
   'currents-list-webhooks': { r: true, d: false, i: true, o: false },
   'currents-create-webhook': { r: false, d: false, i: false, o: true },
   'currents-get-webhook': { r: true, d: false, i: true, o: false },
@@ -164,9 +188,17 @@ describe('MCP tool best practices', () => {
     expect(dupes, `duplicate tool names: ${dupes.join(', ')}`).toHaveLength(0);
   });
 
+  // Two tools sharing a title are two identical rows in a client that renders
+  // titles, with nothing to tell the caller which one it approved.
+  it('tool titles are unique', () => {
+    const titles = registeredTools.map((t) => t.title);
+    const dupes = titles.filter((t, i) => titles.indexOf(t) !== i);
+    expect(dupes, `duplicate tool titles: ${dupes.join(', ')}`).toHaveLength(0);
+  });
+
   describe.each(registeredTools)(
     '$name',
-    ({ name, description, annotations }) => {
+    ({ name, title, description, annotations }) => {
       // ── name constraints (SEP-986) ──────────────────────────────
       it(`name length ≤ ${TOOL_NAME_MAX_LENGTH}`, () => {
         expect(
@@ -189,6 +221,26 @@ describe('MCP tool best practices', () => {
           combined.length,
           `"${combined}" is ${combined.length} chars`
         ).toBeLessThanOrEqual(CURSOR_COMBINED_MAX_LENGTH);
+      });
+
+      // ── title constraints ───────────────────────────────────────
+      // A host that renders a title has only `currents-get-spec-instance` to
+      // print without one, and the connector directory asks for one per tool.
+      it('title is not empty', () => {
+        expect(title.length).toBeGreaterThan(0);
+      });
+
+      it(`title length ≤ ${TOOL_TITLE_MAX_LENGTH}`, () => {
+        expect(
+          title.length,
+          `"${title}" is ${title.length} chars`
+        ).toBeLessThanOrEqual(TOOL_TITLE_MAX_LENGTH);
+      });
+
+      it('title is written for a person, not derived from the name', () => {
+        expect(title).toBe(title.trim());
+        expect(title).toMatch(/^[A-Z]/);
+        expect(title).not.toContain('-');
       });
 
       // ── description constraints ─────────────────────────────────
@@ -276,27 +328,22 @@ describe('tools registered by scope', () => {
     return registeredTools.map((t) => t.name);
   };
 
-  // `currents-create-trace-link` is the one tool behind an org feature flag;
-  // the rest of this suite passes no flags, which is the stdio case.
-  describe('a tool behind an org feature flag', () => {
-    const FLAGGED = 'currents-create-trace-link';
-
-    it('is listed to a results:read token when the flag is on', () => {
+  // The tools behind an org feature flag; the rest of this suite passes no
+  // flags, which is the stdio case.
+  describe.each([
+    ['currents-create-trace-link', 'results:read' as const],
+    ['currents-create-session', 'runs:write' as const],
+  ])('%s, behind an org feature flag', (FLAGGED, SCOPE) => {
+    it('is listed to a token carrying its scope when the flag is on', () => {
       expect(
         toolsFor({
-          oauthScopes: ['results:read'],
+          oauthScopes: [SCOPE],
           orgFeatures: { evidenceSharing: true },
         })
       ).toContain(FLAGGED);
     });
 
-    it('is listed to an API key when the flag is on', () => {
-      expect(
-        toolsFor({
-          apiKeyScope: 'read',
-          orgFeatures: { evidenceSharing: true },
-        })
-      ).toContain(FLAGGED);
+    it('is listed to a write API key when the flag is on', () => {
       expect(
         toolsFor({
           apiKeyScope: 'write',
@@ -305,17 +352,28 @@ describe('tools registered by scope', () => {
       ).toContain(FLAGGED);
     });
 
+    // A read key reaches the flagged tools whose route takes one, and only
+    // those — the flag does not change which key a route asks for.
+    it('follows its route on a read API key', () => {
+      const names = toolsFor({
+        apiKeyScope: 'read',
+        orgFeatures: { evidenceSharing: true },
+      });
+
+      expect(names.includes(FLAGGED)).toBe(SCOPE === 'results:read');
+    });
+
     it('is withheld when the flag is off, whatever the credential', () => {
-      expect(
-        toolsFor({ oauthScopes: ['results:read'], orgFeatures: {} })
-      ).not.toContain(FLAGGED);
+      expect(toolsFor({ oauthScopes: [SCOPE], orgFeatures: {} })).not.toContain(
+        FLAGGED
+      );
       expect(toolsFor({ apiKeyScope: 'write', orgFeatures: {} })).not.toContain(
         FLAGGED
       );
     });
 
     // The flag does not stand in for the scope its route names.
-    it('is withheld from a token without results:read, flag or not', () => {
+    it('is withheld from a token without that scope, flag or not', () => {
       expect(
         toolsFor({
           oauthScopes: ['webhooks:read'],
@@ -409,11 +467,26 @@ describe('instructions passed to the client', () => {
 
   it('describes the credential the server was built for', () => {
     expect(instructionsFor({ oauthScopes: ['results:read'] })).toBe(
-      buildServerInstructions({ oauthScopes: ['results:read'] })
+      buildServerInstructions({ oauthScopes: ['results:read'] }, getSkills())
     );
     expect(instructionsFor({ apiKeyScope: 'read' })).toBe(
-      buildServerInstructions({ apiKeyScope: 'read' })
+      buildServerInstructions({ apiKeyScope: 'read' }, getSkills())
     );
+  });
+
+  // A skill declares no scopes, so this names them for every credential —
+  // `lib/instructions.ts` says why, and the line carries the caveat.
+  it('names the skills whatever the credential', () => {
+    for (const context of [
+      { oauthScopes: ['results:read'] as const },
+      { apiKeyScope: 'read' as const },
+      {},
+    ]) {
+      const instructions = instructionsFor(context);
+      for (const skill of getSkills()) {
+        expect(instructions).toContain(skill.name);
+      }
+    }
   });
 
   // The stdio server passes no context, and a client that gets an empty
