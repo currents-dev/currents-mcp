@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.6.1](https://github.com/currents-dev/currents-mcp/compare/v2.6.0...v2.6.1) (2026-09-23)
+
+No change to the tools. Two runtime dependencies that ship in the package move to patched versions. Both are reached on the HTTP server path (`start:http`), not over stdio.
+
+### Security
+
+* `hono` 4.13.1 → 4.13.7 ([#179](https://github.com/currents-dev/currents-mcp/pull/179)), reached through `@modelcontextprotocol/sdk`. Fixes unbounded dot-notation nesting in `parseBody()` that could exhaust memory, the query parser reading parameters after the URL fragment, and an incomplete fix for CVE-2026-39408 in `toSSG()`.
+* `qs` 6.15.2 → 6.16.0 ([#177](https://github.com/currents-dev/currents-mcp/pull/177)), reached through `express` and `body-parser`. Fixes CVE-2026-82417 (denial of service through an attacker-controlled `isBuffer`) and CVE-2026-82562 (array-limit bypass through bracket-key comma parsing).
+
 # [2.6.0](https://github.com/currents-dev/currents-mcp/compare/v2.5.0...v2.6.0) (2026-09-23)
 
 The tools are written in the Currents monorepo and copied here by sync ([#199](https://github.com/currents-dev/currents-mcp/pull/199)). The entries below are what changed for anything calling these tools.
