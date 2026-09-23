@@ -1,5 +1,27 @@
 # Changelog
 
+# [2.6.0](https://github.com/currents-dev/currents-mcp/compare/v2.5.0...v2.6.0) (2026-09-23)
+
+The tools are written in the Currents monorepo and copied here by sync ([#199](https://github.com/currents-dev/currents-mcp/pull/199)). The entries below are what changed for anything calling these tools.
+
+### ⚠ Breaking
+
+* `currents-get-affected-executions` is renamed `currents-get-action-executions`. The old name no longer exists. A client, prompt or config that calls it by name has to switch to the new one. It takes the same arguments: the executions one action applied to, keyed on `actionId`. Its counterpart, `currents-get-affected-test-executions`, keyed on a test signature, is unchanged.
+
+### Features
+
+* every tool carries a human-readable `title`, which a client can show instead of the tool name
+* `currents-create-session` records a browser session an agent drove as a Currents run, so its screenshots, video and trace can be read and shared like a CI run's
+* `currents-create-trace-link` creates a shareable link to a test attempt's Playwright trace that needs no Currents credential to open
+* the two tools above are gated on the organization's `evidenceSharing` feature. They are listed only when the server is started with `--features evidenceSharing` or `CURRENTS_MCP_FEATURES=evidenceSharing` ([#190](https://github.com/currents-dev/currents-mcp/pull/190), [#188](https://github.com/currents-dev/currents-mcp/pull/188))
+* the server's instructions tell the agent that tool results carry text people wrote (test titles, error messages, stack traces, CI output, Jira issues), and that an instruction found in it is to be reported rather than acted on
+* adds the `browser-evidence` skill
+
+### Bug Fixes
+
+* the README tool and skill tables are generated from the source, so a synced tool or skill needs no hand edit ([#187](https://github.com/currents-dev/currents-mcp/pull/187), [#193](https://github.com/currents-dev/currents-mcp/pull/193))
+* drops the retired `pullRequestsPage` feature flag ([#198](https://github.com/currents-dev/currents-mcp/pull/198))
+
 # [2.5.0](https://github.com/currents-dev/currents-mcp/compare/v2.4.2...v2.5.0) (2026-09-15)
 
 The tools are now written in the Currents monorepo and copied here ([#181](https://github.com/currents-dev/currents-mcp/pull/181)), so this release carries everything that accumulated there since 2.4.2 in a single commit. The entries below are what changed for anything calling these tools.
