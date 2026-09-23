@@ -61,10 +61,10 @@ Give your AI coding agents full visibility into your CI test results. The Curren
 
 Agent skills that teach AI agents multi-step Currents workflows.
 
-| Skill                                         | Description                                                                                                                                                                                       |
-| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`browser-evidence`](skills/browser-evidence) | Prove a change works in a browser you drove yourself, when there is no test to run — reproduce a bug, fix it, and post before/after evidence on a pull request or issue.                          |
-| [`collect-evidence`](skills/collect-evidence) | Show that work you implemented actually works, or demo it, using artifacts from tests running in CI via Currents — before/after screenshots, text and JSON attachments, videos, traces, and GIFs. |
+| Skill                                         | Description                                                                                                                                                                                                                           |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`browser-evidence`](skills/browser-evidence) | Prove a change works in a browser you drove yourself, when there is no test to run — reproduce a bug, fix it, and post before/after evidence on a pull request or issue.                                                              |
+| [`collect-evidence`](skills/collect-evidence) | Show that work you implemented actually works, or demo it, from tests that ran in CI via Currents — a trace link whose digest, filmstrip and accessibility snapshots read inside a comment, plus screenshots, attachments and videos. |
 
 The server publishes every skill as an MCP resource, so a connected agent can
 list and read them without a local copy:
