@@ -1,5 +1,7 @@
 # Changelog
 
+## [2.6.1](https://github.com/currents-dev/currents-mcp/compare/v2.6.0...v2.6.1) (2026-09-23)
+
 # [2.6.0](https://github.com/currents-dev/currents-mcp/compare/v2.5.0...v2.6.0) (2026-09-23)
 
 The tools are written in the Currents monorepo and copied here by sync ([#199](https://github.com/currents-dev/currents-mcp/pull/199)). The entries below are what changed for anything calling these tools.
