@@ -1,5 +1,18 @@
 # Changelog
 
+# [2.6.0](https://github.com/currents-dev/currents-mcp/compare/v2.4.2...v2.6.0) (2026-09-23)
+
+### Bug Fixes
+
+* bump nanoid to 3.3.18 to patch CVE-2026-67213 ([#174](https://github.com/currents-dev/currents-mcp/issues/174)) ([561db6f](https://github.com/currents-dev/currents-mcp/commit/561db6f45aab10eb64a319b50ae7b937b7b4fb54))
+* find tools by their name, not by what declares them ([#187](https://github.com/currents-dev/currents-mcp/issues/187)) ([4c5e328](https://github.com/currents-dev/currents-mcp/commit/4c5e32840c35d79431dbe44b3d0b985a4a95ce37))
+* generate the README skills table, so a synced skill needs no hand edit [ENG-1478] ([#193](https://github.com/currents-dev/currents-mcp/issues/193)) ([8eaa992](https://github.com/currents-dev/currents-mcp/commit/8eaa992d0aed02ad85891a4f487c3247dfe4a6ed)), closes [currents-dev/currents#3779](https://github.com/currents-dev/currents/issues/3779)
+
+### Features
+
+* declare the org feature surface the shared source needs ([#188](https://github.com/currents-dev/currents-mcp/issues/188)) ([507cd4b](https://github.com/currents-dev/currents-mcp/commit/507cd4baed62ae33798652f66beb01b2b4a89bab))
+* withhold feature-gated tools unless the launcher names the flag ([#190](https://github.com/currents-dev/currents-mcp/issues/190)) ([5662ded](https://github.com/currents-dev/currents-mcp/commit/5662ded0da60899ed8872d6fb8b3eb5ee38eddbe)), closes [currents-dev/currents#3690](https://github.com/currents-dev/currents/issues/3690)
+
 # [2.5.0](https://github.com/currents-dev/currents-mcp/compare/v2.4.2...v2.5.0) (2026-09-15)
 
 The tools are now written in the Currents monorepo and copied here ([#181](https://github.com/currents-dev/currents-mcp/pull/181)), so this release carries everything that accumulated there since 2.4.2 in a single commit. The entries below are what changed for anything calling these tools.
