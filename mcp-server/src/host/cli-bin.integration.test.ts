@@ -87,6 +87,10 @@ describe.skipIf(!existsSync(buildIndex))(
 
     // Packed and installed once: both entry paths below exercise the same
     // artifact, and doing it per test doubled the slowest part of the suite.
+    //
+    // The timeout is passed here because the suite's `timeout` above applies
+    // to its tests, not its hooks. Without it this hook runs under vitest's
+    // 10s default, which a pack and an install exceed on a slow runner.
     beforeAll(() => {
       packDir = mkdtempSync(path.join(tmpdir(), 'mcp-pack-'));
       installDir = mkdtempSync(path.join(tmpdir(), 'mcp-install-'));
@@ -94,7 +98,7 @@ describe.skipIf(!existsSync(buildIndex))(
       execNpm(['init', '-y'], { cwd: installDir, stdio: 'ignore' });
       execNpm(['install', tarball], { cwd: installDir, stdio: 'ignore' });
       binDir = path.join(installDir, 'node_modules', '.bin');
-    });
+    }, 180_000);
 
     /*
      * `npm install <tgz>` links `node_modules/.bin/mcp` (or `mcp.cmd`) to the
