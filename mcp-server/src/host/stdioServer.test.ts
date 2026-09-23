@@ -37,26 +37,15 @@ describe('startMcpServer', () => {
   beforeEach(() => createMcpServer.mockClear());
 
   // `host/api.ts` re-exports this as the programmatic entry point. An
-  // embedder's argv and environment are its own: a `--features` it passes for
-  // its own reasons, or an inherited CURRENTS_MCP_FEATURES naming something
-  // this version does not know, must not decide what tools it serves or stop
-  // it connecting.
-  it('asks for no features when the caller names none', async () => {
-    const argv = ['node', 'app', '--features', 'evidenceShareing'];
+  // embedder's argv and environment are its own, so nothing in them decides
+  // which tools it serves.
+  it('builds the server with no request context', async () => {
     const original = process.argv;
-    process.argv = argv;
-    process.env.CURRENTS_MCP_FEATURES = 'alsoNotAFeature';
+    process.argv = ['node', 'app', '--verbose'];
     try {
-      await expect(started()).resolves.toEqual({ orgFeatures: {} });
+      await expect(started()).resolves.toBeUndefined();
     } finally {
       process.argv = original;
-      delete process.env.CURRENTS_MCP_FEATURES;
     }
-  });
-
-  it('serves the features the caller passes', async () => {
-    await expect(
-      started({ orgFeatures: { aiAnalysis: true } })
-    ).resolves.toEqual({ orgFeatures: { aiAnalysis: true } });
   });
 });
