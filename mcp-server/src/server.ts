@@ -53,11 +53,13 @@ import { getTestSignatureTool } from './tools/tests/get-tests-signature';
 // Errors tools
 import { getErrorsExplorerTool } from './tools/errors/get-errors-explorer';
 // Evidence tools
+import { createEvidenceLinksTool } from './tools/evidence/create-evidence-links';
 import { getTestEvidenceTool } from './tools/evidence/get-test-evidence';
 // Sessions tools
 import { createSessionTool } from './tools/sessions/create-session';
-// Traces tools
-import { createTraceLinkTool } from './tools/traces/create-trace-link';
+// Share tools
+import { createShareLinkTool } from './tools/share/create-share-link';
+
 // Webhooks tools
 import { createWebhookTool } from './tools/webhooks/create-webhook';
 import { deleteWebhookTool } from './tools/webhooks/delete-webhook';
@@ -73,10 +75,11 @@ import { updateWebhookTool } from './tools/webhooks/update-webhook';
  *
  * `openWorldHint` is false in all of them: a tool reaches the runs, tests and
  * settings of the organization the credential belongs to and nothing outside
- * it. Six tools override it — the four Jira tools, because the issue they read
- * or write lives in the customer's Jira instance, and the two webhook tools
+ * it. Seven tools override it — the four Jira tools, because the issue they
+ * read or write lives in the customer's Jira instance, the two webhook tools
  * that take a `url`, because the destination they store is one the notification
- * worker will later POST run data to.
+ * worker will later POST run data to, and `currents-create-share-link`, because
+ * the link it returns serves test data to anyone who holds it.
  */
 const readOnly: ToolAnnotations = {
   readOnlyHint: true,
@@ -466,8 +469,8 @@ export const TOOL_CATALOG: CatalogTool[] = [
     'currents-get-context',
     {
       description:
-        'Get test failure context for AI debugging at run, instance, or test level. Supports json or md format, detail level, and pagination for failed tests. Requires run_id for run-level, or instance_id with optional test_id.',
-      title: 'Get Failure Context',
+        'Use to fix tests that failed in CI: returns the errors, steps and files of the failed tests of a run, a spec file (instance) or one test — the same content as Fix in the Currents dashboard. Flaky tests are left out of a run unless include_flaky is set. Supports json or md format, detail level, and pagination for failed tests. Requires run_id for run-level, or instance_id with optional test_id.',
+      title: 'Get Failure Context to Fix Tests',
       annotations: readOnly,
     },
     getContextTool
@@ -495,14 +498,14 @@ export const TOOL_CATALOG: CatalogTool[] = [
     getTestEvidenceTool
   ),
   catalogTool(
-    'currents-create-trace-link',
+    'currents-create-evidence-links',
     {
       description:
-        "Create a shareable link that serves a test attempt's Playwright trace: a markdown digest of what the attempt did and what failed, a filmstrip, an animated screencast, DOM snapshots, network requests and attachments. Use it to read a trace without downloading it, and to put evidence in a pull request comment or an issue — the link reads without a Currents credential and expires. Start from the digest it returns. Requires instanceId and testId.",
-      title: 'Create Trace Link',
+        "Create a shareable link to a test attempt's evidence, served from its Playwright trace, and the URLs onto it: a markdown digest of what the attempt did and what failed, a filmstrip, an animated screencast, DOM snapshots, network requests and attachments. Use it to read a trace without downloading it, and to put evidence in a pull request comment or an issue — the link reads without a Currents credential and expires. Start from the digest it returns. Requires instanceId and testId.",
+      title: 'Create Evidence Links',
       annotations: additiveWrite,
     },
-    createTraceLinkTool
+    createEvidenceLinksTool
   ),
   catalogTool(
     'currents-create-session',
@@ -524,6 +527,16 @@ export const TOOL_CATALOG: CatalogTool[] = [
       annotations: readOnly,
     },
     listWebhooksTool
+  ),
+  catalogTool(
+    'currents-create-share-link',
+    {
+      description:
+        'Create a public link to test results that anyone can open without signing in, until it expires. purpose "fix" is the failure context, for an agent that will fix the tests — the same content as currents-get-context, with flaky tests included and marked flaky. purpose "report" lists every test with its attempts and files, for a person. Target a run (run_id), a spec file (run_id + instance_id) or a test (instance_id + test_id). Returns url (markdown, for agents) and pageUrl (web page, for people). Create one only when asked to hand results to someone.',
+      title: 'Create Public Share Link',
+      annotations: { ...additiveWrite, openWorldHint: true },
+    },
+    createShareLinkTool
   ),
   catalogTool(
     'currents-create-webhook',
@@ -589,9 +602,6 @@ export const TOOL_CATALOG: CatalogTool[] = [
  * rephrases. With neither `oauthScopes` nor `apiKeyScope` — the stdio server —
  * every tool is registered, and each call is decided at the route.
  *
- * A tool gated on an organization feature flag is withheld the same way, from
- * the flags in `orgFeatures`.
- *
  * `instructions` names what the credential holds (`lib/instructions.ts`). The
  * filtered list on its own leaves an agent to read a missing tool as a missing
  * feature and tell the user Currents has no webhooks.
@@ -599,7 +609,7 @@ export const TOOL_CATALOG: CatalogTool[] = [
 export function createMcpServer(
   context: Pick<
     RequestContext,
-    'oauthScopes' | 'apiKeyScope' | 'orgFeatures' | 'scopesFrom'
+    'oauthScopes' | 'apiKeyScope' | 'scopesFrom'
   > = {}
 ): McpServer {
   const logoDataUri = getLogoDataUri();

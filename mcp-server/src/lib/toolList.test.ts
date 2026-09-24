@@ -3,10 +3,8 @@ import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { AnySchema } from '@modelcontextprotocol/sdk/server/zod-compat.js';
 import { describe, expect, it, vi } from 'vitest';
-import { z } from 'zod';
 import { createMcpServer, TOOL_CATALOG } from '../server';
-import { isToolGranted, type McpTool } from './tool';
-import { listTools, MAX_CACHED_TOOL_SETS, type CatalogTool } from './toolList';
+import { listTools, MAX_CACHED_TOOL_SETS } from './toolList';
 
 vi.mock('./logger', () => ({
   logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn() },
@@ -69,25 +67,6 @@ describe('the cached tools/list', () => {
   });
 });
 
-/** A tool gated on an organization feature flag, which the catalog has none of yet. */
-const flaggedTool: CatalogTool = {
-  name: 'currents-flagged-tool',
-  title: 'Flagged Tool',
-  description: 'A tool gated on an organization feature flag.',
-  annotations: {
-    readOnlyHint: true,
-    destructiveHint: false,
-    idempotentHint: true,
-    openWorldHint: false,
-  },
-  tool: {
-    scope: 'any',
-    feature: 'evidenceSharing',
-    schema: z.object({}),
-    handler: () => ({ content: [] }),
-  } as unknown as McpTool,
-};
-
 describe('listTools', () => {
   /**
    * The nth set, distinct for every n the cache bound needs: `n` past the
@@ -116,35 +95,8 @@ describe('listTools', () => {
     expect(two).toHaveLength(2);
   });
 
-  /**
-   * The reason the key is the granted names rather than what `isToolGranted`
-   * read to choose them. `feature` gates a tool on the organization's flags,
-   * which a key naming the caller's scopes alone does not cover — so the
-   * flagged tool would be built into the holding organization's list and then
-   * served to the next organization whose scopes matched.
-   */
-  it('keeps two organizations apart when a tool is gated on a feature flag', () => {
-    const catalog = [...TOOL_CATALOG.slice(0, 4), flaggedTool];
-    const namesFor = (orgFeatures: Record<string, boolean>) =>
-      listTools(
-        catalog.filter((entry) =>
-          isToolGranted(entry.tool, { apiKeyScope: 'read', orgFeatures })
-        )
-      ).map((tool) => tool.name);
-
-    expect(namesFor({ evidenceSharing: true })).toContain(
-      'currents-flagged-tool'
-    );
-    expect(namesFor({})).not.toContain('currents-flagged-tool');
-    // And back, so the entry cached for the organization without the flag is
-    // not what the one holding it is served either.
-    expect(namesFor({ evidenceSharing: true })).toContain(
-      'currents-flagged-tool'
-    );
-  });
-
-  // What the key is built from comes from a token and from an organization's
-  // flags, so the cache has to have an end.
+  // What the key is built from comes from a token, so the cache has to have an
+  // end.
   it('drops the least recently used set once it is full', () => {
     const oldest = someTools(0);
     const first = listTools(oldest);

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as request from '../../lib/request';
-import { createTraceLinkTool } from './create-trace-link';
+import { createEvidenceLinksTool } from './create-evidence-links';
 
 vi.mock('../../lib/request');
 
@@ -21,11 +21,11 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe('createTraceLinkTool', () => {
+describe('createEvidenceLinksTool', () => {
   it('posts the body to the instance route, with the id encoded', async () => {
     answer({ data: LINK });
 
-    await createTraceLinkTool.handler({
+    await createEvidenceLinksTool.handler({
       instanceId: 'inst/1',
       testId: 'test-1',
       attemptIndex: 2,
@@ -44,7 +44,7 @@ describe('createTraceLinkTool', () => {
     answer({ data: LINK });
 
     const body = parse(
-      await createTraceLinkTool.handler({
+      await createEvidenceLinksTool.handler({
         instanceId: 'inst-1',
         testId: 'test-1',
       })
@@ -65,7 +65,7 @@ describe('createTraceLinkTool', () => {
     answer({ data: LINK });
 
     const body = parse(
-      await createTraceLinkTool.handler({
+      await createEvidenceLinksTool.handler({
         instanceId: 'inst-1',
         testId: 'test-1',
       })
@@ -81,13 +81,15 @@ describe('createTraceLinkTool', () => {
       error: 'No trace found for this test attempt',
     } as never);
 
-    const result = await createTraceLinkTool.handler({
+    const result = await createEvidenceLinksTool.handler({
       instanceId: 'inst-1',
       testId: 'test-1',
     });
 
     expect(result).toMatchObject({ isError: true });
-    expect(result.content[0].text).toContain('Failed to create the trace link');
+    expect(result.content[0].text).toContain(
+      'Failed to create the evidence links'
+    );
   });
 
   // A 200 with nothing to paste is worse than an error: the agent would report
@@ -95,7 +97,7 @@ describe('createTraceLinkTool', () => {
   it('fails when the response carries no URL', async () => {
     answer({ data: { expiresAt: LINK.expiresAt } });
 
-    const result = await createTraceLinkTool.handler({
+    const result = await createEvidenceLinksTool.handler({
       instanceId: 'inst-1',
       testId: 'test-1',
     });
@@ -109,7 +111,7 @@ describe('createTraceLinkTool', () => {
   it('fails on a URL it cannot read an origin from', async () => {
     answer({ data: { ...LINK, url: 't.crts.sh/S2xQd0pUb1hCZ2pS' } });
 
-    const result = await createTraceLinkTool.handler({
+    const result = await createEvidenceLinksTool.handler({
       instanceId: 'inst-1',
       testId: 'test-1',
     });
@@ -118,8 +120,7 @@ describe('createTraceLinkTool', () => {
     expect(result.content[0].text).toContain('t.crts.sh/S2xQd0pUb1hCZ2pS');
   });
 
-  it('is gated on the flag and the read scope its route names', () => {
-    expect(createTraceLinkTool.scope).toBe('results:read');
-    expect(createTraceLinkTool.feature).toBe('evidenceSharing');
+  it('is tagged with the read scope its route names', () => {
+    expect(createEvidenceLinksTool.scope).toBe('results:read');
   });
 });

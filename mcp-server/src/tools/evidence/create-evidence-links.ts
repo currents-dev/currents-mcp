@@ -87,7 +87,7 @@ const handler = async ({ instanceId, ...body }: z.infer<typeof zodSchema>) => {
   );
 
   if (!result.ok) {
-    return apiFailureResult('Failed to create the trace link', result);
+    return apiFailureResult('Failed to create the evidence links', result);
   }
 
   const data = result.data?.data;
@@ -102,7 +102,7 @@ const handler = async ({ instanceId, ...body }: z.infer<typeof zodSchema>) => {
       content: [
         {
           type: 'text' as const,
-          text: `The trace link was created but its URL cannot be used: ${
+          text: `The link was created but its URL cannot be used: ${
             data?.url ?? 'the response carried none'
           }`,
         },
@@ -129,9 +129,8 @@ const handler = async ({ instanceId, ...body }: z.infer<typeof zodSchema>) => {
   };
 };
 
-export const createTraceLinkTool = {
+export const createEvidenceLinksTool = {
   scope: 'results:read',
-  feature: 'evidenceSharing',
   schema: zodSchema,
   handler,
 } satisfies McpTool<typeof zodSchema>;

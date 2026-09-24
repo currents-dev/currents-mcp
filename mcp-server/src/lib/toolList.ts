@@ -35,7 +35,7 @@ const EMPTY_INPUT_SCHEMA = { type: 'object', properties: {} } as const;
  * How many tool sets keep their list. Each one is around 50kb, so this holds
  * the cache near 3mb — far above the number of distinct grants a deployment
  * serves, and a bound rather than none, since what the key is built from comes
- * from a token and from the organization's feature flags.
+ * from a token.
  */
 export const MAX_CACHED_TOOL_SETS = 64;
 
@@ -52,13 +52,10 @@ const cache = new Map<string, Tool[]>();
  * `server.ts` serves it in place of the SDK's handler.
  *
  * Keyed on the granted names rather than on what `isToolGranted` read to
- * choose them. Those inputs are a moving set — scopes, and now the
- * organization's feature flags — and a key naming some of them serves one
- * organization's list to another the first time a tool is gated on something
- * the key left out. The names are what the payload is built from, so a key
- * made of them cannot disagree with it, whatever `isToolGranted` grows to
- * read. `server.ts` has the set in hand already, and joining 39 short strings
- * is far below the 4ms of a rebuild.
+ * choose them. The names are what the payload is built from, so a key made of
+ * them cannot disagree with it, whatever `isToolGranted` grows to read.
+ * `server.ts` has the set in hand already, and joining 39 short strings is far
+ * below the 4ms of a rebuild.
  */
 export function listTools(granted: CatalogTool[]): Tool[] {
   // Newline-joined: tool names are unique and carry no whitespace

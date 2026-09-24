@@ -159,10 +159,11 @@ const EXPECTED_ANNOTATIONS: Record<string, Record<string, boolean>> = {
   'currents-get-test-evidence': { r: true, d: false, i: true, o: false },
   // Each call mints another link to the same trace, and the ones already
   // handed out keep working.
-  'currents-create-trace-link': { r: false, d: false, i: false, o: false },
+  'currents-create-evidence-links': { r: false, d: false, i: false, o: false },
   // Each call records another run; the ones already recorded are untouched.
   'currents-create-session': { r: false, d: false, i: false, o: false },
   'currents-list-webhooks': { r: true, d: false, i: true, o: false },
+  'currents-create-share-link': { r: false, d: false, i: false, o: true },
   'currents-create-webhook': { r: false, d: false, i: false, o: true },
   'currents-get-webhook': { r: true, d: false, i: true, o: false },
   'currents-update-webhook': { r: false, d: true, i: false, o: true },
@@ -317,7 +318,7 @@ describe('tools registered by scope', () => {
 
   /** Rebuilds the server for one caller and returns the names it registered. */
   const toolsFor = (
-    context: Pick<RequestContext, 'oauthScopes' | 'apiKeyScope' | 'orgFeatures'>
+    context: Pick<RequestContext, 'oauthScopes' | 'apiKeyScope'>
   ) => {
     registeredTools.length = 0;
     const resourceCount = registeredResources.length;
@@ -327,66 +328,6 @@ describe('tools registered by scope', () => {
     registeredResources.length = resourceCount;
     return registeredTools.map((t) => t.name);
   };
-
-  // The tools behind an org feature flag; the rest of this suite passes no
-  // flags, which is the stdio case.
-  describe.each([
-    ['currents-create-trace-link', 'results:read' as const],
-    ['currents-create-session', 'runs:write' as const],
-  ])('%s, behind an org feature flag', (FLAGGED, SCOPE) => {
-    it('is listed to a token carrying its scope when the flag is on', () => {
-      expect(
-        toolsFor({
-          oauthScopes: [SCOPE],
-          orgFeatures: { evidenceSharing: true },
-        })
-      ).toContain(FLAGGED);
-    });
-
-    it('is listed to a write API key when the flag is on', () => {
-      expect(
-        toolsFor({
-          apiKeyScope: 'write',
-          orgFeatures: { evidenceSharing: true },
-        })
-      ).toContain(FLAGGED);
-    });
-
-    // A read key reaches the flagged tools whose route takes one, and only
-    // those — the flag does not change which key a route asks for.
-    it('follows its route on a read API key', () => {
-      const names = toolsFor({
-        apiKeyScope: 'read',
-        orgFeatures: { evidenceSharing: true },
-      });
-
-      expect(names.includes(FLAGGED)).toBe(SCOPE === 'results:read');
-    });
-
-    it('is withheld when the flag is off, whatever the credential', () => {
-      expect(toolsFor({ oauthScopes: [SCOPE], orgFeatures: {} })).not.toContain(
-        FLAGGED
-      );
-      expect(toolsFor({ apiKeyScope: 'write', orgFeatures: {} })).not.toContain(
-        FLAGGED
-      );
-    });
-
-    // The flag does not stand in for the scope its route names.
-    it('is withheld from a token without that scope, flag or not', () => {
-      expect(
-        toolsFor({
-          oauthScopes: ['webhooks:read'],
-          orgFeatures: { evidenceSharing: true },
-        })
-      ).not.toContain(FLAGGED);
-    });
-
-    // The stdio server loads no organization, so the route decides each call.
-    it('is listed to a caller carrying no flags at all', () => {
-      expect(toolsFor({})).toContain(FLAGGED);
-    });
-  });
 
   it('registers every tool for a caller with neither credential', () => {
     expect(toolsFor({})).toEqual(everyTool);
