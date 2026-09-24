@@ -33,6 +33,7 @@ const SCOPE_SUMMARIES: Record<OAuthApiScope, string | null> = {
   'runs:write': 'cancel, reset and delete runs',
   'webhooks:read': 'read webhook configuration, including destination URLs',
   'webhooks:write': 'create, edit and delete webhooks',
+  'shares:write': null,
   'ai:invoke': null,
 };
 

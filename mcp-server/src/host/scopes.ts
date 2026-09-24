@@ -27,6 +27,7 @@ export const OAUTH_API_SCOPES = [
   'runs:write',
   'webhooks:read',
   'webhooks:write',
+  'shares:write',
   'ai:invoke',
 ] as const;
 
