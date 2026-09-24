@@ -9,10 +9,13 @@ import type { McpTool } from '../../lib/tool';
  * How many instance reads this tool has in flight at once.
  *
  * `maxInstances` allows 25, and issuing them together was 25 `/v1` calls from
- * one tool call. Two concurrent calls of it saturated the staging task in the
- * ENG-1385 load test, which is a load one caller can produce on its own. The
- * manifest still covers every selected spec; only how many are read at once
- * changes.
+ * one tool call. Two concurrent calls of it saturated the staging ECS task in
+ * the ENG-1385 load test, before `/mcp` moved to the api Lambda. Issued
+ * together on the Lambda, the 25 reads would still reach the Mongo every
+ * invocation shares at once, and from the published package they would be 25
+ * concurrent requests to the REST API. The cap is per tool call, so concurrent
+ * calls still add up. The manifest still covers every selected spec; only how
+ * many are read at once changes.
  */
 const MAX_CONCURRENT_INSTANCE_READS = 5;
 

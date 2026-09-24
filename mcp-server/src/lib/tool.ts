@@ -1,5 +1,5 @@
-import { isOAuthWriteScope, isOrgFeatureEnabled } from '../host/scopes';
-import type { ApiKeyScope, OAuthApiScope, OrgFeatureKey } from '../host/scopes';
+import { isOAuthWriteScope } from '../host/scopes';
+import type { ApiKeyScope, OAuthApiScope } from '../host/scopes';
 import type { ToolCallback } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { AnySchema } from '@modelcontextprotocol/sdk/server/zod-compat.js';
 import type { RequestContext } from './context';
@@ -25,13 +25,6 @@ export type McpTool<Schema extends AnySchema = AnySchema> = {
    * sets this to match.
    */
   apiKeyScope?: ApiKeyScope;
-  /**
-   * The organization feature flag the tool's `/v1` route is gated on, for a
-   * route that is gated on one. The tool is withheld from `tools/list` when
-   * the flag is off, rather than listed and refused with a 403 the agent reads
-   * and rephrases.
-   */
-  feature?: OrgFeatureKey;
   schema: Schema;
   handler: ToolCallback<Schema>;
 };
@@ -58,33 +51,6 @@ export function toolApiKeyScope(tool: Pick<McpTool, 'scope' | 'apiKeyScope'>) {
  * every tool and lets the route decide each call.
  */
 export function isToolGranted(
-  tool: Pick<McpTool, 'scope' | 'apiKeyScope' | 'feature'>,
-  context: Pick<RequestContext, 'oauthScopes' | 'apiKeyScope' | 'orgFeatures'>
-): boolean {
-  return (
-    isToolFeatureEnabled(tool, context) && isToolScopeGranted(tool, context)
-  );
-}
-
-/**
- * Whether the organization behind `context` has the flag `tool` declares.
- *
- * A context carrying no flags — the stdio server, which never loads an
- * organization — reaches every tool, and each call is decided at the route.
- * The remote route resolves the organization's flags per request, so a tool it
- * hides is one whose route reads the same flag.
- */
-function isToolFeatureEnabled(
-  tool: Pick<McpTool, 'feature'>,
-  context: Pick<RequestContext, 'orgFeatures'>
-): boolean {
-  if (!tool.feature || !context.orgFeatures) {
-    return true;
-  }
-  return isOrgFeatureEnabled({ features: context.orgFeatures }, tool.feature);
-}
-
-function isToolScopeGranted(
   tool: Pick<McpTool, 'scope' | 'apiKeyScope'>,
   context: Pick<RequestContext, 'oauthScopes' | 'apiKeyScope'>
 ): boolean {

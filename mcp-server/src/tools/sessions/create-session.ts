@@ -141,7 +141,7 @@ const nextSteps = (data: SessionRun) => {
         ? ` and artifactName set to one of ${traces.map((t) => t.name).join(', ')}`
         : '';
     steps.push(
-      `Once the trace is uploaded, call currents-create-trace-link with instanceId ${data.instanceId}, testId ${data.testId}${pick} for a link that needs no Currents credential.`
+      `Once the trace is uploaded, call currents-create-evidence-links with instanceId ${data.instanceId}, testId ${data.testId}${pick} for a link that needs no Currents credential.`
     );
   }
   return steps;
@@ -184,7 +184,6 @@ const handler = async (body: z.infer<typeof zodSchema>) => {
 
 export const createSessionTool = {
   scope: 'runs:write',
-  feature: 'evidenceSharing',
   schema: zodSchema,
   handler,
 } satisfies McpTool<typeof zodSchema>;

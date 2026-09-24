@@ -52,6 +52,25 @@ describe('skills manifest', () => {
   });
 });
 
+// A host lists a skill by its description and the agent reads the body, so
+// the warning has to be in both. Remove this block with both markers when the
+// skill is no longer experimental.
+describe('browser-evidence', () => {
+  const skill = getSkills().find((s) => s.name === 'browser-evidence');
+  const entryPoint = skill?.files.find((f) => f.path === 'SKILL.md');
+
+  it('says it is experimental in its description', () => {
+    expect(skill).toBeDefined();
+    expect(skill?.description).toMatch(/^Experimental\. /);
+  });
+
+  it('opens its body with the experimental warning', () => {
+    expect(entryPoint?.content).toMatch(
+      /^# Browser Evidence\n\n## Experimental\n/m
+    );
+  });
+});
+
 describe('skill resource URIs', () => {
   it('builds a skill:// URI per file', () => {
     expect(skillFileUri('collect-evidence', 'SKILL.md')).toBe(

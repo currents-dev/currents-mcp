@@ -30,10 +30,12 @@ const SCOPE_SUMMARIES: Record<OAuthApiScope, string | null> = {
   'actions:write': 'create, edit, enable, disable and archive those rules',
   'issues:write':
     'create and link Jira issues, and list Jira projects and issue types',
-  'runs:write': 'cancel, reset and delete runs',
+  'runs:write':
+    'record a browser session as a run, and cancel, reset and delete runs',
   'webhooks:read': 'read webhook configuration, including destination URLs',
   'webhooks:write': 'create, edit and delete webhooks',
-  'shares:write': null,
+  'shares:write':
+    'create public links to test results that anyone can open until they expire',
   'ai:invoke': null,
 };
 
@@ -52,26 +54,18 @@ export const SCOPES_WITHOUT_TOOLS: readonly OAuthApiScope[] =
   SCOPE_ORDER.filter((scope) => SCOPE_SUMMARIES[scope] === null);
 
 /**
- * Six tools reach outside the organization, which is why they carry
+ * Seven tools reach outside the organization, which is why they carry
  * `openWorldHint: true` in `server.ts`. A preamble claiming everything stays
  * inside Currents would contradict the annotation the host reads per tool.
  */
 const ORGANIZATION_LINE =
-  "Every tool acts on the one Currents organization this connection is authorized for. Two groups reach beyond it: the Jira tools read and write issues in that organization's connected Jira, and the webhook tools store a URL Currents will later POST run data to.";
+  "Every tool acts on the one Currents organization this connection is authorized for. Three reach beyond it: the Jira tools read and write issues in that organization's connected Jira, the webhook tools store a URL Currents will later POST run data to, and currents-create-share-link returns a link anyone can open.";
 
 /**
  * What an agent should do when it wants something the tool list does not
  * cover. Filtering the list (ENG-1301) removes the tool and leaves nothing in
  * its place, and an agent that finds no webhook tool reports that Currents has
  * no webhooks — a worse answer than the 403 the filtering replaced.
- *
- * The re-authorization half is conditioned on the scope being absent, because
- * the grant is not the only reason a tool is withheld: `isToolGranted` also
- * withholds one whose `feature` flag the organization does not hold, and
- * re-authorizing adds no tool for that. Those two are the whole of it, so the
- * listed-scope branch can name the flag as the cause rather than leaving an
- * agent to guess — `currents-create-trace-link` is the live case, tagged
- * `results:read` and gated on `evidenceSharing`.
  *
  * The toolless scopes are named whether or not the grant carries them. Naming
  * them only when granted left the commoner case wrong: a token without
@@ -88,12 +82,9 @@ const missingToolLine = (credential: ScopedCredential): string => {
   const widen = pat
     ? 'the user can issue a new personal access token with it added'
     : 'the user can re-authorize with it added';
-  const cannotWiden = pat
-    ? 'a new token will not add it'
-    : 're-authorizing will not add it';
 
   return [
-    `The tool list is filtered to the scopes above, so a task with no tool requires access this connection lacks, not something Currents cannot do: if its scope is not listed above, say so and that ${widen}; if it is listed, the tool is off for this organization and ${cannotWiden}.`,
+    `The tool list is filtered to the scopes above, so a task with no tool requires access this connection lacks, not something Currents cannot do: say which scope it needs and that ${widen}.`,
     SCOPES_WITHOUT_TOOLS.length
       ? `Exception: ${SCOPES_WITHOUT_TOOLS.join(' and ')} reach no tool here, granted or not.`
       : '',
@@ -128,7 +119,7 @@ const API_KEY_LINE =
  *
  * The last sentence is what keeps `currents-create-session` working. Its
  * handler builds `nextSteps` itself — "PUT each file to its uploadUrl", then
- * call `currents-create-trace-link` (tools/sessions/create-session.ts) — and
+ * call `currents-create-evidence-links` (tools/sessions/create-session.ts) — and
  * without the carve-out those steps read as exactly what the rule above
  * refuses, so an agent would report the upload instead of doing it and the
  * trace would never arrive.
@@ -144,8 +135,8 @@ const UNTRUSTED_CONTENT_LINE =
  * declares no scopes, so the alternative is withholding a workflow that is
  * mostly readable from a connection missing one step. The caveat is stated
  * instead, because a step refused halfway through is the confusing outcome —
- * `currents-create-trace-link` is the live case, gated on a scope and an
- * organization flag.
+ * `browser-evidence` records through `currents-create-session`, which needs
+ * `runs:write` on a connection that may hold only the read scopes.
  */
 const skillsLine = (skills: readonly Pick<Skill, 'name'>[]): string =>
   skills.length
@@ -192,7 +183,7 @@ function credentialInstructions(
   }
   return [
     ORGANIZATION_LINE,
-    `${API_KEY_LINE} The key's access level was not known when the tool list was built, so every tool this organization has is listed: a write tool called with a read key is refused with a 403, and the user changes that on the key in Currents.`,
+    `${API_KEY_LINE} The key's access level was not known when the tool list was built, so every tool is listed: a write tool called with a read key is refused with a 403, and the user changes that on the key in Currents.`,
   ].join('\n\n');
 }
 
@@ -225,7 +216,7 @@ function keyInstructions(scope: ApiKeyScope): string {
   return [
     ORGANIZATION_LINE,
     scope === 'write'
-      ? `${API_KEY_LINE} This key is write, so every tool this organization has is listed.`
+      ? `${API_KEY_LINE} This key is write, so every tool is listed.`
       : `${API_KEY_LINE} This key is read, so the tool list holds only the tools a read key may call. Creating, changing or deleting anything through them needs a key with write access, set on the key in Currents — nothing to re-authorize.`,
   ].join('\n\n');
 }

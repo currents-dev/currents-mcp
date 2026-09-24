@@ -1,9 +1,13 @@
 ---
 name: browser-evidence
-description: Prove a change works in a browser you drove yourself, when there is no test to run — reproduce a bug, fix it, and post before/after evidence on a pull request or issue. Use when asked to "reproduce this", "show the bug", "prove the fix", "record a session", "capture before and after", or to demonstrate a change on a ticket that has no automated test. Records the browser as a Currents run and returns links that read without a Currents login. For evidence from tests that already run in CI, use collect-evidence instead.
+description: Experimental. Prove a change works in a browser you drove yourself, when there is no test to run — reproduce a bug, fix it, and post before/after evidence on a pull request or issue. Use when asked to "reproduce this", "show the bug", "prove the fix", "record a session", "capture before and after", or to demonstrate a change on a ticket that has no automated test. Records the browser as a Currents run and returns links that read without a Currents login. For evidence from tests that already run in CI, use collect-evidence instead.
 ---
 
 # Browser Evidence
+
+## Experimental
+
+Its steps, the tools it calls and what they return may change between releases. Tell the user once, when you start, that this skill is experimental, so they do not build a process on its current behaviour.
 
 A ticket says something is broken. There is no test that catches it. You drive a browser, record what you see, fix the code, record it again, and post the two side by side.
 
@@ -33,7 +37,7 @@ Ask at the start. Asked later, the question arrives with a finished recording in
 
 - a URL that is already serving the app
 - a Currents project id — `currents-get-projects` lists them; ask which one if more than one could be right
-- the Currents MCP server connected, with evidence sharing enabled for the organization
+- the Currents MCP server connected, with write access for `currents-create-session`: the `runs:write` scope on a token, or a write API key
 - a Playwright MCP server connected, for the browser tools in step 1
 
 ## Workflow
@@ -84,9 +88,9 @@ Check each one succeeded. `--fail` is what makes curl report a refused upload; w
 curl --fail -X PUT -H "Content-Type: application/zip" --data-binary @/tmp/before-trace.zip "<uploadUrl>"
 ```
 
-### 5. Create the trace link and read the digest
+### 5. Create the evidence links and read the digest
 
-Call `currents-create-trace-link` with the `instanceId` and `testId` from step 3. It returns the link and the URLs onto it — `digest`, `filmstrip`, `animation`. Fetch the `digest` URL and read it: it says what the page did and what failed, and it is how you confirm the recording captured the problem. It needs no Currents credential.
+Call `currents-create-evidence-links` with the `instanceId` and `testId` from step 3. It returns the link and the URLs onto it — `digest`, `filmstrip`, `animation`. Fetch the `digest` URL and read it: it says what the page did and what failed, and it is how you confirm the recording captured the problem. It needs no Currents credential.
 
 ```bash
 curl -sL "<digest url>"
@@ -108,8 +112,9 @@ Lead with what changed for the user.
 
 ## Troubleshooting
 
-- **`currents-create-session` is not in your tools**: the organization does not have evidence sharing enabled, or the credential is missing the `runs:write` scope. Both hide it, so say which one you cannot rule out rather than asserting either.
-- **403 from the session tool**: the same two causes.
+- **`currents-create-session` is not in your tools**: the credential lacks `runs:write`, or is a read API key.
+- **403 from the session tool**: the same cause, on a connection that lists every tool (an API key whose access level the server does not know).
+- **503 `Trace links are not configured` from `currents-create-evidence-links`**: this deployment serves no trace links. Attach the trace zip from step 2 and the screenshots instead, and say the trace opens at https://trace.playwright.dev.
 - **404 from the session tool**: the project id does not belong to this organization.
 - **422 from the session tool**: recording is suspended for the organization, or its subscription has expired.
 - **The upload URL is refused**: more than ten minutes passed since step 3. Record the session again.

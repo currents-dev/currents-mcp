@@ -14,7 +14,9 @@ describe('instructions for an access token', () => {
   it('says what the tools behind a granted scope do', () => {
     const text = buildServerInstructions({ oauthScopes: ['runs:write'] });
 
-    expect(text).toContain('cancel, reset and delete runs');
+    expect(text).toContain(
+      'record a browser session as a run, and cancel, reset and delete runs'
+    );
   });
 
   // The toolless scopes are the deliberate exception, named by
@@ -34,28 +36,6 @@ describe('instructions for an access token', () => {
 
     expect(text).toContain('filtered to the scopes above');
     expect(text).toContain('re-authorize');
-  });
-
-  // A tool is also withheld when the organization does not hold its `feature`
-  // flag, which no re-authorization adds. The advice has to hang on the scope
-  // being absent rather than on the tool being absent.
-  it('conditions the re-authorization advice on the scope being absent', () => {
-    const text = buildServerInstructions({ oauthScopes: ['results:read'] });
-
-    expect(text).toContain('if its scope is not listed above');
-  });
-
-  // `isToolGranted` withholds on a feature flag as well as on a scope, and
-  // `currents-create-trace-link` is tagged `results:read` and gated on
-  // `evidenceSharing`. Without this branch an agent holding `results:read` and
-  // finding no trace-link tool has no account of why.
-  it('names the feature flag when the scope is listed but the tool is not', () => {
-    const text = buildServerInstructions({ oauthScopes: ['results:read'] });
-
-    expect(text).toContain(
-      'if it is listed, the tool is off for this organization'
-    );
-    expect(text).toContain('re-authorizing will not add it');
   });
 
   it('marks a granted scope that reaches no tool', () => {
@@ -137,7 +117,9 @@ describe('instructions for a personal access token', () => {
       scopesFrom: 'personal-access-token',
     });
 
-    expect(text).toContain('cancel, reset and delete runs');
+    expect(text).toContain(
+      'record a browser session as a run, and cancel, reset and delete runs'
+    );
   });
 
   it('names the credential when the grant reaches no tool', () => {
@@ -181,12 +163,10 @@ describe('instructions for an API key', () => {
     expect(text).toContain('through them needs a key with write access');
   });
 
-  it('tells a write key every tool the organization has is listed', () => {
+  it('tells a write key every tool is listed', () => {
     const text = buildServerInstructions({ apiKeyScope: 'write' });
 
-    expect(text).toContain(
-      'This key is write, so every tool this organization has is listed'
-    );
+    expect(text).toContain('This key is write, so every tool is listed');
   });
 
   // The stdio server never learns its key's scope, so the tool list rules
@@ -194,7 +174,7 @@ describe('instructions for an API key', () => {
   it('warns an unknown key scope that a call can still be refused', () => {
     const text = buildServerInstructions({});
 
-    expect(text).toContain('every tool this organization has is listed');
+    expect(text).toContain('every tool is listed');
     expect(text).toContain('403');
   });
 
@@ -272,7 +252,7 @@ describe('what a tool result is', () => {
   });
 
   // `currents-create-session` answers with steps it wrote itself — upload the
-  // artifacts, then call `currents-create-trace-link`. Without this the rule
+  // artifacts, then call `currents-create-evidence-links`. Without this the rule
   // above reads as a refusal of those steps, and the agent reports the upload
   // rather than doing it.
   it.each(credentials)(

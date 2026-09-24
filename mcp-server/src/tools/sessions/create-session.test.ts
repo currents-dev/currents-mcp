@@ -68,7 +68,7 @@ describe('createSessionTool', () => {
     const { nextSteps } = parse(await createSessionTool.handler(body));
 
     expect(nextSteps[0]).toContain('uploadUrl');
-    expect(nextSteps[1]).toContain('currents-create-trace-link');
+    expect(nextSteps[1]).toContain('currents-create-evidence-links');
     expect(nextSteps[1]).toContain('inst-1');
     expect(nextSteps[1]).toContain('test-1');
   });
@@ -104,7 +104,7 @@ describe('createSessionTool', () => {
     vi.spyOn(request, 'postApi').mockResolvedValue({
       ok: false,
       status: 403,
-      error: 'Evidence sharing is not enabled for this organization',
+      error: 'Insufficient scope',
     } as never);
 
     const result = await createSessionTool.handler(body);
@@ -199,8 +199,7 @@ describe('createSessionTool', () => {
     expect(nextSteps[1]).toContain('before, after');
   });
 
-  it('is gated on the flag and the write scope its route names', () => {
+  it('is tagged with the write scope its route names', () => {
     expect(createSessionTool.scope).toBe('runs:write');
-    expect(createSessionTool.feature).toBe('evidenceSharing');
   });
 });

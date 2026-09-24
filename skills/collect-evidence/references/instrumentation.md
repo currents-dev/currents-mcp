@@ -100,10 +100,15 @@ export default defineConfig({
 The Currents reporter uploads screenshots, videos, traces, and attachments per
 attempt automatically — no extra reporter config.
 
+A trace link serves only what the attempt recorded, so a passing test needs
+`trace: 'on'` for its digest, filmstrip and accessibility snapshots to exist.
+A failing test has them under `retain-on-failure` already.
+
 ### GIF
 
-Playwright does not produce GIFs. Record a video, download it from the
-evidence manifest, then convert:
+A trace link's `animation` endpoint renders the attempt as an animated WebP
+(`?format=gif` for a GIF), so a test with a trace needs nothing here.
+Otherwise record a video, download it from the evidence manifest, and convert:
 
 ```bash
 ffmpeg -i demo.webm -vf "fps=10,scale=720:-1" demo.gif
