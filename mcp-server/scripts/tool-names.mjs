@@ -31,8 +31,10 @@
 const TOOL_PATTERN =
   /(['"])(currents-[A-Za-z0-9_./-]+)\1\s*,\s*\{\s*description:\s*(['"])((?:\\.|(?!\3)[^\\])*)\3/g;
 
+const LINE_END = /[\n\r\u2028\u2029]/g;
+
 /**
- * `src` with every comment blanked to spaces, newlines kept.
+ * `src` with every comment blanked to spaces, line breaks kept.
  *
  * A registration left behind in a comment is not a tool, and counting it as
  * one would hide exactly the withdrawal `withdrawn-tools.mjs` is looking for:
@@ -53,14 +55,16 @@ export function withoutComments(src) {
     const char = src[i];
     const next = src[i + 1];
     if (char === "/" && next === "/") {
-      const end = src.indexOf("\n", i);
-      const stop = end === -1 ? src.length : end;
+      // Every line terminator JavaScript recognises, not only LF: a comment
+      // running on past a CR would blank the registrations after it.
+      LINE_END.lastIndex = i;
+      const stop = LINE_END.exec(src)?.index ?? src.length;
       out += " ".repeat(stop - i);
       i = stop;
     } else if (char === "/" && next === "*") {
       const end = src.indexOf("*/", i + 2);
       const stop = end === -1 ? src.length : end + 2;
-      out += src.slice(i, stop).replace(/[^\n]/g, " ");
+      out += src.slice(i, stop).replace(/[^\n\r\u2028\u2029]/g, " ");
       i = stop;
     } else if (char === "'" || char === '"' || char === "`") {
       let j = i + 1;
