@@ -32,14 +32,62 @@ const TOOL_PATTERN =
   /(['"])(currents-[A-Za-z0-9_./-]+)\1\s*,\s*\{\s*description:\s*(['"])((?:\\.|(?!\3)[^\\])*)\3/g;
 
 /**
+ * `src` with every comment blanked to spaces, newlines kept.
+ *
+ * A registration left behind in a comment is not a tool, and counting it as
+ * one would hide exactly the withdrawal `withdrawn-tools.mjs` is looking for:
+ * the name disappears from the catalog but still matches here.
+ *
+ * Strings and template literals are stepped over, so a `//` inside one (a URL
+ * in a description) does not start a comment. Two things are not handled,
+ * because `server.ts` has neither: regex literals, and a backtick nested inside
+ * a template's `${}`.
+ *
+ * @param {string} src
+ * @returns {string}
+ */
+export function withoutComments(src) {
+  let out = "";
+  let i = 0;
+  while (i < src.length) {
+    const char = src[i];
+    const next = src[i + 1];
+    if (char === "/" && next === "/") {
+      const end = src.indexOf("\n", i);
+      const stop = end === -1 ? src.length : end;
+      out += " ".repeat(stop - i);
+      i = stop;
+    } else if (char === "/" && next === "*") {
+      const end = src.indexOf("*/", i + 2);
+      const stop = end === -1 ? src.length : end + 2;
+      out += src.slice(i, stop).replace(/[^\n]/g, " ");
+      i = stop;
+    } else if (char === "'" || char === '"' || char === "`") {
+      let j = i + 1;
+      while (j < src.length && src[j] !== char) {
+        j += src[j] === "\\" ? 2 : 1;
+      }
+      out += src.slice(i, j + 1);
+      i = j + 1;
+    } else {
+      out += char;
+      i += 1;
+    }
+  }
+  return out;
+}
+
+/**
  * Every tool `serverSrc` registers, in source order, with its description as
- * written between the quotes (escapes still in place).
+ * written between the quotes (escapes still in place). Registrations inside
+ * comments are not counted.
  *
  * @param {string} serverSrc
  * @returns {{ name: string, rawDescription: string }[]}
  */
 export function registeredTools(serverSrc) {
-  return [...serverSrc.matchAll(TOOL_PATTERN)].map((match) => ({
+  const code = withoutComments(serverSrc);
+  return [...code.matchAll(TOOL_PATTERN)].map((match) => ({
     name: match[2],
     rawDescription: match[4],
   }));
