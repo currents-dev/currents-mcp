@@ -103,7 +103,10 @@ const zodSchema = z
     if (!run_id) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'run-level context requires run_id',
+        // The only message a caller that passed nothing gets, so it names
+        // every level rather than the one it fell through to.
+        message:
+          'pass run_id for the failed tests of a run, run_id and instance_id for a spec file, or instance_id and test_id for one test; currents-get-runs and currents-find-run return a run_id',
         path: ['run_id'],
       });
     }
