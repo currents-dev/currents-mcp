@@ -77,6 +77,15 @@ describe('getContextTool', () => {
     });
   });
 
+  it('names every level and where a run_id comes from when given no identifier', async () => {
+    const result = await getContextTool.handler({} as never);
+
+    const [content] = result.content;
+    expect(content.text).toContain('instance_id and test_id for one test');
+    expect(content.text).toContain('currents-get-runs');
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it('calls GET /context with query params for run-level', async () => {
     await getContextTool.handler({
       run_id: 'run-1',

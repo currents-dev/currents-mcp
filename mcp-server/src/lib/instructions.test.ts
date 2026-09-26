@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { buildServerInstructions, SCOPES_WITHOUT_TOOLS } from './instructions';
+import { getSkills } from '../skills';
+import {
+  buildServerInstructions,
+  SCOPE_ORDER,
+  SCOPES_WITHOUT_TOOLS,
+} from './instructions';
 
 describe('instructions for an access token', () => {
   it('names every granted scope', () => {
@@ -203,8 +208,35 @@ describe('the skills line', () => {
       { name: 'browser-evidence' },
     ]);
 
-    expect(text).toContain('collect-evidence, browser-evidence');
+    expect(text).toContain(
+      'skill://currents/collect-evidence/SKILL.md, skill://currents/browser-evidence/SKILL.md'
+    );
     expect(text).toContain('does not reach');
+  });
+
+  // Claude Code cuts the instructions off (observed at about 2048
+  // characters), and the scope list ahead of this line could push it past.
+  it('comes first', () => {
+    const text = buildServerInstructions({ oauthScopes: ['results:read'] }, [
+      { name: 'browser-evidence' },
+    ]);
+
+    expect(text.split('\n\n')[0]).toContain(
+      'skill://currents/browser-evidence/SKILL.md'
+    );
+  });
+
+  // Claude Code cuts the instructions off at about 2048 characters, and every
+  // scope granted puts the credential text past that.
+  it('keeps the skills and the untrusted-content rule inside the cut', () => {
+    const text = buildServerInstructions(
+      { oauthScopes: SCOPE_ORDER },
+      getSkills()
+    );
+    const kept = text.slice(0, 2048);
+
+    expect(kept).toContain('skill://currents/browser-evidence/SKILL.md');
+    expect(kept).toContain("the server's own and is yours to follow");
   });
 
   // A deployment whose skills did not ship serves every tool and no skill
@@ -212,8 +244,8 @@ describe('the skills line', () => {
   it('is left out when no skill shipped', () => {
     const text = buildServerInstructions({ apiKeyScope: 'write' }, []);
 
-    expect(text).not.toContain('prompts');
-    expect(text).toBe(text.trimEnd());
+    expect(text).not.toContain('skill://');
+    expect(text).toBe(text.trim());
     expect(text).toBe(buildServerInstructions({ apiKeyScope: 'write' }));
   });
 });
