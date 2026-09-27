@@ -501,7 +501,7 @@ export const TOOL_CATALOG: CatalogTool[] = [
     'currents-create-evidence-links',
     {
       description:
-        "Create a shareable link to a test attempt's evidence, served from its Playwright trace, and the URLs onto it: a markdown digest of what the attempt did and what failed, a filmstrip, an animated screencast, DOM snapshots, network requests and attachments. Use it to read a trace without downloading it, and to put evidence in a pull request comment or an issue — the link reads without a Currents credential and expires. Start from the digest it returns. Requires instanceId and testId.",
+        "Create a shareable link to a test attempt's evidence, served from its Playwright trace, and the URLs onto it: a markdown digest of what the attempt did and what failed, a filmstrip, an animated screencast, DOM snapshots, network requests and attachments. Use it to read a trace without downloading it, and to put evidence in a pull request comment or an issue — the link reads without a Currents credential and expires. Start from the digest it returns. Requires instanceId and testId. Before posting evidence, read the workflow at skill://currents/browser-evidence/SKILL.md for a session you recorded, or skill://currents/collect-evidence/SKILL.md for a CI run.",
       title: 'Create Evidence Links',
       annotations: additiveWrite,
     },
@@ -511,7 +511,7 @@ export const TOOL_CATALOG: CatalogTool[] = [
     'currents-create-session',
     {
       description:
-        "Record a browser session you drove as a Currents run, so its evidence can be read and shared like a CI run's. Use it when there is no test to run — a bug reproduced by hand, a fix demonstrated in a browser. Returns the run and an upload URL per file you declared; PUT the bytes to those, and the response says what to do next. A trace attached this way can then be turned into a link that needs no Currents credential.",
+        "Record a browser session you drove as a Currents run, so its evidence can be read and shared like a CI run's. Use it when there is no test to run — a bug reproduced by hand, a fix demonstrated in a browser. Returns the run and an upload URL per file you declared; PUT the bytes to those, and the response says what to do next. A trace attached this way can then be turned into a link that needs no Currents credential. Read the workflow at skill://currents/browser-evidence/SKILL.md before the first call: it covers how to zip the trace, upload the files and check the link.",
       title: 'Record Browser Session',
       annotations: additiveWrite,
     },

@@ -61,7 +61,7 @@ Call `currents-get-context` with `format: "md"`:
 
 Read the run first to see what failed and which failures share a cause, then one test at a time for the ones you fix. Tests that failed with the same error usually have one fix.
 
-Open the linked files when the error alone does not say enough. The error context is the page's accessibility tree at the moment of failure; the trace is what the test did.
+Open the linked files when the error alone does not say enough. The error context is the page's accessibility tree at the moment of failure; the trace is what the test did. A Playwright trace has two links: `explore trace` is a markdown digest of the actions, console and network, with links on to frames and DOM snapshots at the failure; `download trace` is the zip, for Playwright's trace viewer. Start with `explore trace`.
 
 ### 3. Fix
 

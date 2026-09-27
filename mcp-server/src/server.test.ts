@@ -87,7 +87,7 @@ import {
   SCOPE_ORDER,
   SCOPES_WITHOUT_TOOLS,
 } from './lib/instructions';
-import { createMcpServer } from './server';
+import { createMcpServer, TOOL_CATALOG } from './server';
 import { getSkills, skillFileUri } from './skills';
 
 createMcpServer();
@@ -447,6 +447,19 @@ describe('skills registered as resources', () => {
     expect(registeredResources.map((r) => r.uri).sort()).toEqual(
       expected.sort()
     );
+  });
+
+  // A tool description names a skill by URI, and a renamed skill would leave
+  // it pointing at nothing.
+  it('registers every skill a tool description names', () => {
+    const named = TOOL_CATALOG.flatMap(
+      (tool) => tool.description.match(/skill:\/\/currents\/[^\s,]+\.md/g) ?? []
+    );
+    expect(named.length).toBeGreaterThan(0);
+    const uris = registeredResources.map((r) => r.uri);
+    for (const uri of named) {
+      expect(uris).toContain(uri);
+    }
   });
 
   it('resource URIs are unique', () => {
