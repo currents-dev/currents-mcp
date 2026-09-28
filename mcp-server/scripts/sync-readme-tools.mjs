@@ -16,6 +16,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadSkills } from "./load-skills.mjs";
+import { registeredTools as parseTools } from "./tool-names.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const readmePath = join(root, "..", "README.md");
@@ -46,28 +47,7 @@ const origResolve = await (async () => {
 
 const serverSrc = readFileSync(join(root, "src", "server.ts"), "utf-8");
 
-// Quote-agnostic: the source is prettier-formatted with singleQuote, but the
-// monorepo copy this file's subject is synced from has been both.
-// Anchored on the tool name and its description, not on whatever function
-// declares them. That call has been renamed three times — `server.registerTool`,
-// then a local `registerTool` wrapper applying scope filtering, then
-// `catalogTool` building a TOOL_CATALOG the server loops over — and each rename
-// silently found zero tools until someone noticed.
-//
-// `currents-` is the stable part: `server.test.ts` asserts every registered name
-// matches it, so a tool that stopped being found here would have to stop being a
-// tool. The loop that registers them passes variables, so it cannot match and
-// nothing is counted twice.
-//
-// The character class is the one `server.test.ts` allows, dots and slashes
-// included, rather than the narrower `\w`. A name outside it would be skipped
-// rather than reported: this only refuses to run when it finds *no* tools, so a
-// partial match writes a README missing a tool and says nothing. That would be
-// caught next by `host/readme.test.ts`, which fails when a registered tool is
-// absent from the table — one step later, and for a reason that does not name
-// the cause.
-const toolRegex =
-  /(['"])(currents-[A-Za-z0-9_./-]+)\1\s*,\s*\{\s*description:\s*(['"])((?:\\.|(?!\3)[^\\])*)\3/g;
+// What the pattern matches, and why, is documented in `tool-names.mjs`.
 
 /**
  * The lead sentence of a description, for a table cell. Both catalogs carry
@@ -94,10 +74,10 @@ function firstSentence(description) {
 /**
  * A string literal's source text as the string it declares.
  *
- * The regex above captures what is between the quotes, so every escape in it
- * is still two characters. Decoding the quotes alone left `\\` as a pair, which
- * the markdown escape below then doubled again — a description declaring
- * `C:\Users` reached the README as two backslashes.
+ * The pattern in `tool-names.mjs` captures what is between the quotes, so
+ * every escape in it is still two characters. Decoding the quotes alone left
+ * `\\` as a pair, which the markdown escape below then doubled again — a
+ * description declaring `C:\Users` reached the README as two backslashes.
  *
  * One pass rather than chained replaces, so a decoded backslash is not read
  * again as the start of the next escape.
@@ -111,10 +91,8 @@ function decodeStringLiteral(literal) {
   );
 }
 
-let match;
-while ((match = toolRegex.exec(serverSrc)) !== null) {
-  const name = match[2];
-  const description = decodeStringLiteral(match[4]);
+for (const { name, rawDescription } of parseTools(serverSrc)) {
+  const description = decodeStringLiteral(rawDescription);
   registeredTools.push({ name, shortDesc: firstSentence(description) });
 }
 

@@ -210,6 +210,17 @@ jobs:
           # a fifty-file diff.
           REMOVED="$(git status --porcelain -- mcp-server/src/tools skills \
             | awk '$1 ~ /D/ { print $2 }' | tr '\n' ' ')"
+          # A deleted file is not the only way to withdraw a tool: a rename
+          # keeps every file and changes the name clients call, which is how
+          # `currents-get-affected-executions` went without a warning. The
+          # names are compared as registered in server.ts, before and after.
+          # The script comes from main's checkout; sync-readme-tools.mjs above
+          # already ran, so a pattern that no longer matches has failed there.
+          git show HEAD:mcp-server/src/server.ts > /tmp/server.before.ts
+          WITHDRAWN="$(node mcp-server/scripts/withdrawn-tools.mjs \
+            /tmp/server.before.ts mcp-server/src/server.ts | tr '\n' ' ')"
+          REMOVED="${REMOVED}${WITHDRAWN}"
+          REMOVED="${REMOVED% }"
           echo "removed=$REMOVED" >> "$GITHUB_OUTPUT"
           if [ -n "$REMOVED" ]; then
             echo "::warning::This sync withdraws: $REMOVED"
