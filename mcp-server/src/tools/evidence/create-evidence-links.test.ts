@@ -52,6 +52,7 @@ describe('createEvidenceLinksTool', () => {
 
     expect(body).toMatchObject(LINK);
     expect(body.digest).toBe(`${LINK.url}/digest?format=md`);
+    expect(body.download).toBe(`${LINK.url}/download`);
     expect(body.filmstrip).toBe(`${LINK.url}/filmstrip`);
     expect(body.animation).toBe(`${LINK.url}/animation`);
     expect(body.snapshots).toBe(`${LINK.url}/snapshots`);

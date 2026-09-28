@@ -63,6 +63,7 @@ type TraceLinkData = {
  */
 const traceEndpoints = (url: string) => ({
   digest: `${url}/digest?format=md`,
+  download: `${url}/download`,
   filmstrip: `${url}/filmstrip`,
   animation: `${url}/animation`,
   frames: `${url}/frames`,
