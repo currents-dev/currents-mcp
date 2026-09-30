@@ -272,8 +272,11 @@ describe('MCP tool best practices', () => {
       // All four, not a subset: the spec defaults destructiveHint and
       // openWorldHint to true, so an unannotated read looks to a host like the
       // most dangerous kind of write.
-      it('declares the four hints the catalog assigns it', () => {
-        expect(annotations).toEqual(hints(EXPECTED_ANNOTATIONS[name]));
+      it('declares its title and the four hints the catalog assigns it', () => {
+        expect(annotations).toEqual({
+          title,
+          ...hints(EXPECTED_ANNOTATIONS[name]),
+        });
       });
     }
   );

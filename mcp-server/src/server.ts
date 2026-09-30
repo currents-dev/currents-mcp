@@ -135,7 +135,16 @@ const catalogTool = <Schema extends AnySchema>(
    */
   config: { title: string; description: string; annotations: ToolAnnotations },
   tool: McpTool<Schema>
-): CatalogTool => ({ name, ...config, tool: tool as McpTool });
+): CatalogTool => ({
+  name,
+  ...config,
+  // The same title again inside the annotations. The 2025-06-18 spec moved it
+  // to the top of the tool, which is where clients read it first, but the
+  // connector directory's submission form reads `annotations.title` and flags
+  // every tool without one as missing a title.
+  annotations: { title: config.title, ...config.annotations },
+  tool: tool as McpTool,
+});
 
 /**
  * Every tool this server can serve, in the order a client is told them.
@@ -542,7 +551,7 @@ export const TOOL_CATALOG: CatalogTool[] = [
     'currents-create-webhook',
     {
       description:
-        'Create a new webhook for a project. Specify the URL to receive POST notifications, optional custom headers (as JSON string), events to trigger on (RUN_FINISH, RUN_START, RUN_TIMEOUT, RUN_CANCELED), and an optional label. Requires projectId and url.',
+        'Create a new webhook for a project. Specify the URL to receive POST notifications, optional custom headers (as JSON string), events to trigger on (RUN_FINISH, RUN_START, RUN_TIMEOUT, RUN_CANCELED), and an optional label. Requires projectId and url. The payload Currents sends and how to verify it are documented at https://docs.currents.dev/resources/integrations/http-webhooks.',
       title: 'Create Webhook',
       annotations: { ...additiveWrite, openWorldHint: true },
     },
@@ -562,7 +571,7 @@ export const TOOL_CATALOG: CatalogTool[] = [
     'currents-update-webhook',
     {
       description:
-        'Update an existing webhook. You can update the url, headers (as JSON string), hookEvents array, or label. All fields are optional. The hookId is a UUID.',
+        'Update an existing webhook. You can update the url, headers (as JSON string), hookEvents array, or label. All fields are optional. The hookId is a UUID. The payload Currents sends and how to verify it are documented at https://docs.currents.dev/resources/integrations/http-webhooks.',
       // Not idempotent: `updateGenericHook` writes `updatedAt: new Date()`
       // whether or not the body changed anything.
       title: 'Update Webhook',
