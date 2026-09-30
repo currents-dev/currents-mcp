@@ -20,7 +20,7 @@ const registeredTools = vi.hoisted(() => [] as Array<{ name: string }>);
 // is here to keep the next sync from failing on a mock rather than on itself.
 vi.mock('@modelcontextprotocol/sdk/server/mcp.js', () => ({
   McpServer: class {
-    server = { setRequestHandler() {} };
+    server = { setRequestHandler() {}, registerCapabilities() {} };
     registerTool(name: string) {
       registeredTools.push({ name });
     }
