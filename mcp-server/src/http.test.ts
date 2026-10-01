@@ -3,9 +3,28 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 import { createServer, Server } from 'node:http';
 import { AddressInfo } from 'node:net';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { ErrorCode } from '@modelcontextprotocol/sdk/types.js';
+import { z } from 'zod';
 import { handleMcpRequest } from './http';
 import { ApiDispatch, RequestContext } from './lib/context';
 import { getSkills } from './skills';
+import { SKILLS_EXTENSION, skillFileDigest } from './skillsExtension';
+
+const SkillEntrySchema = z.object({
+  uri: z.string(),
+  frontmatter: z.record(z.string(), z.string()),
+  resources: z.array(
+    z.object({ uri: z.string(), digest: z.string(), size: z.number() })
+  ),
+});
+const SkillsListResultSchema = z.object({
+  resultType: z.literal('complete'),
+  skills: z.array(SkillEntrySchema),
+});
+const SkillsGetResultSchema = z.object({
+  resultType: z.literal('complete'),
+  skill: SkillEntrySchema,
+});
 
 vi.mock('./lib/logger', () => ({
   logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn() },
@@ -139,6 +158,65 @@ describe('handleMcpRequest', () => {
         expect(text).toContain(file.content);
       }
       expect(text.startsWith('<file path="SKILL.md">')).toBe(true);
+    });
+
+    // What an importer does with the Skills extension, in order: sees the
+    // declaration, lists the catalog, fetches each file and checks it against
+    // the digest, and looks one skill up by URI.
+    describe('over the Skills extension', () => {
+      it('is declared in the capabilities the handshake returns', () => {
+        expect(client.getServerCapabilities()?.extensions).toEqual({
+          [SKILLS_EXTENSION]: {},
+        });
+      });
+
+      it('lists every skill, and every file reads back to its digest', async () => {
+        const { skills } = await client.request(
+          { method: 'skills/list', params: {} },
+          SkillsListResultSchema
+        );
+        expect(skills.map((s) => s.frontmatter.name)).toEqual(
+          getSkills().map((s) => s.name)
+        );
+
+        for (const skill of skills) {
+          expect(skill.resources.map((r) => r.uri)).toContain(skill.uri);
+          for (const resource of skill.resources) {
+            const { contents } = await client.readResource({
+              uri: resource.uri,
+            });
+            expect(contents).toHaveLength(1);
+            expect(contents[0].uri).toBe(resource.uri);
+            const text = 'text' in contents[0] ? contents[0].text : '';
+            expect(skillFileDigest(text)).toBe(resource.digest);
+            expect(Buffer.byteLength(text, 'utf8')).toBe(resource.size);
+          }
+        }
+      });
+
+      it('returns one skill by URI with the same entry as the list', async () => {
+        const { skills } = await client.request(
+          { method: 'skills/list', params: {} },
+          SkillsListResultSchema
+        );
+        const { skill } = await client.request(
+          { method: 'skills/get', params: { uri: skills[0].uri } },
+          SkillsGetResultSchema
+        );
+        expect(skill).toEqual(skills[0]);
+      });
+
+      it('refuses an unknown skill URI as invalid params', async () => {
+        await expect(
+          client.request(
+            {
+              method: 'skills/get',
+              params: { uri: 'skill://currents/no-such-skill/SKILL.md' },
+            },
+            SkillsGetResultSchema
+          )
+        ).rejects.toMatchObject({ code: ErrorCode.InvalidParams });
+      });
     });
   });
 

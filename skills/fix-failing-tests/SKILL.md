@@ -43,7 +43,7 @@ Leave the change in the working tree unless the person asked you to commit, push
 
 Use the most exact thing you have, in this order:
 
-1. **A Currents link.** `https://app.currents.dev/run/<runId>` gives the run. `https://app.currents.dev/i/<instanceId>/test/<testId>` gives one test.
+1. **A Currents link.** `https://app.currents.dev/run/<runId>` gives the run. `https://app.currents.dev/instance/<instanceId>/test/<testId>`, or its short form `/i/<instanceId>/test/<testId>`, gives one test.
 2. **A CI build ID** — in CI, the value the test job passed to the Currents reporter. `currents-find-run` with `ciBuildId` and `projectId` is an exact match.
 3. **A pull request.** `currents-list-pull-requests` with the PR number, then its latest run.
 4. **The branch.** `currents-find-run` with `branch` returns the most recent completed run, which can be for an older commit than the one you are on.

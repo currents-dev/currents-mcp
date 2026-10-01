@@ -11,6 +11,7 @@ import { isToolGranted, McpTool } from './lib/tool';
 import { reportToolCall } from './lib/toolCallReport';
 import { listTools, type CatalogTool } from './lib/toolList';
 import { getSkills, registerSkills } from './skills';
+import { registerSkillsExtension } from './skillsExtension';
 // Actions tools
 import { createActionTool } from './tools/actions/create-action';
 import { deleteActionTool } from './tools/actions/delete-action';
@@ -75,11 +76,12 @@ import { updateWebhookTool } from './tools/webhooks/update-webhook';
  *
  * `openWorldHint` is false in all of them: a tool reaches the runs, tests and
  * settings of the organization the credential belongs to and nothing outside
- * it. Seven tools override it — the four Jira tools, because the issue they
+ * it. Eight tools override it — the four Jira tools, because the issue they
  * read or write lives in the customer's Jira instance, the two webhook tools
  * that take a `url`, because the destination they store is one the notification
- * worker will later POST run data to, and `currents-create-share-link`, because
- * the link it returns serves test data to anyone who holds it.
+ * worker will later POST run data to, and `currents-create-share-link` and
+ * `currents-create-evidence-links`, because the links they return serve test
+ * data to anyone who holds them.
  */
 const readOnly: ToolAnnotations = {
   readOnlyHint: true,
@@ -135,7 +137,16 @@ const catalogTool = <Schema extends AnySchema>(
    */
   config: { title: string; description: string; annotations: ToolAnnotations },
   tool: McpTool<Schema>
-): CatalogTool => ({ name, ...config, tool: tool as McpTool });
+): CatalogTool => ({
+  name,
+  ...config,
+  // The same title again inside the annotations. The 2025-06-18 spec moved it
+  // to the top of the tool, which is where clients read it first, but the
+  // connector directory's submission form reads `annotations.title` and flags
+  // every tool without one as missing a title.
+  annotations: { title: config.title, ...config.annotations },
+  tool: tool as McpTool,
+});
 
 /**
  * Every tool this server can serve, in the order a client is told them.
@@ -354,7 +365,7 @@ export const TOOL_CATALOG: CatalogTool[] = [
     'currents-get-run-details',
     {
       description:
-        'Retrieves details of a specific test run. Requires a user-provided runId.',
+        "Retrieves a run: its status, commit, branch, groups and spec files, each with its instanceId. Requires runId, the ID in a /run/<runId> dashboard link. For why the run's tests failed, call currents-get-context with run_id instead; for its screenshots, videos and traces, currents-get-test-evidence.",
       title: 'Get Run',
       annotations: readOnly,
     },
@@ -417,7 +428,7 @@ export const TOOL_CATALOG: CatalogTool[] = [
     'currents-get-spec-instance',
     {
       description:
-        'Retrieves debugging data from a specific execution of a test spec file by instanceId.',
+        "Retrieves the raw result of one spec file execution by instanceId: each test's state and attempts, and the artifact URLs. For why its tests failed, currents-get-context with run_id and instance_id returns the errors, steps and trace links ready to read.",
       title: 'Get Spec Execution',
       annotations: readOnly,
     },
@@ -469,7 +480,7 @@ export const TOOL_CATALOG: CatalogTool[] = [
     'currents-get-context',
     {
       description:
-        'Use to fix tests that failed in CI: returns the errors, steps and files of the failed tests of a run, a spec file (instance) or one test — the same content as Fix in the Currents dashboard. Flaky tests are left out of a run unless include_flaky is set. Supports json or md format, detail level, and pagination for failed tests. Requires run_id for run-level, or instance_id with optional test_id.',
+        'Call this first to find out why tests failed in CI, or to fix them: returns the errors, steps and files of the failed tests of a run, a spec file (instance) or one test — the same content as Fix in the Currents dashboard. Takes the IDs from dashboard links: /run/<runId> is run_id, /instance/<instanceId>/test/<testId> (or /i/<instanceId>/test/<testId>) is instance_id and test_id. Flaky tests are left out of a run unless include_flaky is set. Supports json or md format, detail level, and pagination for failed tests. Target a run (run_id), a spec file (run_id + instance_id) or a test (instance_id + test_id). The steps for fixing them are at skill://currents/fix-failing-tests/SKILL.md.',
       title: 'Get Failure Context to Fix Tests',
       annotations: readOnly,
     },
@@ -491,7 +502,7 @@ export const TOOL_CATALOG: CatalogTool[] = [
     'currents-get-test-evidence',
     {
       description:
-        'Collect evidence artifacts (screenshots, videos, traces, attachments) produced by tests in a CI run, with signed download URLs grouped per test. Use to gather proof or a demo of an implemented feature from CI — e.g. before/after screenshots, text output stored as test attachments, or Playwright videos and traces — instead of running tests locally. Locates the run by runId, or by projectId with ciBuildId or branch (latest run). Supports filtering by spec file, test title, and test status. URLs are signed and time-limited, so download the files promptly.',
+        'Collect evidence artifacts (screenshots, videos, traces, attachments) produced by tests in a CI run, with signed download URLs grouped per test. Read skill://currents/collect-evidence/SKILL.md before the first call. Use to gather proof or a demo of an implemented feature from CI — e.g. before/after screenshots, text output stored as test attachments, or Playwright videos and traces — instead of running tests locally. Locates the run by runId, or by projectId with ciBuildId or branch (latest run). Supports filtering by spec file, test title, and test status. URLs are signed and time-limited, so download the files promptly.',
       title: 'Collect Test Evidence',
       annotations: readOnly,
     },
@@ -503,7 +514,7 @@ export const TOOL_CATALOG: CatalogTool[] = [
       description:
         "Create a shareable link to a test attempt's evidence, served from its Playwright trace, and the URLs onto it: a markdown digest of what the attempt did and what failed, a filmstrip, an animated screencast, DOM snapshots, network requests and attachments. Use it to read a trace without downloading it, and to put evidence in a pull request comment or an issue — the link reads without a Currents credential and expires. Start from the digest it returns. Requires instanceId and testId. Before posting evidence, read the workflow at skill://currents/browser-evidence/SKILL.md for a session you recorded, or skill://currents/collect-evidence/SKILL.md for a CI run.",
       title: 'Create Evidence Links',
-      annotations: additiveWrite,
+      annotations: { ...additiveWrite, openWorldHint: true },
     },
     createEvidenceLinksTool
   ),
@@ -542,7 +553,7 @@ export const TOOL_CATALOG: CatalogTool[] = [
     'currents-create-webhook',
     {
       description:
-        'Create a new webhook for a project. Specify the URL to receive POST notifications, optional custom headers (as JSON string), events to trigger on (RUN_FINISH, RUN_START, RUN_TIMEOUT, RUN_CANCELED), and an optional label. Requires projectId and url.',
+        'Create a new webhook for a project. Specify the URL to receive POST notifications, optional custom headers (as JSON string), events to trigger on (RUN_FINISH, RUN_START, RUN_TIMEOUT, RUN_CANCELED), and an optional label. Requires projectId and url. The payload Currents sends and how to verify it are documented at https://docs.currents.dev/resources/integrations/http-webhooks.',
       title: 'Create Webhook',
       annotations: { ...additiveWrite, openWorldHint: true },
     },
@@ -562,7 +573,7 @@ export const TOOL_CATALOG: CatalogTool[] = [
     'currents-update-webhook',
     {
       description:
-        'Update an existing webhook. You can update the url, headers (as JSON string), hookEvents array, or label. All fields are optional. The hookId is a UUID.',
+        'Update an existing webhook. You can update the url, headers (as JSON string), hookEvents array, or label. All fields are optional. The hookId is a UUID. The payload Currents sends and how to verify it are documented at https://docs.currents.dev/resources/integrations/http-webhooks.',
       // Not idempotent: `updateGenericHook` writes `updatedAt: new Date()`
       // whether or not the body changed anything.
       title: 'Update Webhook',
@@ -612,6 +623,10 @@ export function createMcpServer(
     'oauthScopes' | 'apiKeyScope' | 'scopesFrom'
   > = {}
 ): McpServer {
+  const granted = TOOL_CATALOG.filter((entry) =>
+    isToolGranted(entry.tool, context)
+  );
+
   const logoDataUri = getLogoDataUri();
   const server = new McpServer(
     {
@@ -627,11 +642,7 @@ export function createMcpServer(
           ]
         : undefined,
     },
-    { instructions: buildServerInstructions(context, getSkills()) }
-  );
-
-  const granted = TOOL_CATALOG.filter((entry) =>
-    isToolGranted(entry.tool, context)
+    { instructions: buildServerInstructions(context, getSkills(), granted) }
   );
 
   // Every handler goes through `reportToolCall`, so the host hears about each
@@ -662,6 +673,7 @@ export function createMcpServer(
   // the server is built per request, so that would be a 500 on every one. The
   // tools override above has the opposite constraint.
   registerSkills(server);
+  registerSkillsExtension(server);
 
   return server;
 }
