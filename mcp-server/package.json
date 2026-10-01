@@ -74,5 +74,10 @@
     "tsdown": "^0.21.0",
     "typescript": "^5.9.3",
     "vitest": "^4.0.18"
+  },
+  "overrides": {
+    "release-it": {
+      "undici": "7.29.1"
+    }
   }
 }

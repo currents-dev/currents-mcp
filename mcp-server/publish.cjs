@@ -41,6 +41,8 @@ console.log(`README.md copied (${readmeContent.length} bytes)`);
 
 pkg.devDependencies = {};
 delete pkg["release-it"];
+// Overrides only pin dev-tooling transitive deps; keep them out of the published manifest.
+delete pkg.overrides;
 
 fs.writeFileSync("./package.json", JSON.stringify(pkg, null, 2));
 execSync(`npm pack --dry-run && npm publish --tag ${options.tag}`, {
