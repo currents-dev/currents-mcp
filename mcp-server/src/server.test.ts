@@ -38,7 +38,7 @@ vi.mock('@modelcontextprotocol/sdk/server/mcp.js', () => ({
   McpServer: class {
     // The factory replaces the SDK's `tools/list` handler through this; what
     // it serves is `lib/toolList.test.ts`.
-    server = { setRequestHandler: vi.fn() };
+    server = { setRequestHandler: vi.fn(), registerCapabilities: vi.fn() };
 
     constructor(
       info: Record<string, unknown>,
@@ -84,9 +84,12 @@ vi.mock('@modelcontextprotocol/sdk/server/mcp.js', () => ({
 import type { RequestContext } from './lib/context';
 import {
   buildServerInstructions,
+  MAX_INSTRUCTIONS_LENGTH,
   SCOPE_ORDER,
   SCOPES_WITHOUT_TOOLS,
+  TASK_ROUTES,
 } from './lib/instructions';
+import { isToolGranted } from './lib/tool';
 import { createMcpServer, TOOL_CATALOG } from './server';
 import { getSkills, skillFileUri } from './skills';
 
@@ -159,7 +162,7 @@ const EXPECTED_ANNOTATIONS: Record<string, Record<string, boolean>> = {
   'currents-get-test-evidence': { r: true, d: false, i: true, o: false },
   // Each call mints another link to the same trace, and the ones already
   // handed out keep working.
-  'currents-create-evidence-links': { r: false, d: false, i: false, o: false },
+  'currents-create-evidence-links': { r: false, d: false, i: false, o: true },
   // Each call records another run; the ones already recorded are untouched.
   'currents-create-session': { r: false, d: false, i: false, o: false },
   'currents-list-webhooks': { r: true, d: false, i: true, o: false },
@@ -272,8 +275,11 @@ describe('MCP tool best practices', () => {
       // All four, not a subset: the spec defaults destructiveHint and
       // openWorldHint to true, so an unannotated read looks to a host like the
       // most dangerous kind of write.
-      it('declares the four hints the catalog assigns it', () => {
-        expect(annotations).toEqual(hints(EXPECTED_ANNOTATIONS[name]));
+      it('declares its title and the four hints the catalog assigns it', () => {
+        expect(annotations).toEqual({
+          title,
+          ...hints(EXPECTED_ANNOTATIONS[name]),
+        });
       });
     }
   );
@@ -406,27 +412,25 @@ describe('instructions passed to the client', () => {
     return serverOptions.at(-1)?.options?.instructions;
   };
 
-  it('describes the credential the server was built for', () => {
-    expect(instructionsFor({ oauthScopes: ['results:read'] })).toBe(
-      buildServerInstructions({ oauthScopes: ['results:read'] }, getSkills())
-    );
-    expect(instructionsFor({ apiKeyScope: 'read' })).toBe(
-      buildServerInstructions({ apiKeyScope: 'read' }, getSkills())
-    );
-  });
-
-  // A skill declares no scopes, so this names them for every credential —
-  // `lib/instructions.ts` says why, and the line carries the caveat.
-  it('names the skills whatever the credential', () => {
+  it('describes the credential and the tools the server was built for', () => {
     for (const context of [
       { oauthScopes: ['results:read'] as const },
       { apiKeyScope: 'read' as const },
-      {},
     ]) {
-      const instructions = instructionsFor(context);
-      for (const skill of getSkills()) {
-        expect(instructions).toContain(skill.name);
-      }
+      const granted = TOOL_CATALOG.filter((entry) =>
+        isToolGranted(entry.tool, context)
+      );
+      expect(instructionsFor(context)).toBe(
+        buildServerInstructions(context, getSkills(), granted)
+      );
+    }
+  });
+
+  // A write key reaches every tool, so every skill's route is shown.
+  it('names every skill for a write key', () => {
+    const instructions = instructionsFor({ apiKeyScope: 'write' });
+    for (const skill of getSkills()) {
+      expect(instructions).toContain(skillFileUri(skill.name, 'SKILL.md'));
     }
   });
 
@@ -435,6 +439,107 @@ describe('instructions passed to the client', () => {
   it('is set for a caller with neither credential', () => {
     expect(instructionsFor({})).toEqual(expect.any(String));
     expect(instructionsFor({})).not.toBe('');
+  });
+});
+
+/**
+ * The instructions state facts about the tool list, the skills and the scope
+ * vocabulary. Each of those changes on its own, and an instruction naming a
+ * tool the agent does not have, a skill that did not ship or a hint the tool
+ * does not carry sends the agent after something that is not there.
+ */
+describe('instructions agree with what the server serves', () => {
+  type Credential = Pick<
+    RequestContext,
+    'oauthScopes' | 'apiKeyScope' | 'scopesFrom'
+  >;
+  const credentials: Array<[string, Credential]> = [
+    ['every scope', { oauthScopes: SCOPE_ORDER }],
+    ['no scope', { oauthScopes: [] }],
+    ...SCOPE_ORDER.map((scope): [string, Credential] => [
+      `only ${scope}`,
+      { oauthScopes: [scope] },
+    ]),
+    ...SCOPE_ORDER.map((scope): [string, Credential] => [
+      `every scope but ${scope}`,
+      { oauthScopes: SCOPE_ORDER.filter((other) => other !== scope) },
+    ]),
+    [
+      'a personal access token with results:read',
+      { oauthScopes: ['results:read'], scopesFrom: 'personal-access-token' },
+    ],
+    [
+      'a personal access token with no scope',
+      { oauthScopes: [], scopesFrom: 'personal-access-token' },
+    ],
+    ['a read key', { apiKeyScope: 'read' }],
+    ['a write key', { apiKeyScope: 'write' }],
+    ['no credential', {}],
+  ];
+
+  const build = (context: Credential) => {
+    const granted = TOOL_CATALOG.filter((entry) =>
+      isToolGranted(entry.tool, context)
+    );
+    return {
+      granted,
+      text: buildServerInstructions(context, getSkills(), granted),
+    };
+  };
+
+  // Claude Code drops what is past the limit, and what is last is the line
+  // telling the agent which scope a missing tool needs.
+  it.each(credentials)('fit inside the length a host keeps for %s', (_, c) => {
+    expect(build(c).text.length).toBeLessThanOrEqual(MAX_INSTRUCTIONS_LENGTH);
+  });
+
+  it.each(credentials)('name only tools the connection has for %s', (_, c) => {
+    const { granted, text } = build(c);
+    const named = text.match(/\bcurrents-[a-z-]+[a-z]/g) ?? [];
+
+    expect(
+      named.filter((name) => !granted.some((tool) => tool.name === name))
+    ).toEqual([]);
+  });
+
+  // A skill is named in its route, which is shown only when the connection
+  // has the tools the route names.
+  it.each(credentials)('name only skills that shipped for %s', (_, c) => {
+    const { text } = build(c);
+    const shipped = getSkills().map((skill) =>
+      skillFileUri(skill.name, 'SKILL.md')
+    );
+    const named = text.match(/skill:\/\/currents\/[^\s,:]+\.md/g) ?? [];
+
+    expect(named.filter((uri) => !shipped.includes(uri))).toEqual([]);
+  });
+
+  it.each(credentials)('name only real scopes for %s', (_, c) => {
+    const named = build(c).text.match(/\b[a-z]+:(read|write|invoke)\b/g) ?? [];
+
+    expect(
+      named.filter((scope) => !SCOPE_ORDER.includes(scope as never))
+    ).toEqual([]);
+  });
+
+  // A route naming a renamed or removed tool is never shown, and nothing
+  // else would notice.
+  it('route only to tools in the catalog', () => {
+    const catalog = TOOL_CATALOG.map((tool) => tool.name);
+    const routed = TASK_ROUTES.flatMap((route) => route.tools);
+
+    expect(routed.filter((name) => !catalog.includes(name))).toEqual([]);
+  });
+
+  // A skill without a route is never named, so no agent reads it.
+  it('route to every shipped skill', () => {
+    const routed = TASK_ROUTES.map((route) => route.skill);
+
+    expect(
+      getSkills()
+        .map((skill) => skill.name)
+        .filter((name) => !routed.includes(name))
+    ).toEqual([]);
   });
 });
 
