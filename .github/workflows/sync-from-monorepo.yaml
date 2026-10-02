@@ -133,6 +133,7 @@ jobs:
           # nothing reaches the shell as shell.
           EVENT: ${{ github.event_name }}
           EVENT_SHA: ${{ github.sha }}
+          OWNER: ${{ github.repository_owner }}
         run: |
           set -euo pipefail
           # On a pull_request, that PR's merge commit rather than main or the
@@ -146,8 +147,17 @@ jobs:
           # inside a condition is just a false one, and reading that as "no
           # sync PR is open" is how auth trouble turns into the duplicate PR
           # this is here to prevent. Out here it fails the step.
-          OPEN="$(gh pr list --head "$SYNC_BRANCH" --state open \
-            --json number --jq '.[0].number // empty')"
+          #
+          # --head matches a branch *name*, in any head repository, so a fork
+          # PR from a branch called sync/monorepo answers this lookup too.
+          # Qualified by owner and base: this repository takes fork PRs, and
+          # an unqualified match here points the checkout below at a ref this
+          # repository may not have, while the same lookup in `open-pr` holds
+          # pull-requests: write.
+          OPEN="$(gh pr list --head "$SYNC_BRANCH" --base main --state open \
+            --json number,headRepositoryOwner \
+            --jq '[.[] | select(.headRepositoryOwner.login == $ENV.OWNER)]
+                  | .[0].number // empty')"
           REF=main
           if [ -n "$OPEN" ]; then
             REF="$SYNC_BRANCH"
@@ -402,6 +412,7 @@ jobs:
       - name: Apply the vetted tree and open the PR
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OWNER: ${{ github.repository_owner }}
           SHA: ${{ needs.validate.outputs.sha }}
           SHORT: ${{ needs.validate.outputs.short }}
           SOURCE_REF: ${{ needs.validate.outputs.ref }}
@@ -450,8 +461,13 @@ jobs:
           # `|| true` there would report a PR that auth, validation or a rate
           # limit stopped as one that already existed, after the branch had
           # been pushed.
-          EXISTING="$(gh pr list --head "$SYNC_BRANCH" --state open \
-            --json number --jq '.[0].number // empty')"
+          # Owner- and base-qualified for the reason given in `validate`:
+          # unqualified, a fork's branch of the same name answers this, and
+          # the edit and comment below would land on that PR.
+          EXISTING="$(gh pr list --head "$SYNC_BRANCH" --base main \
+            --state open --json number,headRepositoryOwner \
+            --jq '[.[] | select(.headRepositoryOwner.login == $ENV.OWNER)]
+                  | .[0].number // empty')"
 
           if [ -n "$EXISTING" ]; then
             # No --force, deliberately. `validate` based this commit on the

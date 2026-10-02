@@ -119,8 +119,9 @@ on that branch (a hand fix pushed there — the README skill table has no
 generator — is what the next sync has to still pass against), and the push is
 not forced: if anything landed on the branch after `validate` read it, the push
 is rejected and the next run takes that commit as its base instead. Withdrawn
-tools are reported against `main`, not against the branch, so one an earlier
-commit on the same PR removed keeps being named while the PR still removes it.
+tools are reported against `main`, not against the branch, so a tool an earlier
+commit on the same PR removed keeps being named for as long as the PR still
+removes it.
 
 The branch is not refreshed from `main`. A sync PR left open long enough to
 conflict is resolved the way any other PR is.
