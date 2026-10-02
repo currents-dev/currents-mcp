@@ -84,11 +84,17 @@ on:
 # target is fixed, so keying this by ref would let a dispatch from a feature
 # branch run beside the daily one and race it — and in the path where no sync
 # PR is open yet, both force-push that branch, so the loser's validated tree
-# and its PR are replaced by the winner's. A pull_request check writes nothing
-# and keeps its own per-ref group, which is what stops it queueing behind the
-# daily run.
+# and its PR are replaced by the winner's.
+#
+# Only writers, though. A pull_request check and a dry run both write nothing,
+# and a dry run is the default for a dispatch, so holding the writer lock
+# through one would stall the scheduled sync behind a full npm ci and test
+# suite for no reason. Both keep their own per-ref group.
 concurrency:
-  group: sync-from-monorepo-${{ github.event_name == 'pull_request' && github.ref || 'write' }}
+  group: >-
+    sync-from-monorepo-${{ github.event_name == 'pull_request' && github.ref
+    || github.event_name == 'workflow_dispatch' && inputs.dry_run
+    && format('dry-{0}', github.ref) || 'write' }}
   cancel-in-progress: false
 
 env:
@@ -313,15 +319,20 @@ jobs:
           # Against main rather than HEAD: HEAD may be an earlier commit of
           # this same PR, and a tool it withdrew is still withdrawn by the PR.
           #
-          # --no-renames because rename detection is what this has to see. A
-          # skill directory renamed upstream is a withdrawal: the skill:// URI
-          # clients hold stops resolving. Detected, git calls that one R100
-          # line and nothing is reported — exactly the silent withdrawal
-          # withdrawn-tools.mjs exists to catch for tools, which has no
-          # equivalent for skills. Off, the same rename is a — and an A, and
-          # the — is named.
+          # skills/ only. A path that stops existing is what withdraws a
+          # skill, because the skill:// URI clients hold is its path and
+          # nothing else checks it. A tool is the opposite: what clients call
+          # is the name server.ts registers, which withdrawn-tools.mjs
+          # compares below, and the file it lives in is private. Scanning tool
+          # paths here only ever added false withdrawals — a tool moved
+          # between directories keeps its registration and reads as a deleted
+          # path, and syncs do move them — and a warning that cries wolf is
+          # the one nobody reads when a real withdrawal comes.
+          #
+          # --no-renames so a renamed skill is a — and an A rather than one
+          # R100 line that this would not report at all.
           REMOVED="$(git diff --no-renames --name-status origin/main \
-            -- mcp-server/src/tools skills \
+            -- skills \
             | awk '$1 ~ /^D/ { print $2 }' | tr '\n' ' ')"
           # A deleted file is not the only way to withdraw a tool: a rename
           # keeps every file and changes the name clients call, which is how
