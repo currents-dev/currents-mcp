@@ -80,10 +80,15 @@ on:
     paths:
       - '.github/workflows/sync-from-monorepo.yaml'
 
-# One at a time per ref: two runs would race the same deterministic branch
-# name. Keyed by ref so a PR check does not queue behind the daily run.
+# One writer at a time, whatever ref it was dispatched from. The branch they
+# target is fixed, so keying this by ref would let a dispatch from a feature
+# branch run beside the daily one and race it — and in the path where no sync
+# PR is open yet, both force-push that branch, so the loser's validated tree
+# and its PR are replaced by the winner's. A pull_request check writes nothing
+# and keeps its own per-ref group, which is what stops it queueing behind the
+# daily run.
 concurrency:
-  group: sync-from-monorepo-${{ github.ref }}
+  group: sync-from-monorepo-${{ github.event_name == 'pull_request' && github.ref || 'write' }}
   cancel-in-progress: false
 
 env:
@@ -307,7 +312,15 @@ jobs:
           # a fifty-file diff.
           # Against main rather than HEAD: HEAD may be an earlier commit of
           # this same PR, and a tool it withdrew is still withdrawn by the PR.
-          REMOVED="$(git diff --name-status origin/main \
+          #
+          # --no-renames because rename detection is what this has to see. A
+          # skill directory renamed upstream is a withdrawal: the skill:// URI
+          # clients hold stops resolving. Detected, git calls that one R100
+          # line and nothing is reported — exactly the silent withdrawal
+          # withdrawn-tools.mjs exists to catch for tools, which has no
+          # equivalent for skills. Off, the same rename is a — and an A, and
+          # the — is named.
+          REMOVED="$(git diff --no-renames --name-status origin/main \
             -- mcp-server/src/tools skills \
             | awk '$1 ~ /^D/ { print $2 }' | tr '\n' ' ')"
           # A deleted file is not the only way to withdraw a tool: a rename
