@@ -10,7 +10,7 @@
   "homepage": "https://docs.currents.dev/ai/connect",
   "repository": "https://github.com/currents-dev/currents-mcp",
   "license": "Apache-2.0",
-  "logo": "mcp-server/assets/logo.png",
+  "logo": "mcp-server/assets/icon.svg",
   "keywords": [
     "testing",
     "ci",
