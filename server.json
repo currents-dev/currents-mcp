@@ -1,0 +1,25 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "dev.currents/mcp",
+  "title": "Currents",
+  "description": "Self-healing CI tests and proof of work for AI agents",
+  "version": "1.0.0",
+  "websiteUrl": "https://docs.currents.dev/ai/connect",
+  "repository": {
+    "url": "https://github.com/currents-dev/currents-mcp",
+    "source": "github"
+  },
+  "icons": [
+    {
+      "src": "https://raw.githubusercontent.com/currents-dev/currents-mcp/main/mcp-server/assets/icon.svg",
+      "mimeType": "image/svg+xml",
+      "sizes": ["any"]
+    }
+  ],
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://mcp.currents.dev/mcp"
+    }
+  ]
+}
