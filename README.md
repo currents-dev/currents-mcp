@@ -136,7 +136,12 @@ Add the following to enable Currents MCP on Claude Desktop (edit `claude_desktop
 To install the plugin, which adds the [skills](#skills) as well as the server:
 
 - VS Code: open `vscode://chat-plugin/install?source=currents-dev/currents-mcp`
-- Copilot CLI: `copilot plugin install currents-dev/currents-mcp`
+- Copilot CLI:
+
+  ```bash
+  copilot plugin marketplace add currents-dev/currents-mcp
+  copilot plugin install currents@currents
+  ```
 
 To add only the server to Copilot CLI:
 
