@@ -2,7 +2,7 @@
   "name": "currents",
   "displayName": "Currents",
   "version": "1.0.0",
-  "description": "Fix tests that failed in CI from what Currents recorded: errors, steps, traces, screenshots and console output. Query runs, flaky tests and performance, and manage quarantine rules.",
+  "description": "Currents gives AI agents the test results your CI records, from Playwright, Cypress, Jest and more. Self-healing tests: an agent gets the errors, traces and history behind a failure, finds the root cause and fixes the test, flaky ones included. Proof of work for any change, not just tests: before-and-after screenshots, videos and Playwright traces from CI, or a demo the agent records in a browser, posted as evidence in the pull request. Teams also use it to reproduce bugs, verify fixes, rank flaky and slow tests, quarantine tests and file Jira issues, within the permissions you approve.",
   "author": {
     "name": "Currents",
     "email": "support@currents.dev"
