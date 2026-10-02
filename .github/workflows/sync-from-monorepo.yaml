@@ -15,6 +15,23 @@
 # file. Only the first two can write: a pull_request run reports what the sync
 # would do to that PR's tree and stops.
 #
+# A sync that carries only a new monorepo commit hash opens nothing. The
+# monorepo publishes on every release tag, so most days the artifact holds the
+# source already sitting here under a newer commit; the marker is left stale
+# rather than spending a review on a one-line diff, and the next sync that does
+# carry source brings it along. `Previous sync:` then names the last sync that
+# changed something, which is the commit a reviewer would want named anyway.
+#
+# One PR at a time, on a fixed branch. When a sync PR is already open, the next
+# sync is committed on top of it rather than opening a second one: one thread
+# holds the whole conversation, and `main` never has two competing copies of
+# the same source proposed against it. `validate` then checks out that branch
+# instead of main, because the branch is what the new commit lands on — a hand
+# fix pushed there (the README skill table is the standing example) is what the
+# sync has to still build and pass against. The branch is not refreshed from
+# main; a sync PR left open long enough to conflict is resolved the way any
+# other PR is.
+#
 # Two jobs, because the artifact is not trusted code. `validate` executes it —
 # `npm ci`, the build, the test suite — and holds no write credential, no
 # persisted git token and no registry login by the time it does. `open-pr`
@@ -23,8 +40,9 @@
 #
 # Neither checks out the dispatching ref, so a dispatch from a feature branch
 # cannot carry that branch's commits into a PR against main: `validate` takes
-# main, and `open-pr` takes the exact commit `validate` tested against rather
-# than main as it stands by then. The workflow file itself still comes from the
+# main or the sync branch, neither of which the dispatcher chooses, and
+# `open-pr` takes the exact commit `validate` tested against rather than either
+# of them as they stand by then. The workflow file itself still comes from the
 # dispatching ref, which no workflow can defend against — that is bounded by
 # who may dispatch.
 #
@@ -71,6 +89,11 @@ concurrency:
 env:
   ARTIFACT: ghcr.io/currents-dev/mcp-source
   MARKER: mcp-server/.synced-from
+  # Fixed rather than derived from the source commit. A name per commit is a PR
+  # per commit, and the point here is that a second sync joins the first PR
+  # instead of opening its own. Nothing force-pushes over it while a PR is
+  # open, so the guard that name used to provide is no longer load-bearing.
+  SYNC_BRANCH: sync/monorepo
 
 jobs:
   validate:
@@ -80,8 +103,11 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       # Read only. This job runs code that arrived in the artifact, so it must
-      # hold nothing worth stealing.
+      # hold nothing worth stealing. The PR read below is what picks the base,
+      # and on a public repository it discloses nothing a logged-out visitor
+      # cannot already see.
       packages: read
+      pull-requests: read
     outputs:
       changed: ${{ steps.check.outputs.changed }}
       sha: ${{ steps.manifest.outputs.sha }}
@@ -91,12 +117,47 @@ jobs:
       removed: ${{ steps.check.outputs.removed }}
       base: ${{ steps.base.outputs.sha }}
     steps:
+      # The sync lands on whatever an open sync PR already holds, so that is
+      # what it has to be built and tested against. Checking out main instead
+      # would vet a tree nobody is going to merge and would miss exactly the
+      # breakage a hand fix on the branch is there to prevent.
+      #
+      # Before the checkout and before anything from the artifact runs, so the
+      # token this reads with is gone by then.
+      - name: Pick the base to sync onto
+        id: pick
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          # Through the environment, like every other interpolation here, so
+          # nothing reaches the shell as shell.
+          EVENT: ${{ github.event_name }}
+          EVENT_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          # On a pull_request, that PR's merge commit rather than main or the
+          # sync branch: the point of running there is to see what the sync
+          # does to *those* changes, which is the case main cannot show.
+          if [ "$EVENT" = 'pull_request' ]; then
+            echo "ref=$EVENT_SHA" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Assigned rather than tested in the `if` itself: a failing `gh`
+          # inside a condition is just a false one, and reading that as "no
+          # sync PR is open" is how auth trouble turns into the duplicate PR
+          # this is here to prevent. Out here it fails the step.
+          OPEN="$(gh pr list --head "$SYNC_BRANCH" --state open \
+            --json number --jq '.[0].number // empty')"
+          REF=main
+          if [ -n "$OPEN" ]; then
+            REF="$SYNC_BRANCH"
+            echo "PR #${OPEN} is open; this sync goes on top of $SYNC_BRANCH."
+          fi
+          echo "ref=$REF" >> "$GITHUB_OUTPUT"
+
       - uses: actions/checkout@v4
         with:
-          # On a pull_request, that PR's merge commit rather than main: the
-          # point of running there is to see what the sync does to *those*
-          # changes, which is the case main cannot show.
-          ref: ${{ github.event_name == 'pull_request' && github.sha || 'main' }}
+          ref: ${{ steps.pick.outputs.ref }}
           # Otherwise the token lands in .git/config, readable by anything the
           # test suite below runs.
           persist-credentials: false
@@ -104,6 +165,15 @@ jobs:
       - name: Record the base this ran against
         id: base
         run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      # What a withdrawal is measured against. The PR is merged into main, so
+      # main is the comparison whether this sync is the first commit on the
+      # branch or the fourth — against the branch, a tool an earlier commit on
+      # the same PR withdrew would stop being reported while the PR still
+      # withdraws it. Unauthenticated, like every other read of this public
+      # repository's own history.
+      - name: Fetch main to compare against
+        run: git fetch --no-tags --depth=1 origin main
 
       - uses: oras-project/setup-oras@v1
 
@@ -187,7 +257,9 @@ jobs:
           # The README tool table is generated from server.ts, and
           # host/readme.test.ts fails when they disagree — so a sync that adds
           # or drops a tool has to bring the table with it. Node builtins only,
-          # and from main's checkout rather than the dispatching ref. The skill
+          # and from the base checkout rather than the dispatching ref —
+          # scripts/ is not a synced path, so it is this repository's own on
+          # the sync branch as much as on main. The skill
           # table has no generator; a skill added upstream still fails that
           # test, by design, and is fixed by hand on the PR.
           node mcp-server/scripts/sync-readme-tools.mjs
@@ -201,6 +273,21 @@ jobs:
             echo "The tree already matches the published source."
             exit 0
           fi
+          # A moved marker on its own is not a sync. The monorepo publishes on
+          # every release tag, most of which change nothing under the paths
+          # this copy takes, so without this the daily run opens a PR whose
+          # whole diff is a commit hash — and a stream of those is what
+          # teaches a reviewer to merge a sync without reading it.
+          #
+          # Nothing is pushed in that case, marker included: it is left naming
+          # the last sync that carried source, so the next real sync still
+          # opens against a true predecessor rather than against a hash no
+          # commit here ever corresponded to.
+          if [ -z "$(git status --porcelain -- . ":(exclude)$MARKER")" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Only the marker moved: the published source is already here."
+            exit 0
+          fi
           echo "changed=true" >> "$GITHUB_OUTPUT"
           git --no-pager diff --stat
           git status --short
@@ -208,15 +295,18 @@ jobs:
           # already calling it. The sync applies it either way — the monorepo
           # decides the catalog — but the reviewer should not have to find it in
           # a fifty-file diff.
-          REMOVED="$(git status --porcelain -- mcp-server/src/tools skills \
-            | awk '$1 ~ /D/ { print $2 }' | tr '\n' ' ')"
+          # Against main rather than HEAD: HEAD may be an earlier commit of
+          # this same PR, and a tool it withdrew is still withdrawn by the PR.
+          REMOVED="$(git diff --name-status origin/main \
+            -- mcp-server/src/tools skills \
+            | awk '$1 ~ /^D/ { print $2 }' | tr '\n' ' ')"
           # A deleted file is not the only way to withdraw a tool: a rename
           # keeps every file and changes the name clients call, which is how
           # `currents-get-affected-executions` went without a warning. The
           # names are compared as registered in server.ts, before and after.
-          # The script comes from main's checkout; sync-readme-tools.mjs above
+          # The script comes from the checkout; sync-readme-tools.mjs above
           # already ran, so a pattern that no longer matches has failed there.
-          git show HEAD:mcp-server/src/server.ts > /tmp/server.before.ts
+          git show origin/main:mcp-server/src/server.ts > /tmp/server.before.ts
           WITHDRAWN="$(node mcp-server/scripts/withdrawn-tools.mjs \
             /tmp/server.before.ts mcp-server/src/server.ts | tr '\n' ' ')"
           REMOVED="${REMOVED}${WITHDRAWN}"
@@ -295,10 +385,11 @@ jobs:
       contents: write
       pull-requests: write
     steps:
-      # The exact commit `validate` checked out and tested against, not main as
-      # it now stands: main can advance between the two jobs, and applying a
-      # vetted tree onto a base nobody vetted it against is how a sync quietly
-      # reverts whatever landed in between.
+      # The exact commit `validate` checked out and tested against — main, or
+      # the head of the sync PR already open — and not either of them as they
+      # now stand: both can advance between the two jobs, and applying a vetted
+      # tree onto a base nobody vetted it against is how a sync quietly reverts
+      # whatever landed in between.
       - uses: actions/checkout@v4
         with:
           ref: ${{ needs.validate.outputs.base }}
@@ -327,13 +418,12 @@ jobs:
           cp /tmp/synced/mcp-server/.synced-from "$MARKER"
           cp /tmp/synced/README.md README.md
 
-          # The whole commit, not the short form. The guard below treats an
-          # open PR on this branch as the same sync, and that only holds if the
-          # name cannot be reached by two different commits.
-          BRANCH="sync/monorepo-${SHA}"
           git config user.name 'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
-          git checkout -b "$BRANCH"
+          # -B, not -b: the base may already be this branch, when the sync is
+          # going on top of a PR that is open. Nothing is reset by it — the
+          # branch is being pointed at the commit it is already on.
+          git checkout -B "$SYNC_BRANCH"
           git add -A
 
           cat > /tmp/message <<EOF
@@ -356,24 +446,41 @@ jobs:
             fi
           } > /tmp/body
 
-          # Before the push, not after it. The branch name is derived from the
-          # source commit, so a rerun for the same commit targets the same
-          # branch — and force-pushing over an open PR would discard whatever a
-          # reviewer had added to it. Same commit means the same content, so
-          # there is nothing to update.
-          EXISTING="$(gh pr list --head "$BRANCH" --state open \
+          # Asked before the push rather than inferred from a failed create:
+          # `|| true` there would report a PR that auth, validation or a rate
+          # limit stopped as one that already existed, after the branch had
+          # been pushed.
+          EXISTING="$(gh pr list --head "$SYNC_BRANCH" --state open \
             --json number --jq '.[0].number // empty')"
+
           if [ -n "$EXISTING" ]; then
-            echo "PR #${EXISTING} is already open for ${BRANCH} at the same" \
-              "source commit; leaving it alone."
+            # No --force, deliberately. `validate` based this commit on the
+            # branch head it read at the time; if anything was pushed there
+            # since — a reviewer's fix, another sync — this push is rejected
+            # rather than discarding it, and the next run picks that commit up
+            # as its base and syncs on top of it instead.
+            git push origin "HEAD:refs/heads/${SYNC_BRANCH}"
+            # The body describes the newest source the PR carries; the earlier
+            # commits stay in it. The comment is what tells anyone already
+            # subscribed that it moved, which an edited body does not.
+            gh pr edit "$EXISTING" \
+              --title "Sync MCP source from the monorepo (${SHORT})" \
+              --body-file /tmp/body
+            {
+              printf 'Synced again on top of this PR: monorepo commit '
+              printf '`%s`, published by `%s`.\n' "$SHA" "$SOURCE_REF"
+              if [ -n "$REMOVED" ]; then
+                printf '\n**This withdraws:** `%s`\n' "$REMOVED"
+              fi
+            } > /tmp/comment
+            gh pr comment "$EXISTING" --body-file /tmp/comment
+            echo "Updated PR #${EXISTING} to ${SHORT}."
             exit 0
           fi
-          # Force because the branch may be left over from a closed PR; no open
-          # one can be clobbered, having just checked.
-          git push --force origin "$BRANCH"
-          # Asked rather than inferred from a failure: `|| true` on the create
-          # would report a PR that auth, validation or a rate limit stopped as
-          # one that already existed, after the branch had been pushed.
-          gh pr create --base main --head "$BRANCH" \
+
+          # Force because the branch may be left over from a closed or merged
+          # PR; no open one can be clobbered, having just checked.
+          git push --force origin "$SYNC_BRANCH"
+          gh pr create --base main --head "$SYNC_BRANCH" \
             --title "Sync MCP source from the monorepo (${SHORT})" \
             --body-file /tmp/body

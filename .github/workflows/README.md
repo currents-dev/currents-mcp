@@ -87,20 +87,43 @@ Pulls the shared MCP source the monorepo publishes and opens a PR with it.
 
 **What it does:**
 
-1. Pulls `ghcr.io/currents-dev/mcp-source` with `oras`, authenticating with the
+1. Picks the base: the head of the `sync/monorepo` PR already open, or `main`
+   when there is none
+2. Pulls `ghcr.io/currents-dev/mcp-source` with `oras`, authenticating with the
    job's own `GITHUB_TOKEN` — this repository is a reader on that package
-2. Compares the artifact's monorepo commit against `mcp-server/.synced-from`
-   and stops if they match
 3. Copies `src/` (except `src/host/`), `skills/` and the logo in, and
-   regenerates the README tool table
-4. Runs format, types, build and the unit suite over the result
-5. Opens a PR from `sync/monorepo-<short-sha>` — on a schedule or an explicit
-   `dry_run: false` dispatch only
+   regenerates the README tool table — unconditionally, so a hand-edited or
+   half-applied copy is corrected rather than left as the marker's word for it
+4. Stops unless something other than `mcp-server/.synced-from` changed
+5. Runs format, types, build and the unit suite over the result
+6. Commits onto the open sync PR, or opens one from `sync/monorepo` — on a
+   schedule or an explicit `dry_run: false` dispatch only
 
-On a pull request it stops after step 4, against that PR's own merge commit
-rather than `main`. That is the only way to see what a sync would do to a
-change before merging it — including a change to the shared source itself,
-which `main` cannot show.
+On a pull request it stops after step 5, against that PR's own merge commit
+rather than `main` or the sync branch. That is the only way to see what a sync
+would do to a change before merging it — including a change to the shared
+source itself, which `main` cannot show.
+
+**One PR, and only for a sync that carries something.** The monorepo publishes
+on every release tag, so most days the artifact holds the source already
+checked in here under a newer commit. Step 4 drops those: nothing is pushed,
+and `.synced-from` is deliberately left naming the last sync that carried
+source, so the next real PR cites a predecessor that something here actually
+corresponds to.
+
+When a sync PR is open, the next sync is a commit on top of it rather than a
+second PR, so one thread holds the review and `main` never has two competing
+copies of the same source proposed against it. The branch name is therefore
+fixed rather than derived from the source commit, `validate` builds and tests
+on that branch (a hand fix pushed there — the README skill table has no
+generator — is what the next sync has to still pass against), and the push is
+not forced: if anything landed on the branch after `validate` read it, the push
+is rejected and the next run takes that commit as its base instead. Withdrawn
+tools are reported against `main`, not against the branch, so one an earlier
+commit on the same PR removed keeps being named while the PR still removes it.
+
+The branch is not refreshed from `main`. A sync PR left open long enough to
+conflict is resolved the way any other PR is.
 
 The write job names the triggers that may write rather than excluding dry runs:
 `inputs` is empty on a `pull_request` event, so a condition of
@@ -128,7 +151,8 @@ attestations API is not available to this organization for a private repository
 digest defeats a job whose purpose is to pull whatever was published last.
 
 What bounds it is what this job can do with what it pulls: push a branch and
-open a PR. It cannot merge or publish, and the PR is reviewed by a person.
+open or add to a PR. It cannot merge or publish, and the PR is reviewed by a
+person.
 
 **`test.yml` does not run on that PR.** GitHub starts no `push` or
 `pull_request` workflow runs for events caused by `GITHUB_TOKEN` — PRs #149,
