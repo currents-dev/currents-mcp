@@ -129,6 +129,21 @@ Add the following to enable Currents MCP on Claude Desktop (edit `claude_desktop
 }
 ```
 
+### VS Code and GitHub Copilot
+
+[Install in VS Code](https://vscode.dev/redirect/mcp/install?name=currents&config=%7B%22type%22%3A%22http%22%2C%22url%22%3A%22https%3A%2F%2Fmcp.currents.dev%2Fmcp%22%7D) adds the hosted server. VS Code opens a Currents sign-in page the first time it connects; there is no API key to enter.
+
+To install the plugin, which adds the [skills](#skills) as well as the server:
+
+- VS Code: open `vscode://chat-plugin/install?source=currents-dev/currents-mcp`
+- Copilot CLI: `copilot plugin install currents-dev/currents-mcp`
+
+To add only the server to Copilot CLI:
+
+```bash
+copilot mcp add --transport http currents https://mcp.currents.dev/mcp
+```
+
 ### Remote (hosted) MCP endpoint
 
 In addition to the local stdio transport above, the same server can run as a hosted
