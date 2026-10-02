@@ -1,0 +1,31 @@
+{
+  "name": "currents",
+  "displayName": "Currents",
+  "version": "1.0.0",
+  "description": "Fix tests that failed in CI from what Currents recorded: errors, steps, traces, screenshots and console output. Query runs, flaky tests and performance, and manage quarantine rules.",
+  "author": {
+    "name": "Currents",
+    "email": "support@currents.dev"
+  },
+  "homepage": "https://docs.currents.dev/ai/connect",
+  "repository": "https://github.com/currents-dev/currents-mcp",
+  "license": "Apache-2.0",
+  "logo": "mcp-server/assets/logo.png",
+  "keywords": [
+    "testing",
+    "ci",
+    "playwright",
+    "cypress",
+    "flaky-tests",
+    "test-results"
+  ],
+  "skills": "./skills/",
+  "mcpServers": {
+    "currents": {
+      "url": "https://mcp.currents.dev/mcp",
+      "auth": {
+        "CLIENT_ID": "https://app.currents.dev/oauth-clients/cursor.json"
+      }
+    }
+  }
+}
