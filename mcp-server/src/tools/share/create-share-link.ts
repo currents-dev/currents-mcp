@@ -9,7 +9,15 @@ const zodSchema = z
     purpose: z
       .enum(['fix', 'report'])
       .describe(
-        '"fix": the failure context — errors, steps and files of the failed and flaky tests — for an agent that will fix them; the same content as currents-get-context. "report": every test with its attempts, statuses and file links, for a person.'
+        '"fix": the failure context — errors, steps and files of the failed and flaky tests — for an agent that will fix them; the same content as currents-get-context. "report": every test with its attempts, statuses and file links, for a person; for a session, the session with its attachments and trace.'
+      ),
+    session_id: z
+      .string()
+      .trim()
+      .min(1)
+      .optional()
+      .describe(
+        'A session from currents-create-session. Send it alone, with purpose "report". The link shows the session as it is when opened.'
       ),
     run_id: z
       .string()
@@ -49,6 +57,29 @@ const zodSchema = z
       ),
   })
   .superRefine((val, ctx) => {
+    if (val.session_id) {
+      if (
+        val.run_id ||
+        val.instance_id ||
+        val.test_id ||
+        val.attempt !== undefined
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message:
+            'session_id cannot be sent with run_id, instance_id, test_id or attempt',
+          path: ['session_id'],
+        });
+      }
+      if (val.purpose !== 'report') {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'a session can be shared with purpose "report" only',
+          path: ['purpose'],
+        });
+      }
+      return;
+    }
     if (val.test_id && !val.instance_id) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -67,7 +98,7 @@ const zodSchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message:
-          'provide run_id (run), run_id + instance_id (spec file), or instance_id + test_id (test)',
+          'provide session_id (session), run_id (run), run_id + instance_id (spec file), or instance_id + test_id (test)',
         path: ['run_id'],
       });
     }
@@ -89,6 +120,7 @@ const zodSchema = z
 
 const handler = async ({
   purpose,
+  session_id,
   run_id,
   instance_id,
   test_id,
@@ -99,6 +131,7 @@ const handler = async ({
 
   const result = await postApi<unknown, Record<string, unknown>>('/share', {
     purpose,
+    sessionId: session_id,
     runId: run_id,
     instanceId: instance_id,
     testId: test_id,
