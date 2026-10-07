@@ -104,11 +104,11 @@ export const TASK_ROUTES: ReadonlyArray<{
   {
     task: 'Record a browser session for a bug no test covers',
     skill: 'browser-evidence',
-    // The workflow ends at currents-create-evidence-links, which needs
-    // `results:read`; a `runs:write` token alone records a session it cannot
-    // turn into a link.
+    // The workflow without the CLI ends at currents-create-evidence-links,
+    // which needs `results:read`; a `runs:write` token alone records a session
+    // it cannot turn into a link.
     tools: ['currents-create-session', 'currents-create-evidence-links'],
-    step: 'currents-create-session',
+    step: '`currents session start`, or currents-create-session without the CLI',
   },
   {
     task: 'Flakiest, slowest or most failing tests',

@@ -83,7 +83,7 @@ describe('createShareLinkTool', () => {
   });
 
   it.each([
-    [{ purpose: 'fix' }, 'provide run_id'],
+    [{ purpose: 'fix' }, 'provide session_id'],
     [
       { purpose: 'fix', test_id: 'test-1', run_id: 'run-1' },
       'test_id requires instance_id',
@@ -145,5 +145,23 @@ describe('createShareLinkTool', () => {
     ]) {
       expect(createShareLinkTool.schema.safeParse(input).success).toBe(true);
     }
+  });
+
+  it('shares a session, and only as a report, alone', async () => {
+    await createShareLinkTool.handler({
+      purpose: 'report',
+      session_id: 's1',
+    });
+
+    expect(request.postApi).toHaveBeenCalledWith(
+      '/share',
+      expect.objectContaining({ purpose: 'report', sessionId: 's1' })
+    );
+    const parse = (input: object) =>
+      createShareLinkTool.schema.safeParse(input);
+    expect(parse({ purpose: 'fix', session_id: 's1' }).success).toBe(false);
+    expect(
+      parse({ purpose: 'report', session_id: 's1', run_id: 'r' }).success
+    ).toBe(false);
   });
 });

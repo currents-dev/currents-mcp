@@ -59,9 +59,11 @@ describe('browser-evidence', () => {
   const skill = getSkills().find((s) => s.name === 'browser-evidence');
   const entryPoint = skill?.files.find((f) => f.path === 'SKILL.md');
 
+  // The README skills table shows the first sentence of the description, so it
+  // has to say what the skill does as well as mark it experimental.
   it('says it is experimental in its description', () => {
     expect(skill).toBeDefined();
-    expect(skill?.description).toMatch(/^Experimental\. /);
+    expect(skill?.description).toMatch(/^Experimental: \S/);
   });
 
   it('opens its body with the experimental warning', () => {

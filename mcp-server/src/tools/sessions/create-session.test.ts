@@ -5,15 +5,12 @@ import { createSessionTool } from './create-session';
 vi.mock('../../lib/request');
 
 const RUN = {
-  runId: 'a1b2c3d4e5f60718',
-  groupId: 'session',
-  instanceId: 'inst-1',
-  testId: 'test-1',
-  artifacts: [
+  sessionId: 'a1b2c3d4e5f60718',
+  attachments: [
     {
       name: 'trace',
       type: 'trace',
-      artifactId: 'art-1',
+      attachmentId: 'att-1',
       uploadUrl: 'https://fs/upload?sig',
     },
   ],
@@ -41,10 +38,52 @@ describe('createSessionTool', () => {
 
     await createSessionTool.handler({ ...body, durationMs: 12_000 });
 
-    expect(request.postApi).toHaveBeenCalledWith('/runs/session', {
+    expect(request.postApi).toHaveBeenCalledWith('/sessions', {
       ...body,
       durationMs: 12_000,
     });
+  });
+
+  it('sends the commit and the pull request to the route', async () => {
+    answer({ data: RUN });
+    const git = {
+      commit: {
+        sha: 'abc123',
+        branch: 'feat/x',
+        remoteOrigin: 'git@github.com:a/b.git',
+      },
+      pr: { id: '12' },
+    };
+
+    await createSessionTool.handler({ ...body, ...git });
+
+    expect(request.postApi).toHaveBeenCalledWith('/sessions', {
+      ...body,
+      ...git,
+    });
+  });
+
+  it('accepts a size, a caption and meta on a file, and refuses a bad one', () => {
+    const file = {
+      name: 'a.png',
+      type: 'screenshot',
+      contentType: 'image/png',
+    };
+
+    expect(
+      createSessionTool.schema.safeParse({
+        ...body,
+        attachments: [
+          { ...file, sizeBytes: 5, caption: 'x', meta: { a: 'b' } },
+        ],
+      }).success
+    ).toBe(true);
+    expect(
+      createSessionTool.schema.safeParse({
+        ...body,
+        attachments: [{ ...file, sizeBytes: 0 }],
+      }).success
+    ).toBe(false);
   });
 
   it('returns the run and the upload URLs', async () => {
@@ -52,12 +91,8 @@ describe('createSessionTool', () => {
 
     const result = parse(await createSessionTool.handler(body));
 
-    expect(result).toMatchObject({
-      runId: RUN.runId,
-      instanceId: 'inst-1',
-      testId: 'test-1',
-    });
-    expect(result.artifacts[0].uploadUrl).toBe('https://fs/upload?sig');
+    expect(result).toMatchObject({ sessionId: RUN.sessionId });
+    expect(result.attachments[0].uploadUrl).toBe('https://fs/upload?sig');
   });
 
   // The URLs expire and a trace is unreadable until its bytes are there, so
@@ -69,19 +104,43 @@ describe('createSessionTool', () => {
 
     expect(nextSteps[0]).toContain('uploadUrl');
     expect(nextSteps[1]).toContain('currents-create-evidence-links');
-    expect(nextSteps[1]).toContain('inst-1');
-    expect(nextSteps[1]).toContain('test-1');
+    expect(nextSteps[1]).toContain(`sessionId ${RUN.sessionId}`);
+    expect(nextSteps[1]).toContain('attachmentId att-1');
+  });
+
+  it('always names the headers, and the size only when sizes were sent', async () => {
+    answer({ data: RUN });
+    const art = {
+      name: 'trace',
+      contentType: 'application/zip',
+      type: 'trace' as const,
+    };
+
+    const without = parse(
+      await createSessionTool.handler({ ...body, attachments: [art] })
+    );
+    const withSize = parse(
+      await createSessionTool.handler({
+        ...body,
+        attachments: [{ ...art, sizeBytes: 5 }],
+      })
+    );
+
+    expect(without.nextSteps[0]).toContain('uploadHeaders');
+    expect(without.nextSteps[0]).not.toContain('sizeBytes');
+    expect(withSize.nextSteps[0]).toContain('uploadHeaders');
+    expect(withSize.nextSteps[0]).toContain('sizeBytes');
   });
 
   it('mentions no trace link when no trace was attached', async () => {
     answer({
       data: {
         ...RUN,
-        artifacts: [
+        attachments: [
           {
             name: 'shot',
             type: 'screenshot',
-            artifactId: 'art-2',
+            attachmentId: 'art-2',
             uploadUrl: 'https://fs/png',
           },
         ],
@@ -95,7 +154,7 @@ describe('createSessionTool', () => {
   });
 
   it('says nothing to do when the session carried no files', async () => {
-    answer({ data: { ...RUN, artifacts: [] } });
+    answer({ data: { ...RUN, attachments: [] } });
 
     expect(parse(await createSessionTool.handler(body)).nextSteps).toEqual([]);
   });
@@ -113,27 +172,34 @@ describe('createSessionTool', () => {
     expect(result.content[0].text).toContain('Failed to record the session');
   });
 
-  // Every one of these is quoted back as something to call the next tool
-  // with, so a response missing any of them is an error, not a success.
-  it.each(['runId', 'instanceId', 'testId'])(
-    'fails when the response omits %s',
-    async (field) => {
-      const { [field as keyof typeof RUN]: _omitted, ...rest } = RUN;
-      answer({ data: rest });
+  it('fails when the response omits the session ID', async () => {
+    answer({ data: { attachments: [] } });
 
-      const result = await createSessionTool.handler(body);
+    const result = await createSessionTool.handler(body);
 
-      expect(result).toMatchObject({ isError: true });
-      expect(result.content[0].text).toContain('did not identify the run');
-    }
-  );
+    expect(result).toMatchObject({ isError: true });
+    expect(result.content[0].text).toContain('did not identify it');
+  });
 
   // The agent has to guess the content type of a file it produced; learning it
   // was wrong from a 400 is a round trip it can avoid.
   it('refuses a content type that does not match the artifact type', () => {
     const parsed = createSessionTool.schema.safeParse({
       ...body,
-      artifacts: [{ name: 'trace', contentType: 'image/png', type: 'trace' }],
+      attachments: [{ name: 'trace', contentType: 'image/png', type: 'trace' }],
+    });
+
+    expect(parsed.success).toBe(false);
+  });
+
+  // The API refuses unknown fields; dropping them here would record a session
+  // without the files a caller sent under the old `artifacts` name.
+  it('refuses fields it does not know, such as artifacts', () => {
+    const parsed = createSessionTool.schema.safeParse({
+      ...body,
+      artifacts: [
+        { name: 'trace', contentType: 'application/zip', type: 'trace' },
+      ],
     });
 
     expect(parsed.success).toBe(false);
@@ -147,7 +213,7 @@ describe('createSessionTool', () => {
   ])('accepts a %s declared as %s', (type, contentType) => {
     const parsed = createSessionTool.schema.safeParse({
       ...body,
-      artifacts: [{ name: 'a', contentType, type }],
+      attachments: [{ name: 'a', contentType, type }],
     });
 
     expect(parsed.success).toBe(true);
@@ -158,7 +224,7 @@ describe('createSessionTool', () => {
   it('refuses two traces with the same name', () => {
     const parsed = createSessionTool.schema.safeParse({
       ...body,
-      artifacts: [
+      attachments: [
         { name: 'trace', contentType: 'application/zip', type: 'trace' },
         { name: 'trace', contentType: 'application/zip', type: 'trace' },
       ],
@@ -171,7 +237,7 @@ describe('createSessionTool', () => {
   it('allows two screenshots with the same name', () => {
     const parsed = createSessionTool.schema.safeParse({
       ...body,
-      artifacts: [
+      attachments: [
         { name: 'step', contentType: 'image/png', type: 'screenshot' },
         { name: 'step', contentType: 'image/png', type: 'screenshot' },
       ],
@@ -180,23 +246,21 @@ describe('createSessionTool', () => {
     expect(parsed.success).toBe(true);
   });
 
-  // With one trace the agent needs no selector; with two it does, or it links
-  // whichever was stored first.
-  it('names artifactName only when more than one trace was attached', async () => {
+  it('names each trace by its attachment ID', async () => {
     answer({
       data: {
         ...RUN,
-        artifacts: [
-          { name: 'before', type: 'trace', artifactId: 'a', uploadUrl: 'u1' },
-          { name: 'after', type: 'trace', artifactId: 'b', uploadUrl: 'u2' },
+        attachments: [
+          { name: 'before', type: 'trace', attachmentId: 'a', uploadUrl: 'u1' },
+          { name: 'after', type: 'trace', attachmentId: 'b', uploadUrl: 'u2' },
         ],
       },
     });
 
     const { nextSteps } = parse(await createSessionTool.handler(body));
 
-    expect(nextSteps[1]).toContain('artifactName');
-    expect(nextSteps[1]).toContain('before, after');
+    expect(nextSteps[1]).toContain('attachmentId a for before');
+    expect(nextSteps[1]).toContain('attachmentId b for after');
   });
 
   it('is tagged with the write scope its route names', () => {

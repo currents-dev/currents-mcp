@@ -98,6 +98,7 @@ Do not download `trace.zip` to put it in a comment — nobody opens one from the
 - Lead with what changed for the user.
 - **Before**: the failing run — the digest excerpt that names the failure, the filmstrip, the accessibility snapshot.
 - **After**: the passing run — screenshots and attachments, paired with the before by test title + attachment name. For text attachments, download both and show a diff.
+- Link the whole run for readers without a Currents login: `currents-create-share-link` with the run's `run_id` and `purpose: "report"` returns a page of that run's results. It needs the `shares:write` scope and each call makes a new link. Without that scope, say which scope is missing and post the filmstrip, the digest excerpt and the downloaded screenshots in its place.
 - Include each run's `dashboardUrl`. A trace link stops at `expiresAt` and the manifest's signed URLs in about three days; the dashboard link does not expire, so it is the one that has to be there.
 - Attach the downloaded files to the comment itself (drag them into the body, or use the tracker's attachment API). Never paste a signed URL.
 - Without a trace link: download the `trace.zip` and attach it, noting that it opens at https://trace.playwright.dev. Its manifest URL is signed like every other one, so it is not a link to paste either.
@@ -105,6 +106,7 @@ Do not download `trace.zip` to put it in a comment — nobody opens one from the
 
 ## Troubleshooting
 
+- **`currents-create-share-link` is not in your tools**: the credential is missing `shares:write`. The comment then carries the dashboard link, the filmstrip, the digest excerpt and the downloaded files, and says a share link needs that scope.
 - **`currents-create-evidence-links` is not in your tools**: the credential is missing `results:read`, and the whole evidence path is gone with it.
 - **503 `Trace links are not configured`**: this deployment serves no trace links. Use the fallback in step 4: attach the `trace.zip`.
 - **`No trace found for this test attempt`**: the attempt recorded no trace — the ordinary case for a passing test under `retain-on-failure` — or the `instanceId` or `testId` names something else, or the trace was uploaded as an attachment and no `artifactName` was passed to match it. Creating the link never reads the file, so this is not an upload still in flight.

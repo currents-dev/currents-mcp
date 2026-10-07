@@ -57,6 +57,7 @@ import { getErrorsExplorerTool } from './tools/errors/get-errors-explorer';
 import { createEvidenceLinksTool } from './tools/evidence/create-evidence-links';
 import { getTestEvidenceTool } from './tools/evidence/get-test-evidence';
 // Sessions tools
+import { addAttachmentsTool } from './tools/runs/add-attachments';
 import { createSessionTool } from './tools/sessions/create-session';
 // Share tools
 import { createShareLinkTool } from './tools/share/create-share-link';
@@ -365,7 +366,7 @@ export const TOOL_CATALOG: CatalogTool[] = [
     'currents-get-run-details',
     {
       description:
-        "Retrieves a run: its status, commit, branch, groups and spec files, each with its instanceId. Requires runId, the ID in a /run/<runId> dashboard link. For why the run's tests failed, call currents-get-context with run_id instead; for its screenshots, videos and traces, currents-get-test-evidence.",
+        "Retrieves a run: its status, commit, branch, groups and spec files, each with its instanceId, and how many files the run has by level, type and source (`attachmentCounts`). Requires runId, the ID in a /run/<runId> dashboard link. For why the run's tests failed, and for the files attached to the run itself such as Docker logs, call currents-get-context with run_id instead; for its screenshots, videos and traces, currents-get-test-evidence.",
       title: 'Get Run',
       annotations: readOnly,
     },
@@ -480,7 +481,7 @@ export const TOOL_CATALOG: CatalogTool[] = [
     'currents-get-context',
     {
       description:
-        'Call this first to find out why tests failed in CI, or to fix them: returns the errors, steps and files of the failed tests of a run, a spec file (instance) or one test — the same content as Fix in the Currents dashboard. Takes the IDs from dashboard links: /run/<runId> is run_id, /instance/<instanceId>/test/<testId> (or /i/<instanceId>/test/<testId>) is instance_id and test_id. Flaky tests are left out of a run unless include_flaky is set. Supports json or md format, detail level, and pagination for failed tests. Target a run (run_id), a spec file (run_id + instance_id) or a test (instance_id + test_id). The steps for fixing them are at skill://currents/fix-failing-tests/SKILL.md.',
+        'Call this first to find out why tests failed in CI, or to fix them: returns the errors, steps and files of the failed tests of a run, a spec file (instance) or one test — the same content as Fix in the Currents dashboard. Takes the IDs from dashboard links: /run/<runId> is run_id, /instance/<instanceId>/test/<testId> (or /i/<instanceId>/test/<testId>) is instance_id and test_id. Flaky tests are left out of a run unless include_flaky is set. The context of a run lists the attachments of the run itself, by CI machine (`runAttachments`). Supports json or md format, detail level, and pagination for failed tests. Target a run (run_id), a spec file (run_id + instance_id) or a test (instance_id + test_id). The steps for fixing them are at skill://currents/fix-failing-tests/SKILL.md.',
       title: 'Get Failure Context to Fix Tests',
       annotations: readOnly,
     },
@@ -512,7 +513,7 @@ export const TOOL_CATALOG: CatalogTool[] = [
     'currents-create-evidence-links',
     {
       description:
-        "Create a shareable link to a test attempt's evidence, served from its Playwright trace, and the URLs onto it: a markdown digest of what the attempt did and what failed, a filmstrip, an animated screencast, DOM snapshots, network requests and attachments. Use it to read a trace without downloading it, and to put evidence in a pull request comment or an issue — the link reads without a Currents credential and expires. Start from the digest it returns. Requires instanceId and testId. Before posting evidence, read the workflow at skill://currents/browser-evidence/SKILL.md for a session you recorded, or skill://currents/collect-evidence/SKILL.md for a CI run.",
+        "Create a shareable link to a test attempt's evidence, served from its Playwright trace, and the URLs onto it: a markdown digest of what the attempt did and what failed, a filmstrip, an animated screencast, DOM snapshots, network requests and attachments. Use it to read a trace without downloading it, and to put evidence in a pull request comment or an issue — the link reads without a Currents credential and expires. Start from the digest it returns. For a session recorded with currents-create-session, send sessionId and the trace's attachmentId; for a CI test, instanceId and testId. Before posting evidence, read the workflow at skill://currents/browser-evidence/SKILL.md for a session you recorded, or skill://currents/collect-evidence/SKILL.md for a CI run.",
       title: 'Create Evidence Links',
       annotations: { ...additiveWrite, openWorldHint: true },
     },
@@ -522,11 +523,21 @@ export const TOOL_CATALOG: CatalogTool[] = [
     'currents-create-session',
     {
       description:
-        "Record a browser session you drove as a Currents run, so its evidence can be read and shared like a CI run's. Use it when there is no test to run — a bug reproduced by hand, a fix demonstrated in a browser. Returns the run and an upload URL per file you declared; PUT the bytes to those, and the response says what to do next. A trace attached this way can then be turned into a link that needs no Currents credential. Read the workflow at skill://currents/browser-evidence/SKILL.md before the first call: it covers how to zip the trace, upload the files and check the link.",
+        'Record a browser session you drove as a Currents session, so its evidence can be read and shared. Use it when there is no test to run — a bug reproduced by hand, a fix demonstrated in a browser. Pass commit and pr, read from git when you can run git in the repository, so the session shows up by branch and pull request. Returns the sessionId and an upload URL per attachment you declared; more can be added later with currents-add-attachments; PUT the bytes to those, and the response says what to do next. A trace attached this way can then be turned into a link that needs no Currents credential. Read the workflow at skill://currents/browser-evidence/SKILL.md before the first call. With the `currents` command, that workflow uses `currents session` instead of this tool, and it zips the trace and uploads the files for you; use this tool when you have a shell but not the command. Without a shell nothing can upload the files.',
       title: 'Record Browser Session',
       annotations: additiveWrite,
     },
     createSessionTool
+  ),
+  catalogTool(
+    'currents-add-attachments',
+    {
+      description:
+        "Add attachments to a session from currents-create-session (send sessionId), or to a CI run (send runId): logs for a spec file, a test, or the run itself. For a CI run, name where they go with instanceId and testId (and attempt) or with spec and testTitle; name none for the run itself, with an optional machineId. A session takes none of those. Send each attachment's exact size in bytes. Returns an upload URL per attachment; PUT the bytes to those, and the response says what to do next. A trace can then be turned into a link that needs no Currents credential with currents-create-evidence-links: for a session, with sessionId and the trace's attachmentId; for a CI test attempt, with instanceId, testId, attemptIndex and the trace's name as artifactName.",
+      title: 'Add Attachments',
+      annotations: additiveWrite,
+    },
+    addAttachmentsTool
   ),
   // Webhooks API tools
   catalogTool(
@@ -543,7 +554,7 @@ export const TOOL_CATALOG: CatalogTool[] = [
     'currents-create-share-link',
     {
       description:
-        'Create a public link to test results that anyone can open without signing in, until it expires. purpose "fix" is the failure context, for an agent that will fix the tests — the same content as currents-get-context, with flaky tests included and marked flaky. purpose "report" lists every test with its attempts and files, for a person. Target a run (run_id), a spec file (run_id + instance_id) or a test (instance_id + test_id). Returns url (markdown, for agents) and pageUrl (web page, for people). Create one only when asked to hand results to someone.',
+        'Create a public link to test results that anyone can open without signing in, until it expires. purpose "fix" is the failure context, for an agent that will fix the tests — the same content as currents-get-context, with flaky tests included and marked flaky. purpose "report" lists every test with its attempts and files, for a person; for a session it is the session page: status, error, attachments and trace. Target a run (run_id), a spec file (run_id + instance_id) or a test (instance_id + test_id), or a session recorded with currents-create-session (session_id alone, purpose "report" only). Returns url (markdown, for agents) and pageUrl (web page, for people). Create one only when asked to hand results to someone.',
       title: 'Create Public Share Link',
       annotations: { ...additiveWrite, openWorldHint: true },
     },

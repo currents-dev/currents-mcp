@@ -1,32 +1,14 @@
 import { z } from 'zod';
+import {
+  sessionAttachmentSchema,
+  sessionTraceLinkStep,
+  uploadStep,
+} from '../../lib/runFiles';
 import { postApi } from '../../lib/request';
 import { apiFailureResult } from '../../lib/toolResult';
 import type { McpTool } from '../../lib/tool';
 
-type ArtifactType = 'trace' | 'screenshot' | 'video' | 'attachment';
-
-/**
- * The route refuses a mismatch too. Repeated here because the agent has to
- * guess the content type of a file it produced, and learning it was wrong
- * from a 400 costs a round trip it can avoid.
- *
- * `packages/api/src/api/runs/session/session.validation.ts` is the one that
- * decides; this only has to agree with it.
- */
-const contentTypeMatches = (type: ArtifactType, contentType: string) => {
-  switch (type) {
-    case 'trace':
-      return contentType === 'application/zip';
-    case 'screenshot':
-      return contentType.startsWith('image/');
-    case 'video':
-      return contentType.startsWith('video/');
-    case 'attachment':
-      return true;
-  }
-};
-
-const zodSchema = z.object({
+const zodSchema = z.strictObject({
   projectId: z
     .string()
     .min(1)
@@ -36,7 +18,7 @@ const zodSchema = z.object({
     .min(1)
     .max(1024)
     .describe(
-      'What the session set out to show, as one line. Used as the run and test title.'
+      'What the session set out to show, as one line. Used as the session title.'
     ),
   status: z
     .enum(['passed', 'failed'])
@@ -57,99 +39,111 @@ const zodSchema = z.object({
     .array(z.string().min(1).max(255))
     .max(20)
     .optional()
-    .describe('Tags to file the run under, as on a CI run.'),
-  artifacts: z
-    .array(
-      z
-        .object({
-          name: z
-            .string()
-            .min(1)
-            .max(1024)
-            .describe(
-              'How the file is labelled. Name a trace here to pick it out later when the session carries more than one.'
-            ),
-          contentType: z
-            .string()
-            .min(1)
-            .max(255)
-            .describe(
-              'Must match the type: a trace is application/zip, a screenshot image/*, a video video/*. An attachment takes anything.'
-            ),
-          type: z.enum(['trace', 'screenshot', 'video', 'attachment']),
-        })
-        .refine(
-          (artifact) => contentTypeMatches(artifact.type, artifact.contentType),
-          {
-            message:
-              'contentType does not match the artifact type: a trace is application/zip, a screenshot is an image, a video is a video',
-            path: ['contentType'],
-          }
-        )
-    )
+    .describe('Tags to file the session under.'),
+  commit: z
+    .object({
+      sha: z.string().max(1024).optional().describe('`git rev-parse HEAD`'),
+      branch: z
+        .string()
+        .max(1024)
+        .optional()
+        .describe('`git branch --show-current`'),
+      message: z
+        .string()
+        .max(10_000)
+        .optional()
+        .describe('The subject of the last commit, `git log -1 --format=%s`.'),
+      authorName: z
+        .string()
+        .max(1024)
+        .optional()
+        .describe('`git log -1 --format=%an`'),
+      authorEmail: z
+        .string()
+        .max(1024)
+        .optional()
+        .describe('`git log -1 --format=%ae`'),
+      remoteOrigin: z
+        .string()
+        .max(1024)
+        .optional()
+        .describe('`git remote get-url origin`'),
+    })
+    .optional()
+    .describe(
+      'Where the session was recorded, so it shows up by branch and pull request. When you can run git in the repository, read these values from it; do not guess them.'
+    ),
+  pr: z
+    .object({
+      link: z
+        .string()
+        .max(2048)
+        .optional()
+        .describe('The pull request URL, when you have it.'),
+      id: z
+        .string()
+        .max(256)
+        .optional()
+        .describe(
+          'The pull request number, when you have no URL. Resolved with commit.remoteOrigin.'
+        ),
+    })
+    .optional()
+    .describe(
+      'The pull request the session belongs to. A session from a dev box has no CI variables to find it from, so pass it here. Pass nothing when there is none.'
+    ),
+  attachments: z
+    .array(sessionAttachmentSchema)
     .max(50)
     .optional()
     .refine(
-      (artifacts) => {
-        const names = (artifacts ?? [])
-          .filter((artifact) => artifact.type === 'trace')
-          .map((artifact) => artifact.name);
+      (attachments) => {
+        const names = (attachments ?? [])
+          .filter((attachment) => attachment.type === 'trace')
+          .map((attachment) => attachment.name);
         return new Set(names).size === names.length;
       },
       {
-        message:
-          'two traces share a name, so artifactName cannot pick between them',
+        message: 'two traces share a name, so they cannot be told apart',
       }
     )
     .describe(
-      'One entry per file to attach. Each comes back with a URL to PUT the bytes to.'
+      'One entry per file to attach. Each comes back with a URL to PUT the bytes to. Send sizeBytes with each, so the upload URL accepts exactly that file.'
     ),
 });
 
-type SessionArtifact = {
-  name: string;
-  type: string;
-  artifactId: string;
-  uploadUrl: string;
-};
-
-type SessionRun = {
-  runId: string;
-  groupId: string;
-  instanceId: string;
-  testId: string;
-  artifacts: SessionArtifact[];
+type SessionAttachments = {
+  sessionId: string;
+  attachments: {
+    attachmentId: string;
+    name: string;
+    type: string;
+    uploadUrl: string;
+    uploadHeaders?: Record<string, string>;
+  }[];
 };
 
 /**
  * The upload URLs are short-lived, and a trace is unreadable until its bytes
  * are there, so the order is what the agent has to get right.
  */
-const nextSteps = (data: SessionRun) => {
-  const steps: string[] = [];
-  if (data.artifacts?.length) {
-    steps.push(
-      'PUT each file to its uploadUrl. The URLs expire about 10 minutes after this call.'
-    );
-  }
-  const traces = (data.artifacts ?? []).filter(
-    (artifact) => artifact.type === 'trace'
-  );
-  if (traces.length) {
-    const pick =
-      traces.length > 1
-        ? ` and artifactName set to one of ${traces.map((t) => t.name).join(', ')}`
-        : '';
-    steps.push(
-      `Once the trace is uploaded, call currents-create-evidence-links with instanceId ${data.instanceId}, testId ${data.testId}${pick} for a link that needs no Currents credential.`
-    );
-  }
-  return steps;
-};
+const nextSteps = (data: SessionAttachments, sizesSent: boolean) =>
+  [
+    uploadStep(data.attachments ?? [], sizesSent),
+    sessionTraceLinkStep({
+      sessionId: data.sessionId,
+      traces: (data.attachments ?? []).filter(
+        (attachment) => attachment.type === 'trace'
+      ),
+    }),
+  ].filter((step): step is string => step !== null);
 
 const handler = async (body: z.infer<typeof zodSchema>) => {
-  const result = await postApi<{ data?: SessionRun }, typeof body>(
-    '/runs/session',
+  const sizesSent = (body.attachments ?? []).every(
+    (attachment) => attachment.sizeBytes !== undefined
+  );
+  const result = await postApi<{ data?: SessionAttachments }, typeof body>(
+    '/sessions',
     body
   );
 
@@ -158,15 +152,15 @@ const handler = async (body: z.infer<typeof zodSchema>) => {
   }
 
   const data = result.data?.data;
-  // All three are named in the guidance below; without them it would quote
+  // Named in the guidance below; without it the guidance would quote
   // `undefined` back to the agent as something to call the next tool with.
-  if (!data?.runId || !data.instanceId || !data.testId) {
+  if (!data?.sessionId) {
     return {
       isError: true,
       content: [
         {
           type: 'text' as const,
-          text: 'The session was recorded but the response did not identify the run.',
+          text: 'The session was recorded but the response did not identify it.',
         },
       ],
     };
@@ -176,7 +170,11 @@ const handler = async (body: z.infer<typeof zodSchema>) => {
     content: [
       {
         type: 'text' as const,
-        text: JSON.stringify({ ...data, nextSteps: nextSteps(data) }, null, 2),
+        text: JSON.stringify(
+          { ...data, nextSteps: nextSteps(data, sizesSent) },
+          null,
+          2
+        ),
       },
     ],
   };

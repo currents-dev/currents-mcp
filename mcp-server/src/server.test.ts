@@ -163,8 +163,10 @@ const EXPECTED_ANNOTATIONS: Record<string, Record<string, boolean>> = {
   // Each call mints another link to the same trace, and the ones already
   // handed out keep working.
   'currents-create-evidence-links': { r: false, d: false, i: false, o: true },
-  // Each call records another run; the ones already recorded are untouched.
+  // Each call records another session; the ones already recorded are untouched.
   'currents-create-session': { r: false, d: false, i: false, o: false },
+  // Adds files to a run or session; the files already there are untouched.
+  'currents-add-attachments': { r: false, d: false, i: false, o: false },
   'currents-list-webhooks': { r: true, d: false, i: true, o: false },
   'currents-create-share-link': { r: false, d: false, i: false, o: true },
   'currents-create-webhook': { r: false, d: false, i: false, o: true },

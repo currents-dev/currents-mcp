@@ -124,4 +124,50 @@ describe('createEvidenceLinksTool', () => {
   it('is tagged with the read scope its route names', () => {
     expect(createEvidenceLinksTool.scope).toBe('results:read');
   });
+
+  describe('for a session', () => {
+    it('posts to the attachment route with only the lifetime', async () => {
+      answer({
+        data: {
+          url: 'https://t.crts.sh/abc',
+          expiresAt: '2026-09-17T00:00:00.000Z',
+          attachmentId: 'att/1',
+        },
+      });
+
+      const result = parse(
+        await createEvidenceLinksTool.handler({
+          sessionId: 's1',
+          attachmentId: 'att/1',
+          ttlSeconds: 3600,
+        })
+      );
+
+      expect(request.postApi).toHaveBeenCalledWith(
+        '/sessions/s1/attachments/att%2F1/trace-link',
+        { ttlSeconds: 3600 }
+      );
+      expect(result.digest).toBe('https://t.crts.sh/abc/digest?format=md');
+    });
+
+    it.each([
+      ['a session without an attachment', { sessionId: 's' }],
+      ['an attachment without a session', { attachmentId: 'a' }],
+      [
+        'a session and a CI test',
+        { sessionId: 's', attachmentId: 'a', instanceId: 'i', testId: 't' },
+      ],
+      [
+        'an attempt on a session',
+        { sessionId: 's', attachmentId: 'a', attemptIndex: 0 },
+      ],
+      ['a blank session', { sessionId: ' ', attachmentId: 'a' }],
+      ['a blank attachment', { sessionId: 's', attachmentId: ' ' }],
+      ['nothing', {}],
+    ])('refuses %s', (_label, input) => {
+      expect(createEvidenceLinksTool.schema.safeParse(input).success).toBe(
+        false
+      );
+    });
+  });
 });
