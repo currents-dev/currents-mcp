@@ -272,10 +272,16 @@ jobs:
           # `#1234` loses its `#`. A monorepo subject ends in the number of a
           # pull request in a repository nobody reading this one can open, and
           # left as `#1234` it becomes a link to this repository's issue 1234
-          # in the changelog and a cross-reference on it here. `@name` loses
-          # its `@` for the same reason: GitHub resolves a mention in a commit
+          # in the changelog and a cross-reference on it here. `@` becomes
+          # `(at)` for the same reason: GitHub resolves a mention in a commit
           # message whatever the surrounding markup, and `fix: handle @foo` is
           # a subject someone will write by accident.
+          #
+          # Replaced rather than dropped. Dropping it let `@@foo` collapse to
+          # a live `@foo`, and let `@feat:` become a `feat:` prefix that the
+          # classifier below then read — so a substitution meant to make text
+          # inert was deciding this package's next version. Nothing this adds
+          # can start a subject with a conventional-commit prefix.
           #
           # Two caps, not one. 500 bounds the work before any substitution
           # runs; 50 is how many survive, counted after the junk is dropped,
@@ -293,7 +299,7 @@ jobs:
                      | gsub("[^[:print:]]"; "")
                      | sub(" *\\(#[0-9]+\\) *$"; "")
                      | gsub("#(?<n>[0-9]+)"; .n)
-                     | gsub("@(?<n>[A-Za-z0-9])"; .n)
+                     | gsub("@"; "(at)")
                      | .[0:120]
                      | sub("^ +"; "") | sub(" +$"; "")
                      | select(length > 0)][0:50][]' \
