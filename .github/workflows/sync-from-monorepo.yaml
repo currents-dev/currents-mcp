@@ -272,22 +272,31 @@ jobs:
           # `#1234` loses its `#`. A monorepo subject ends in the number of a
           # pull request in a repository nobody reading this one can open, and
           # left as `#1234` it becomes a link to this repository's issue 1234
-          # in the changelog and a cross-reference on it here.
+          # in the changelog and a cross-reference on it here. `@name` loses
+          # its `@` for the same reason: GitHub resolves a mention in a commit
+          # message whatever the surrounding markup, and `fix: handle @foo` is
+          # a subject someone will write by accident.
+          #
+          # Two caps, not one. 500 bounds the work before any substitution
+          # runs; 50 is how many survive, counted after the junk is dropped,
+          # so a manifest full of nulls cannot push the subject that types
+          # this commit past the limit.
           #
           # A `.changes` that is missing, not an array, or not readable leaves
           # this empty and warns. It decides only how the commit is worded, so
           # failing a whole sync over it would be the wrong trade — but a
           # silent empty list looks exactly like a sync that carries nothing.
           : > /tmp/changes.txt
-          if jq -r '[(.changes? // []) | if type == "array" then .[0:50][]
+          if jq -r '[(.changes? // []) | if type == "array" then .[0:500][]
                      else empty end
                      | select(type == "string")
                      | gsub("[^[:print:]]"; "")
                      | sub(" *\\(#[0-9]+\\) *$"; "")
                      | gsub("#(?<n>[0-9]+)"; .n)
+                     | gsub("@(?<n>[A-Za-z0-9])"; .n)
                      | .[0:120]
                      | sub("^ +"; "") | sub(" +$"; "")
-                     | select(length > 0)][]' \
+                     | select(length > 0)][0:50][]' \
               /tmp/payload/manifest.json > /tmp/changes.new 2>/dev/null; then
             mv /tmp/changes.new /tmp/changes.txt
           else
@@ -566,7 +575,11 @@ jobs:
             printf 'src/host/ is this copy own and is not touched.\n'
             if [ -s "$CHANGES" ]; then
               printf '\n### Carries\n\n'
-              sed 's/^/- /' "$CHANGES"
+              # Indented four spaces: a markdown code block, so a subject is
+              # text rather than a link, an image or a mention. The list marker
+              # it replaces left all three live in a public repository's PR
+              # body.
+              sed 's/^/    /' "$CHANGES"
             fi
             if [ -n "$REMOVED" ]; then
               printf '\n**This withdraws:** `%s`\n\n' "$REMOVED"
