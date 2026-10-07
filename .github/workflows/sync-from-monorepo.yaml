@@ -530,17 +530,22 @@ jobs:
           # of its own line, so a `feat:` quoted inside someone's prose cannot
           # type the sync. A subject may lead with a ticket in brackets, as the
           # monorepo writes some of them.
+          #
+          # The scope is anything up to the colon rather than anything up to a
+          # closing paren, so a scope holding parens still parses: the `@` the
+          # step above rewrites to `(at)` would otherwise end the scope early
+          # and leave `feat((at)currents/mcp):` typed as a chore.
           CHANGES=/tmp/synced/changes.txt
           TICKET='^(\[[^]]+\][[:space:]]*)?'
           TYPE=chore
           : > /tmp/breaking
           if [ -s "$CHANGES" ]; then
-            if grep -qE "${TICKET}feat(\([^)]*\))?!?:" "$CHANGES"; then
+            if grep -qE "${TICKET}feat(\([^:]*\))?!?:" "$CHANGES"; then
               TYPE=feat
-            elif grep -qE "${TICKET}fix(\([^)]*\))?!?:" "$CHANGES"; then
+            elif grep -qE "${TICKET}fix(\([^:]*\))?!?:" "$CHANGES"; then
               TYPE=fix
             fi
-            grep -E "${TICKET}[a-z]+(\([^)]*\))?!:" "$CHANGES" \
+            grep -E "${TICKET}[a-z]+(\([^:]*\))?!:" "$CHANGES" \
               > /tmp/breaking || true
           fi
 
