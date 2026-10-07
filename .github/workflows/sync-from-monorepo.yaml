@@ -258,6 +258,59 @@ jobs:
             echo "previous=$PREVIOUS"
           } >> "$GITHUB_OUTPUT"
 
+          # The subjects of the monorepo commits this payload carries, so the
+          # commit `open-pr` writes can say what it brought rather than "sync".
+          # They are artifact-controlled and end up in a commit message and a
+          # PR body, so they never reach a shell as shell: jq reads them to a
+          # file, keeps only strings, strips them to printable characters, and
+          # caps the count before transforming and the length after.
+          #
+          # [:print:] rather than a \u range: jq matches with Oniguruma, which
+          # reads \u0020 as the literal characters and quietly eats most of
+          # the subject.
+          #
+          # `#1234` loses its `#`. A monorepo subject ends in the number of a
+          # pull request in a repository nobody reading this one can open, and
+          # left as `#1234` it becomes a link to this repository's issue 1234
+          # in the changelog and a cross-reference on it here. `@` becomes
+          # `(at)` for the same reason: GitHub resolves a mention in a commit
+          # message whatever the surrounding markup, and `fix: handle @foo` is
+          # a subject someone will write by accident.
+          #
+          # Replaced rather than dropped. Dropping it let `@@foo` collapse to
+          # a live `@foo`, and let `@feat:` become a `feat:` prefix that the
+          # classifier below then read — so a substitution meant to make text
+          # inert was deciding this package's next version. Nothing this adds
+          # can start a subject with a conventional-commit prefix.
+          #
+          # Two caps, not one. 500 bounds the work before any substitution
+          # runs; 50 is how many survive, counted after the junk is dropped,
+          # so a manifest full of nulls cannot push the subject that types
+          # this commit past the limit.
+          #
+          # A `.changes` that is missing, not an array, or not readable leaves
+          # this empty and warns. It decides only how the commit is worded, so
+          # failing a whole sync over it would be the wrong trade — but a
+          # silent empty list looks exactly like a sync that carries nothing.
+          : > /tmp/changes.txt
+          if jq -r '[(.changes? // []) | if type == "array" then .[0:500][]
+                     else empty end
+                     | select(type == "string")
+                     | gsub("[^[:print:]]"; "")
+                     | sub(" *\\(#[0-9]+\\) *$"; "")
+                     | gsub("#(?<n>[0-9]+)"; .n)
+                     | gsub("@"; "(at)")
+                     | .[0:120]
+                     | sub("^ +"; "") | sub(" +$"; "")
+                     | select(length > 0)][0:50][]' \
+              /tmp/payload/manifest.json > /tmp/changes.new 2>/dev/null; then
+            mv /tmp/changes.new /tmp/changes.txt
+          else
+            rm -f /tmp/changes.new
+            echo "::warning::manifest .changes is unreadable"
+          fi
+          echo "Carrying $(wc -l < /tmp/changes.txt) change(s)."
+
       - name: Apply it
         env:
           SHA: ${{ steps.manifest.outputs.sha }}
@@ -362,6 +415,12 @@ jobs:
           rsync -a --relative \
             mcp-server/src mcp-server/assets/logo.png mcp-server/.synced-from \
             skills README.md /tmp/vetted/
+          # Rides with the tree rather than through a job output: `open-pr`
+          # words its commit from these, and a step output would have to carry
+          # fifty artifact-controlled lines through `$GITHUB_OUTPUT`. Nothing
+          # copies it into the repository — `open-pr` names the paths it
+          # applies, and this is not one of them.
+          cp /tmp/changes.txt /tmp/vetted/changes.txt
 
       # Uploaded before the tests run, not after. Taking the snapshot early was
       # half the fix: `/tmp/vetted` stayed writable while artifact-derived tests
@@ -461,11 +520,63 @@ jobs:
           git checkout -B "$SYNC_BRANCH"
           git add -A
 
-          cat > /tmp/message <<EOF
-          chore: sync MCP source from the monorepo at ${SHORT}
+          # Typed from what the payload carries. `chore` is dropped by the
+          # angular preset that generates this repository's changelog, so a
+          # sync committed as one releases its tools invisibly — 2.5.0 changed
+          # every tool's failure shape and its changelog named a dependency
+          # bump.
+          #
+          # Each subject is read by the conventional-commit prefix at the start
+          # of its own line, so a `feat:` quoted inside someone's prose cannot
+          # type the sync. A subject may lead with a ticket in brackets, as the
+          # monorepo writes some of them.
+          #
+          # The scope is anything up to the colon rather than anything up to a
+          # closing paren, so a scope holding parens still parses: the `@` the
+          # step above rewrites to `(at)` would otherwise end the scope early
+          # and leave `feat((at)currents/mcp):` typed as a chore.
+          CHANGES=/tmp/synced/changes.txt
+          TICKET='^(\[[^]]+\][[:space:]]*)?'
+          TYPE=chore
+          : > /tmp/breaking
+          if [ -s "$CHANGES" ]; then
+            if grep -qE "${TICKET}feat(\([^:]*\))?!?:" "$CHANGES"; then
+              TYPE=feat
+            elif grep -qE "${TICKET}fix(\([^:]*\))?!?:" "$CHANGES"; then
+              TYPE=fix
+            fi
+            grep -E "${TICKET}[a-z]+(\([^:]*\))?!:" "$CHANGES" \
+              > /tmp/breaking || true
+          fi
 
-          Published by ${SOURCE_REF}. Previous sync: ${PREVIOUS}.
-          EOF
+          # A breaking change goes in a footer, not as `feat!:` in the header.
+          # The angular preset's header pattern has no `!` in it, so `feat!:`
+          # parses as no type at all: against conventional-changelog-angular 8
+          # it recommends a patch and names no breaking change, where this
+          # footer recommends a major and gives the changelog a BREAKING
+          # CHANGE section.
+          #
+          # The carried subjects are indented under both headings, which is
+          # also what stops one of them reaching the parser on its own: an
+          # indented `BREAKING CHANGE:` is not read as a footer, and an
+          # indented `#` is not stripped as a git comment. Unindent either
+          # list and an artifact-controlled line decides this package's next
+          # major version.
+          {
+            printf '%s: sync MCP source from the monorepo at %s\n\n' \
+              "$TYPE" "$SHORT"
+            printf 'Published by %s. Previous sync: %s.\n' \
+              "$SOURCE_REF" "$PREVIOUS"
+            if [ -s "$CHANGES" ]; then
+              printf '\nCarries:\n\n'
+              sed 's/^/  /' "$CHANGES"
+            fi
+            if [ -s /tmp/breaking ]; then
+              printf '\nBREAKING CHANGE: this sync carries breaking changes.'
+              printf '\n\n'
+              sed 's/^/  /' /tmp/breaking
+            fi
+          } > /tmp/message
           git commit --file /tmp/message
 
           {
@@ -473,6 +584,14 @@ jobs:
               "$SOURCE_REF" "$SHA"
             printf 'Previous sync: `%s`.\n\n' "$PREVIOUS"
             printf 'src/host/ is this copy own and is not touched.\n'
+            if [ -s "$CHANGES" ]; then
+              printf '\n### Carries\n\n'
+              # Indented four spaces: a markdown code block, so a subject is
+              # text rather than a link, an image or a mention. The list marker
+              # it replaces left all three live in a public repository's PR
+              # body.
+              sed 's/^/    /' "$CHANGES"
+            fi
             if [ -n "$REMOVED" ]; then
               printf '\n**This withdraws:** `%s`\n\n' "$REMOVED"
               printf 'Already-released tools and skill:// resources disappear '
