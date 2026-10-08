@@ -110,6 +110,24 @@ describe('getContextTool', () => {
     );
   });
 
+  it('sends include_flaky to GET /context when set', async () => {
+    await getContextTool.handler({ run_id: 'run-1', include_flaky: true });
+
+    expect(fetch).toHaveBeenCalledWith(
+      'https://api.test.com/v1/context?run_id=run-1&format=json&detail=default&limit=10&page=0&include_flaky=true',
+      expect.anything()
+    );
+  });
+
+  it('leaves include_flaky out of GET /context when omitted', async () => {
+    await getContextTool.handler({ run_id: 'run-1' });
+
+    expect(fetch).toHaveBeenCalledWith(
+      'https://api.test.com/v1/context?run_id=run-1&format=json&detail=default&limit=10&page=0',
+      expect.anything()
+    );
+  });
+
   // This tool reads markdown, so it cannot go through the verb helpers that
   // carry the retry — and a read is the call the retry is most for.
   it('sends a read the API failed to serve again', async () => {
