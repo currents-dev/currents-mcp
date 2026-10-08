@@ -76,6 +76,12 @@ const zodSchema = z
       .describe(
         'Truncate markdown response to this character limit (only applies when format=md).'
       ),
+    include_flaky: z
+      .boolean()
+      .optional()
+      .describe(
+        'Run-level only. When true, flaky tests are listed after the failed tests, each with the error from its last failed attempt, and limit and page count across both. Defaults to false.'
+      ),
   })
   .superRefine((val, ctx) => {
     const { run_id, instance_id, test_id } = val;
@@ -138,6 +144,7 @@ const handler = async (args: z.infer<typeof zodSchema>) => {
     limit = 10,
     page = 0,
     max_length,
+    include_flaky,
   } = parsed.data;
 
   const queryParams = new URLSearchParams();
@@ -151,6 +158,9 @@ const handler = async (args: z.infer<typeof zodSchema>) => {
   queryParams.append('page', page.toString());
   if (max_length !== undefined) {
     queryParams.append('max_length', max_length.toString());
+  }
+  if (include_flaky !== undefined) {
+    queryParams.append('include_flaky', include_flaky.toString());
   }
 
   const headers = apiHeaders(
