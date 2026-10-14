@@ -40,9 +40,6 @@ jobs:
             echo "::error::The registry refused the dist-tag. Trusted publishing configurations are keyed on the workflow filename and each grants dist-tag separately, so @currents/mcp needs a configuration naming THIS file with 'Allow npm dist-tag' enabled on it — the one for publish.yaml does not carry over. https://www.npmjs.com/package/@currents/mcp/access"
             exit 1
           fi
-          if npm dist-tag ls @currents/mcp | grep -q '^beta:'; then
-            npm dist-tag rm @currents/mcp beta
-          fi
 
   # Separate job so the third-party actions below do not run beside
   # `id-token: write`: neither needs OIDC, and both resolve a mutable tag.
