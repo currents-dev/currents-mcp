@@ -2,36 +2,6 @@
 
 # [2.7.0](https://github.com/currents-dev/currents-mcp/compare/v2.6.1...v2.7.0) (2026-10-14)
 
-### Bug Fixes
-
-* count the cap after the junk is dropped, and make carried text inert ([257fc5c](https://github.com/currents-dev/currents-mcp/commit/257fc5c7bca11838cca37330f27177c0faa59d1e))
-* **deps:** pin release-it's undici to 7.29.1 ([fa3fe4c](https://github.com/currents-dev/currents-mcp/commit/fa3fe4cc5290ac8581fbbad04a4cb88dfed9ca02))
-* end a line comment at any line terminator ([51bc760](https://github.com/currents-dev/currents-mcp/commit/51bc76004b656f82dc027fcef62409ac6499dd6a))
-* name a renamed skill, and serialize the writers ([6511c20](https://github.com/currents-dev/currents-mcp/commit/6511c20396f5c93e8164603a85c1d9f25be27296))
-* **publish:** strip overrides from published manifest ([05d04bf](https://github.com/currents-dev/currents-mcp/commit/05d04bf61eaa3c5af0e00fc656508414e39b018e))
-* qualify the sync PR lookup by head repository and base ([358708d](https://github.com/currents-dev/currents-mcp/commit/358708d910cbc9bf7fa7f901f7c2ce4a07049504))
-* read a commit scope up to the colon, not to the first paren ([ba39bd9](https://github.com/currents-dev/currents-mcp/commit/ba39bd92dbe6ec4d48cd8de733283ca10ba4afbc))
-* replace @ rather than dropping it from a carried subject ([9f043fe](https://github.com/currents-dev/currents-mcp/commit/9f043fec6b551b7df5ba09a9163bbdbf317d706c))
-* skip commented-out registrations when reading tool names ([0a652bd](https://github.com/currents-dev/currents-mcp/commit/0a652bdceacf608623144085461fd46137bb72b3))
-* warn on withdrawn skills only, and let dry runs run ([5f998c2](https://github.com/currents-dev/currents-mcp/commit/5f998c2bb4809e44025e9811a2174df1fdb18596))
-
-### Features
-
-* a Copilot plugin marketplace for the Currents plugin ([1e80067](https://github.com/currents-dev/currents-mcp/commit/1e8006717dbe84f96c0e3eae6b01855dc1fa8fbf))
-* add a Cursor plugin for the hosted Currents MCP server ([7cc89dd](https://github.com/currents-dev/currents-mcp/commit/7cc89ddf7d8393d8644d15fcfdfe845996c73bdb))
-* add the shares:write scope ([2105a37](https://github.com/currents-dev/currents-mcp/commit/2105a37ee34fd95b44d6796ed9e30798ff8c46ec)), closes [currents-dev/currents#3933](https://github.com/currents-dev/currents/issues/3933)
-* add the square Currents icon used in the directory listings ([ef0ff25](https://github.com/currents-dev/currents-mcp/commit/ef0ff259f6bc567ea316c3c2684ad57e76295fc0))
-* list the hosted server for VS Code and GitHub Copilot ([f7eba52](https://github.com/currents-dev/currents-mcp/commit/f7eba52df192fd87389c5f4513808a0fa6986bd7))
-* match the Cursor plugin description to the published Claude listing ([ddc3f29](https://github.com/currents-dev/currents-mcp/commit/ddc3f29e3d33b5fd24299c94dd3ef5008879f1ff))
-* one sync PR, and only when the sync carries something ([03de607](https://github.com/currents-dev/currents-mcp/commit/03de6078152883df293aaeceb12c3777d4847dce))
-* plugin keywords from the listing description ([e621e34](https://github.com/currents-dev/currents-mcp/commit/e621e34626bdeda5199c4f68ab37cf3afeab38e4))
-* say what a sync carries, in a type the changelog keeps ([ebb5cf2](https://github.com/currents-dev/currents-mcp/commit/ebb5cf2cdbf7311635f8ccc7fd6a748c9fbbf1bf))
-* sync MCP source from the monorepo at a1ac39f ([e00abe2](https://github.com/currents-dev/currents-mcp/commit/e00abe2f62468ac45d40300baad86bd820ed71c4))
-* use the Claude directory description for the Cursor plugin ([e7e626b](https://github.com/currents-dev/currents-mcp/commit/e7e626bd3c0e02900c8526727d90fb4ab4fb4357))
-* use the listing icon as the Cursor plugin logo ([c1f5ca6](https://github.com/currents-dev/currents-mcp/commit/c1f5ca6deb2d98a9a538bbdd8caf14bd18912cde))
-
-# [2.7.0](https://github.com/currents-dev/currents-mcp/compare/v2.6.1...v2.7.0) (2026-10-14)
-
 The tools are written in the Currents monorepo and copied here by sync. This release carries six of them ([#207](https://github.com/currents-dev/currents-mcp/pull/207), [#212](https://github.com/currents-dev/currents-mcp/pull/212), [#219](https://github.com/currents-dev/currents-mcp/pull/219), [#230](https://github.com/currents-dev/currents-mcp/pull/230), [#231](https://github.com/currents-dev/currents-mcp/pull/231), [#233](https://github.com/currents-dev/currents-mcp/pull/233)). The entries below are what changed for anything calling these tools.
 
 ### ⚠ Breaking
