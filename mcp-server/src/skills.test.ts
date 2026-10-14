@@ -37,6 +37,20 @@ describe('skills manifest', () => {
       }
     });
 
+    // Options of the `currents` command belong to the CLI, which prints them
+    // for the installed version (`currents docs`, `--help`). A copy here goes
+    // stale when an option changes, and nothing in this repository notices.
+    it('names no option of the currents command', () => {
+      for (const file of skill.files) {
+        const withOptions = [
+          ...file.content.matchAll(
+            /\bcurrents (?:session|run|cache|api|skill|docs)\b[^\n`]*?\s--?(?!help\b)[a-z]/g
+          ),
+        ].map((m) => m[0]);
+        expect(withOptions, file.path).toEqual([]);
+      }
+    });
+
     it('references only files that ship with the skill', () => {
       const shipped = new Set(skill.files.map((f) => f.path));
       const entryPoint = skill.files.find((f) => f.path === 'SKILL.md');
