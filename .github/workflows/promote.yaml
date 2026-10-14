@@ -8,13 +8,12 @@ on:
         type: string
         description: The version that should be promoted
 
-permissions:
-  contents: read
-  id-token: write
-
 jobs:
   publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     defaults:
       run:
         working-directory: ./mcp-server
@@ -27,18 +26,13 @@ jobs:
           node-version: "24.x"
           registry-url: "https://registry.npmjs.org"
 
-      # The runner's bundled npm predates OIDC support for dist-tag.
-      - name: Update npm to support Trusted Publishing
-        run: npm install -g npm@latest
-
-      - name: Check npm can authorize dist-tag over OIDC
-        run: |
-          have=$(npm --version)
-          need=11.21.0
-          if [ "$(printf '%s\n%s\n' "$need" "$have" | sort -V | head -1)" != "$need" ]; then
-            echo "::error::npm $have cannot authorize dist-tag over OIDC; needs >= $need (npm/cli#10038)."
-            exit 1
-          fi
+      # The runner's bundled npm predates OIDC support for dist-tag, which
+      # npm/cli#10038 added in 11.21.0 and 12.2.0. Pinned rather than `latest`:
+      # this runs in the job holding `id-token: write`, so whatever it installs
+      # can mint an npm credential for this package. Bumping it requires node
+      # >= 24.15.0, which `node-version` above must keep satisfying.
+      - name: Install npm with OIDC dist-tag support
+        run: npm install -g npm@12.2.0 --ignore-scripts
 
       - name: Promote to latest
         run: |
@@ -48,6 +42,15 @@ jobs:
           fi
           npm dist-tag rm @currents/mcp beta
 
+  # Separate job so the third-party actions below do not run beside
+  # `id-token: write`: neither needs OIDC, and both resolve a mutable tag.
+  announce:
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
       - name: Mark Linear release as complete
         id: release
         uses: linear/linear-release-action@v0
