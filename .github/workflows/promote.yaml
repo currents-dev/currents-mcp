@@ -21,10 +21,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # No `registry-url`: it makes setup-node write an `_authToken` line to the
+      # job's npmrc, and with no NODE_AUTH_TOKEN to expand it npm reads a
+      # credential, treats auth as configured and never runs the OIDC exchange
+      # (actions/setup-node#1551). registry.npmjs.org is npm's default anyway.
       - uses: actions/setup-node@v4
         with:
           node-version: "24.x"
-          registry-url: "https://registry.npmjs.org"
 
       # The runner's bundled npm predates OIDC support for dist-tag, which
       # npm/cli#10038 added in 11.21.0 and 12.2.0. Pinned rather than `latest`:
@@ -34,10 +37,18 @@ jobs:
       - name: Install npm with OIDC dist-tag support
         run: npm install -g npm@12.2.0 --ignore-scripts
 
+      - name: Check nothing shadows the OIDC exchange
+        run: |
+          rc="${NPM_CONFIG_USERCONFIG:-$HOME/.npmrc}"
+          if [ -f "$rc" ] && grep -q '_authToken' "$rc"; then
+            echo "::error::$rc configures an auth token, so npm will skip the OIDC exchange and send that token instead. Drop whatever wrote it (usually setup-node's registry-url)."
+            exit 1
+          fi
+
       - name: Promote to latest
         run: |
           if ! npm dist-tag add @currents/mcp@${{ github.event.inputs.packageVersion }} latest; then
-            echo "::error::The registry refused the dist-tag. Trusted publishing grants it separately from publish, and it is off by default: enable 'Allow npm dist-tag' on the trusted publisher configuration for @currents/mcp at https://www.npmjs.com/package/@currents/mcp/access"
+            echo "::error::The registry refused the dist-tag. Trusted publishing configurations are keyed on the workflow filename and each grants dist-tag separately, so @currents/mcp needs a configuration naming THIS file with 'Allow npm dist-tag' enabled on it — the one for publish.yaml does not carry over. https://www.npmjs.com/package/@currents/mcp/access"
             exit 1
           fi
           npm dist-tag rm @currents/mcp beta
