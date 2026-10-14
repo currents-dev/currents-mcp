@@ -51,7 +51,7 @@ The workflow will:
 
 ### Requirements
 
-- Must be run from the `main` branch
+- Must be run from a `release/*` branch. `requireBranch` in `mcp-server/.release-it.json` enforces it
 - Working directory must be clean (no uncommitted changes)
 
 ## Publishing to NPM
@@ -151,9 +151,9 @@ Note: This requires `NPM_TOKEN` to be set in your environment and will modify lo
 
 Commit or stash your changes before running the release workflow.
 
-### Release fails with "not on main branch"
+### Release fails on the branch check
 
-The release workflow must be triggered from the `main` branch. Merge your changes first.
+The release workflow must be triggered from a `release/*` branch. Cut one from `main` first, as described under [Creating a Release](#creating-a-release).
 
 ### npm publish fails with authentication error
 
