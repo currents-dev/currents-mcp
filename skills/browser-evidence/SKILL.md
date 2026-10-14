@@ -39,19 +39,17 @@ Ask at the start. Asked later, the question arrives with a finished recording in
 - a Currents project id — `currents-get-projects` lists them; ask which one if more than one could be right
 - a Playwright MCP server connected, for the browser tools, started with `--caps=devtools`: without it `browser_start_tracing` and `browser_stop_tracing` are missing
 - a shell, for the workflow below; without the `currents` command, use [the flow without the currents CLI](#without-the-currents-cli). An agent with no shell at all cannot upload files: it can only report the screenshots and the accessibility diff it has
-- the `currents` command from `@currents/cmd`, and a `CURRENTS_API_KEY` with write access in the environment. Install it with `npm install --global @currents/cmd`, or write `npx --package @currents/cmd currents` where the steps say `currents`
+- the `currents` command from `@currents/cmd`, and a `CURRENTS_API_KEY` with write access in the environment. In a project that has the package, run `npx currents`. Elsewhere, run `npx --package @currents/cmd currents`: `npx currents` alone runs an unrelated npm package. Where the steps say `currents`, write the form that works here
 
 ## Workflow
 
-Run steps 1 to 4 once per capture: `before` with `--status failed`, `after` with `--status passed`. Share each capture before you start the next one: `session start` replaces the session the later commands use.
+The `currents` command prints its own guide and options, for the version you run. Before the first `currents` command, run `currents docs sessions` and follow it for the commands and their options. Use only the options that `currents session <command> --help` lists. If `docs` is an unknown command, update `@currents/cmd`.
+
+Record two captures, `before` and `after`, each in its own session: run steps 1 to 4 once per capture. Share each capture before you start the next one: `session start` replaces the session the later commands use.
 
 ### 1. Start the session
 
-```bash
-currents session start --project-id <project id> --title "<what you set out to show>" --status failed --error "<the bug, in a sentence>"
-```
-
-It prints the session ID and saves the session in `.currents-session/session.json` in the working directory. Add `--pr <url or number>` when the work belongs to a pull request. The commit and branch come from the repository you run it in.
+Run `currents session start` with a title that says what you set out to show. Mark the `before` session failed, with the bug in a sentence as its error, and the `after` session passed. Link the pull request when the work belongs to one.
 
 ### 2. Capture in the browser
 
@@ -64,23 +62,15 @@ It prints the session ID and saves the session in `.currents-session/session.jso
 
 ### 3. Attach the files
 
-```bash
-currents session attach <screenshot path> .currents-session/before-a11y.txt .playwright-mcp/traces --caption "before"
-```
-
-A folder holding `trace-*.trace` files is packed into one trace; the rest are uploaded as they are. Hidden files, links and subfolders of a folder are left out, and a `.env` file is refused: what you attach is public to anyone with the share link. Delete the screenshot and the trace folder contents when you are done, so they do not end up in a commit. Name the files after the capture (`before`, `after`) so the two do not overwrite each other.
+Run `currents session attach` with the screenshot, the accessibility snapshot file and the trace directory, captioned `before`. Name the files after the capture (`before`, `after`) so the two do not overwrite each other. Delete the screenshot and the trace directory contents when you are done, so they do not end up in a commit.
 
 ### 4. Share
 
-```bash
-currents session share --expires-in-days 7
-```
-
-It prints the page link, then a markdown link. Fetch the markdown with `curl -sL "<markdown link>"` and read it: it says what the page did and what failed, and it is how you confirm the recording captured the problem. If it shows nothing wrong in the `before` capture, you recorded the wrong thing: capture again from step 1.
+Run `currents session share`. It prints the page link, then a Markdown link. Fetch the Markdown with `curl -sL "<markdown link>"` and read it: it says what the page did and what failed, and it is how you confirm the recording captured the problem. If it shows nothing wrong in the `before` capture, you recorded the wrong thing: capture again from step 1.
 
 ### 5. Fix the code, then do it all again
 
-Make the change. Repeat steps 1 to 4 against the fixed app with `--status passed`, and `after` as the file names.
+Make the change. Repeat steps 1 to 4 against the fixed app, as a passed session, with `after` in the file names.
 
 ### 6. Post the comment
 
@@ -94,14 +84,12 @@ Lead with what changed for the user. Do not post trace links or storage URLs: th
 
 ## Troubleshooting
 
+For an error from a `currents` command, see the errors section of `currents docs sessions`.
+
 - **`browser_start_tracing` is not in your tools**: the Playwright MCP server was started without `--caps=devtools`. Ask the user to restart it with that flag, or post the screenshots and the accessibility diff without a trace.
-- **`session start` answers 401 or 403**: `CURRENTS_API_KEY` is missing or a read key.
-- **404 from `session start`**: the project id does not belong to this organization.
 - **422 from `session start`**: recording is suspended for the organization, or its subscription has expired.
-- **403 from `session share`**: the organization turned public sharing off. Say so, and post the screenshots and the diff without a link.
-- **`No session found`**: `session start` did not run in this directory. Run it here, or pass `--session-id`.
-- **The markdown reports no frames**: the trace folder had no `screencast/`, or tracing ran without screenshots.
-- **The markdown says the network log was not read**: it was over 64 MB. Capture again with fewer steps in a new session.
+- **The Markdown reports no frames**: the trace directory had no `screencast/`, or tracing ran without screenshots.
+- **The Markdown says the network log was not read**: it was over 64 MB. Capture again with fewer steps in a new session.
 
 ## Without the currents CLI
 
