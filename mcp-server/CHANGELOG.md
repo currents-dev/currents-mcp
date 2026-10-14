@@ -1,5 +1,44 @@
 # Changelog
 
+# [2.7.0](https://github.com/currents-dev/currents-mcp/compare/v2.6.1...v2.7.0) (2026-10-14)
+
+The tools are written in the Currents monorepo and copied here by sync. This release carries six of them ([#207](https://github.com/currents-dev/currents-mcp/pull/207), [#212](https://github.com/currents-dev/currents-mcp/pull/212), [#219](https://github.com/currents-dev/currents-mcp/pull/219), [#230](https://github.com/currents-dev/currents-mcp/pull/230), [#231](https://github.com/currents-dev/currents-mcp/pull/231), [#233](https://github.com/currents-dev/currents-mcp/pull/233)). The entries below are what changed for anything calling these tools.
+
+### ⚠ Breaking
+
+* `currents-create-trace-link` no longer exists. `currents-create-evidence-links` replaces it and returns more than the trace: a markdown digest of what the attempt did and what failed, a filmstrip, an animated screencast, DOM snapshots, network requests and attachments, each behind a link that opens without a Currents credential and expires. It takes `sessionId` and the trace's `attachmentId` for a recorded session, or `instanceId` and `testId` for a CI test. A client, prompt or config that calls the old name has to switch.
+* the `--features` flag, `CURRENTS_MCP_FEATURES` and the `orgFeatures` option on `startMcpServer` are gone ([#205](https://github.com/currents-dev/currents-mcp/pull/205)). No tool is gated on an organization feature any more: every tool is listed, and each call is decided by the Currents API. Nothing reads argv for tool selection, so a launcher still passing `--features evidenceSharing` starts normally and the flag is ignored.
+
+### Features
+
+* `currents-create-share-link` creates a public link to test results that opens without signing in and expires. `purpose: "fix"` is the failure context an agent needs to fix the tests — what `currents-get-context` returns, with flaky tests included and marked flaky. `purpose: "report"` lists every test with its attempts and files, for a person. It targets a run, a spec file, a test, or a session recorded with `currents-create-session`, and returns `url` (markdown, for agents) and `pageUrl` (a web page, for people)
+* `currents-add-attachments` adds attachments to a recorded session or to a CI run, placed on the run, a spec file, a test or one attempt. It returns an upload URL per attachment, and a trace added this way can then be turned into evidence links
+* `currents-create-session` and the evidence tools are listed for every organization. In 2.6.0 they appeared only when the server was started with `--features evidenceSharing`
+* the `fix-failing-tests` skill: work a red CI run from what Currents recorded while the tests ran, rather than re-running the suite locally to find out what failed. `browser-evidence` and `collect-evidence` are rewritten, and `browser-evidence` now points at the `currents session` command's own guide instead of restating its options
+* the server declares the Skills extension (`io.modelcontextprotocol/skills`, SEP-2640), serving `skills/list` and `skills/get` with each skill's frontmatter and a digest per file. A host that loads MCP-served skills at runtime verifies a file against its digest; the OpenAI plugin dashboard reads `skills/list` on a rescan, so a skill changed here reaches ChatGPT and Codex without a package upload
+* the instructions name what the scopes a token lacks would reach — "flakiness, duration and error metrics" for `analytics:read` — so an agent missing a tool asks for the right scope instead of guessing. They are capped at 2048 characters, which is where Claude Code was observed to cut them off
+* attachment content types and sizes are checked against the API's rules before the call, so a wrong content type fails in the tool rather than a round trip later
+* adds the `shares:write` scope, which `currents-create-share-link` declares. A stdio server cannot learn its API key's scope, so it registers every tool; the scope decides what the hosted server at `mcp.currents.dev` serves
+* the repository is installable as a plugin from the Cursor marketplace and as an Agent Plugins 1.0 plugin for VS Code and Copilot CLI, with the skills bundled, and `server.json` lists the hosted server for the official MCP registry ([#220](https://github.com/currents-dev/currents-mcp/pull/220), [#221](https://github.com/currents-dev/currents-mcp/pull/221), [#222](https://github.com/currents-dev/currents-mcp/pull/222))
+
+### Bug Fixes
+
+* the published manifest no longer carries `overrides`, which only pinned dev tooling ([#218](https://github.com/currents-dev/currents-mcp/pull/218))
+* a sync names what it carries and takes its conventional type from those commits, so the source behind a release is no longer dropped from this changelog as a `chore`. One pull request collects the syncs instead of one per monorepo tag, and a sync that carries no source opens none ([#186](https://github.com/currents-dev/currents-mcp/pull/186), [#224](https://github.com/currents-dev/currents-mcp/pull/224))
+* the sync's withdrawal check names a tool or skill that a rename removed, which previously reached a pull request with no warning ([#209](https://github.com/currents-dev/currents-mcp/pull/209), [#224](https://github.com/currents-dev/currents-mcp/pull/224))
+* a publish no longer notifies the retired MCP image pipeline. The step had failed on every release since 2.4.2, so a release that shipped fine showed as a failed run ([#204](https://github.com/currents-dev/currents-mcp/pull/204))
+
+### Security
+
+* `undici` is pinned to 7.29.1 under `release-it`, which depends on exactly 7.29.0 ([#218](https://github.com/currents-dev/currents-mcp/pull/218)). GHSA-w293-vg96-wgc3 lets `BalancedPool` drop function-valued connect options while cloning its configuration, discarding a custom TLS certificate validation callback. Dev tooling only; it does not ship in the package
+* `vitest` 4.1.0 → 4.1.11 ([#234](https://github.com/currents-dev/currents-mcp/pull/234)), for GHSA-82fw-gwwq-j7x9, a path traversal in `@vitest/mocker`'s redirect mock that lets a test read files outside the project root. Dev tooling only
+
+### Worth knowing before upgrading
+
+* anything calling `currents-create-trace-link` by name has to call `currents-create-evidence-links` instead. There is no alias
+* a client config passing `--features evidenceSharing` or setting `CURRENTS_MCP_FEATURES` should drop it. Leaving it in place is harmless — it is ignored — but the tools it used to reveal are now listed either way
+* an embedder calling `startMcpServer({ orgFeatures })` has to drop the argument; the option no longer exists
+
 ## [2.6.1](https://github.com/currents-dev/currents-mcp/compare/v2.6.0...v2.6.1) (2026-09-23)
 
 No change to the tools. Two runtime dependencies that ship in the package move to patched versions. Both are reached on the HTTP server path (`start:http`), not over stdio.
