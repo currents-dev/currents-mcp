@@ -34,9 +34,10 @@ jobs:
       - name: Validate release branch for latest channel
         if: github.event.inputs.channel == 'latest'
         run: |
-          if [[ ! "${{ github.ref }}" =~ ^refs/(heads|tags)/release/ ]]; then
-            echo "Error: Publishing to 'latest' channel requires a release/* branch or tag"
+          if [[ ! "${{ github.ref }}" =~ ^refs/heads/release/ ]]; then
+            echo "Error: Publishing to 'latest' channel requires a release/* branch"
             echo "Current ref: ${{ github.ref }}"
+            echo "Release tags are named v<version>, so the tag of a release does not match."
             exit 1
           fi
 

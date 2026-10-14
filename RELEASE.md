@@ -105,8 +105,14 @@ The workflow will:
 
 1. Add the `latest` dist-tag to the specified version
 2. Remove the `beta` dist-tag from that version
+3. Mark the release complete in Linear and post it to Slack
 
 This is useful when you've tested a beta release and want to make it the default install without rebuilding.
+
+The workflow authenticates with npm through Trusted Publishing, so it needs no
+`NPM_TOKEN`. Trusted publishing grants dist-tag separately from publish, and the
+grant is off by default: **Allow npm dist-tag** has to be enabled on the trusted
+publisher configuration for `@currents/mcp`, or the registry refuses the tag.
 
 ## Linear Release
 
@@ -116,7 +122,7 @@ The repository follows a branch-cut release model with Linear Releases integrati
 2. **Release branch creation** — when a `release/*` branch is pushed, it automatically:
    - Syncs with Linear Release
 3. **Stabilization** — only bug fixes and critical changes are allowed on the release branch
-4. **Publishing** — when publishing to npm via the "Publish NPM Package" workflow with `latest` channel, the release is automatically marked as completed in Linear and posted to Slack
+4. **Publishing** — the release is marked complete in Linear and posted to Slack when a version reaches the `latest` channel, whether by "NPM - Promote beta to latest" or by "Publish NPM Package" with the `latest` channel
 
 The workflow is defined in `.github/workflows/linear-release.yaml` and syncs the release state between Git branches and Linear Releases.
 

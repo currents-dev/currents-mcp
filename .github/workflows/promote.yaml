@@ -8,6 +8,10 @@ on:
         type: string
         description: The version that should be promoted
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
   publish:
     runs-on: ubuntu-latest
@@ -17,20 +21,57 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
 
       - uses: actions/setup-node@v4
         with:
           node-version: "24.x"
           registry-url: "https://registry.npmjs.org"
 
-      - run: npm ci
-      - name: Publish to NPM
+      # The runner's bundled npm predates OIDC support for dist-tag.
+      - name: Update npm to support Trusted Publishing
+        run: npm install -g npm@latest
+
+      - name: Check npm can authorize dist-tag over OIDC
         run: |
-          git config user.name "Currents NPM Bot"
-          git config user.email "npm@currents.dev"
-          npm dist-tag add @currents/mcp@${{ github.event.inputs.packageVersion }} latest
+          have=$(npm --version)
+          need=11.21.0
+          if [ "$(printf '%s\n%s\n' "$need" "$have" | sort -V | head -1)" != "$need" ]; then
+            echo "::error::npm $have cannot authorize dist-tag over OIDC; needs >= $need (npm/cli#10038)."
+            exit 1
+          fi
+
+      - name: Promote to latest
+        run: |
+          if ! npm dist-tag add @currents/mcp@${{ github.event.inputs.packageVersion }} latest; then
+            echo "::error::The registry refused the dist-tag. Trusted publishing grants it separately from publish, and it is off by default: enable 'Allow npm dist-tag' on the trusted publisher configuration for @currents/mcp at https://www.npmjs.com/package/@currents/mcp/access"
+            exit 1
+          fi
           npm dist-tag rm @currents/mcp beta
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Mark Linear release as complete
+        id: release
+        uses: linear/linear-release-action@v0
+        with:
+          access_key: ${{ secrets.LINEAR_ACCESS_KEY }}
+          command: complete
+          version: ${{ github.event.inputs.packageVersion }}
+
+      - name: Post to Slack
+        if: success() && steps.release.outputs.release-url
+        uses: slackapi/slack-github-action@v2
+        with:
+          webhook: ${{ secrets.SLACK_RELEASE_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload: |
+            {
+              "text": "🚀 Release: @currents/mcp@${{ github.event.inputs.packageVersion }}",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*🚀Release: @currents/mcp@${{ github.event.inputs.packageVersion }}* has been marked as complete in Linear.\n\n<${{ steps.release.outputs.release-url }}|View Release Notes>"
+                  }
+                }
+              ]
+            }
