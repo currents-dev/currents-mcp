@@ -104,15 +104,23 @@ To promote a beta release to the `latest` tag without re-publishing:
 The workflow will:
 
 1. Add the `latest` dist-tag to the specified version
-2. Remove the `beta` dist-tag from that version
-3. Mark the release complete in Linear and post it to Slack
+2. Mark the release complete in Linear and post it to Slack
+
+`beta` is left pointing at the promoted version. The next publish to that
+channel moves it, so between releases `beta` and `latest` name the same
+version. Re-running the workflow on a version already promoted is therefore
+harmless.
 
 This is useful when you've tested a beta release and want to make it the default install without rebuilding.
 
 The workflow authenticates with npm through Trusted Publishing, so it needs no
-`NPM_TOKEN`. Trusted publishing grants dist-tag separately from publish, and the
-grant is off by default: **Allow npm dist-tag** has to be enabled on the trusted
-publisher configuration for `@currents/mcp`, or the registry refuses the tag.
+`NPM_TOKEN`. A trusted publisher configuration names one workflow file, so
+`@currents/mcp` carries one per workflow that reaches npm — `publish.yaml` and
+`promote.yaml` each have their own, and neither authorizes the other. Each
+grants dist-tag separately from publishing, off by default, so a configuration
+that promotes needs **Allow npm dist-tag** enabled on it or the registry
+refuses the tag. Both are managed per package at
+https://www.npmjs.com/package/@currents/mcp/access.
 
 ## Linear Release
 
