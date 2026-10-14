@@ -51,7 +51,9 @@ jobs:
             echo "::error::The registry refused the dist-tag. Trusted publishing configurations are keyed on the workflow filename and each grants dist-tag separately, so @currents/mcp needs a configuration naming THIS file with 'Allow npm dist-tag' enabled on it — the one for publish.yaml does not carry over. https://www.npmjs.com/package/@currents/mcp/access"
             exit 1
           fi
-          npm dist-tag rm @currents/mcp beta
+          if npm dist-tag ls @currents/mcp | grep -q '^beta:'; then
+            npm dist-tag rm @currents/mcp beta
+          fi
 
   # Separate job so the third-party actions below do not run beside
   # `id-token: write`: neither needs OIDC, and both resolve a mutable tag.
@@ -62,6 +64,12 @@ jobs:
       contents: read
 
     steps:
+      # linear-release refuses to start outside a git repository, whichever
+      # command it is given. fetch-depth as its quick start documents.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Mark Linear release as complete
         id: release
         uses: linear/linear-release-action@v0
