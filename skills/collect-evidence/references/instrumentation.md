@@ -100,13 +100,13 @@ export default defineConfig({
 The Currents reporter uploads screenshots, videos, traces, and attachments per
 attempt automatically — no extra reporter config.
 
-A trace link serves only what the attempt recorded, so a passing test needs
-`trace: 'on'` for its digest, filmstrip and accessibility snapshots to exist.
+A trace API link serves only what the attempt recorded, so a passing test needs
+`trace: 'on'` for its trace summary, filmstrip and accessibility snapshots to exist.
 A failing test has them under `retain-on-failure` already.
 
 ### GIF
 
-A trace link's `animation` endpoint renders the attempt as an animated WebP
+A trace API link's `animation` endpoint renders the attempt as an animated WebP
 (`?format=gif` for a GIF), so a test with a trace needs nothing here.
 Otherwise record a video, download it from the evidence manifest, and convert:
 

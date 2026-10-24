@@ -1,6 +1,6 @@
 ---
 name: collect-evidence
-description: Show that work you implemented actually works, or demo it, from tests that ran in CI via Currents — a trace link whose digest, filmstrip and accessibility snapshots read inside a comment, plus screenshots, attachments and videos. Use when asked to "collect evidence", "prove it works", "show me it works", "demo the feature", "capture a before/after", or to attach proof of a change to a PR, issue, ticket, or status update. Evidence comes from CI runs retrieved through the Currents MCP tools or REST API, not from a local run.
+description: Show that work you implemented actually works, or demo it, from tests that ran in CI via Currents — a trace API link whose trace summary, filmstrip and accessibility snapshots read inside a comment, plus screenshots, attachments and videos. Use when asked to "collect evidence", "prove it works", "show me it works", "demo the feature", "capture a before/after", or to attach proof of a change to a PR, issue, ticket, or status update. Evidence comes from CI runs retrieved through the Currents MCP tools or REST API, not from a local run.
 ---
 
 # Collect Evidence
@@ -13,7 +13,7 @@ Do not capture evidence locally: CI runs in a clean, reproducible environment, i
 
 | Evidence               | Use for                                           | Where it comes from                         |
 | ---------------------- | ------------------------------------------------- | ------------------------------------------- |
-| Trace digest           | What the test did and where it broke              | `currents-create-evidence-links` → `digest` |
+| Trace summary          | What the test did and where it broke              | `currents-create-evidence-links` → `digest` |
 | Filmstrip / animation  | The whole attempt in one image                    | the same link                               |
 | Accessibility snapshot | A before/after diff two screenshots cannot show   | the same link, `snapshots/<t>?format=aria`  |
 | Screenshot             | Visual state, before/after UI comparison          | `page.screenshot()` attached to the test    |
@@ -36,7 +36,7 @@ When there is no failing run, say so and lead with the after. The after then car
 
 ### A passing run has almost nothing to show
 
-Under the usual `retain-on-failure`, a test that passes leaves no trace and no video, so the after half is screenshots and attachments. Lead the comment with the failing run — the digest, filmstrip and snapshots all come from there.
+Under the usual `retain-on-failure`, a test that passes leaves no trace and no video, so the after half is screenshots and attachments. Lead the comment with the failing run — the trace summary, filmstrip and snapshots all come from there.
 
 ### Collect both halves in one sitting
 
@@ -80,9 +80,9 @@ If `currents-get-test-evidence` is unavailable, compose primitives: `currents-fi
 
 Call `currents-create-evidence-links` with the `instanceId` and `testId` from the manifest, and `ttlSeconds` up to seven days when the link goes somewhere people come back to — the default is 24 hours. It serves the highest attempt that has a trace: under `retain-on-failure` that is the failure, but under `trace: 'on'` every attempt has one and the default is the passing retry, so pass the failing attempt's `attempt` from the manifest as `attemptIndex` (it reads `null` for a test that did not retry, so omit it there). A retried test reads as `passed` in the manifest whatever its earlier attempts did, so a second trace on it is the only sign anything failed. A trace uploaded as a named attachment rather than as a Playwright trace is found by that name alone — pass it as `artifactName`. It returns the link and the URLs onto it, none of which need a Currents login:
 
-- `digest` (`?format=md`) first: the actions the test ran, console errors, failed requests, and the screencast frame at each failure. This is what says where it broke, and it is the part you quote in the comment. A test that timed out has no failed action — the digest counts zero — so read the end of the timeline and the console errors instead.
+- `digest` (`?format=md`) first: the actions the test ran, console errors, failed requests, and the screencast frame at each failure. This is what says where it broke, and it is the part you quote in the comment. A test that timed out has no failed action — the trace summary counts zero — so read the end of the timeline and the console errors instead.
 - `filmstrip`: one image of the whole attempt — attach that rather than a video nobody plays. The default nine tiles at 320px are a shape, not something you can read; when the evidence is text on the page, ask for fewer and wider (`?frames=4&width=640`). `animation` is the same thing moving, and renders inline on GitHub and Linear.
-- `snapshots/<t>?format=aria`: the page's accessibility tree at that moment. Address it by a `t` from the `snapshots` catalog or from the digest timeline — the catalog names auto-captured snapshots `null`, so a timestamp is what you have. A diff of the before and after trees is what shows the change when both screenshots look identical.
+- `snapshots/<t>?format=aria`: the page's accessibility tree at that moment. Address it by a `t` from the `snapshots` catalog or from the trace summary timeline — the catalog names auto-captured snapshots `null`, so a timestamp is what you have. A diff of the before and after trees is what shows the change when both screenshots look identical.
 - `requests?status=failed`, and `attachments` for anything the test attached inline.
 
 ```bash
@@ -96,23 +96,23 @@ Do not download `trace.zip` to put it in a comment — nobody opens one from the
 ### 4. Assemble and present
 
 - Lead with what changed for the user.
-- **Before**: the failing run — the digest excerpt that names the failure, the filmstrip, the accessibility snapshot.
+- **Before**: the failing run — the trace summary excerpt that names the failure, the filmstrip, the accessibility snapshot.
 - **After**: the passing run — screenshots and attachments, paired with the before by test title + attachment name. For text attachments, download both and show a diff.
-- Link the whole run for readers without a Currents login: `currents-create-share-link` with the run's `run_id` and `purpose: "report"` returns a page of that run's results. It needs the `shares:write` scope and each call makes a new link. Without that scope, say which scope is missing and post the filmstrip, the digest excerpt and the downloaded screenshots in its place.
-- Include each run's `dashboardUrl`. A trace link stops at `expiresAt` and the manifest's signed URLs in about three days; the dashboard link does not expire, so it is the one that has to be there.
+- Link the whole run for readers without a Currents login: `currents-create-share-link` with the run's `run_id` and `purpose: "report"` returns a page of that run's results. It needs the `shares:write` scope and each call makes a new link. Without that scope, say which scope is missing and post the filmstrip, the trace summary excerpt and the downloaded screenshots in its place.
+- Include each run's `dashboardUrl`. A trace API link stops at `expiresAt` and the manifest's signed URLs in about three days; the dashboard link does not expire, so it is the one that has to be there.
 - Attach the downloaded files to the comment itself (drag them into the body, or use the tracker's attachment API). Never paste a signed URL.
-- Without a trace link: download the `trace.zip` and attach it, noting that it opens at https://trace.playwright.dev. Its manifest URL is signed like every other one, so it is not a link to paste either.
+- Without a trace API link: download the `trace.zip` and attach it, noting that it opens at https://trace.playwright.dev. Its manifest URL is signed like every other one, so it is not a link to paste either.
 - GIF from a video, when that is the only recording: `ffmpeg -i demo.webm -vf "fps=10,scale=720:-1" demo.gif`.
 
 ## Troubleshooting
 
-- **`currents-create-share-link` is not in your tools**: the credential is missing `shares:write`. The comment then carries the dashboard link, the filmstrip, the digest excerpt and the downloaded files, and says a share link needs that scope.
+- **`currents-create-share-link` is not in your tools**: the credential is missing `shares:write`. The comment then carries the dashboard link, the filmstrip, the trace summary excerpt and the downloaded files, and says a share link needs that scope.
 - **`currents-create-evidence-links` is not in your tools**: the credential is missing `results:read`, and the whole evidence path is gone with it.
-- **503 `Trace links are not configured`**: this deployment serves no trace links. Use the fallback in step 4: attach the `trace.zip`.
+- **503 `Trace API links are not configured`**: this deployment serves no trace API links. Use the fallback in step 4: attach the `trace.zip`.
 - **`No trace found for this test attempt`**: the attempt recorded no trace — the ordinary case for a passing test under `retain-on-failure` — or the `instanceId` or `testId` names something else, or the trace was uploaded as an attachment and no `artifactName` was passed to match it. Creating the link never reads the file, so this is not an upload still in flight.
 - **`attachments` comes back empty**: the attempt attached nothing inline. Videos and screenshots the reporter uploaded separately are in the evidence manifest, and `currents-get-context` links the failure's own files.
-- **The digest fails with a 404 from storage**: the trace bytes are gone. Artifact cleanup took them, which happens to a passing test's artifacts first.
+- **The trace summary fails with a 404 from storage**: the trace bytes are gone. Artifact cleanup took them, which happens to a passing test's artifacts first.
 - **No artifacts in the manifest**: the reporter did not capture them. Check Playwright config: `screenshot: "on"`, `video: "retain-on-failure"` (or `"on"` for passing-test demos), `trace: "on"` for the evidence run. `testInfo.attach()` works regardless of these settings.
 - **Videos and traces missing for passing tests**: `retain-on-failure` discards them on success. For demo evidence from passing tests, set `"on"` scoped to the evidence spec via a test project — or prefer screenshots and attachments, which are cheap to keep always on.
 - **Run not found**: the lookup only returns completed runs, so a run still going reads the same as none. Check `currents-get-runs` for the branch before concluding the reporter never started.
-- **Expired URL when downloading**: re-run the evidence tool for fresh signed URLs. An expired trace link is replaced by minting another.
+- **Expired URL when downloading**: re-run the evidence tool for fresh signed URLs. An expired trace API link is replaced by minting another.

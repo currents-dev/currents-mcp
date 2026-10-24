@@ -80,7 +80,7 @@ Put both halves in one comment:
 - the before and after screenshots, attached to the comment itself — drag them into the body, or use the tracker's attachment API
 - the diff of the two accessibility snapshots — this is the part that shows what changed when the screenshots look the same
 
-Lead with what changed for the user. Do not post trace links or storage URLs: the share link is the one that stays valid until it expires.
+Lead with what changed for the user. Do not post trace API links or storage URLs: the share link is the one that stays valid until it expires.
 
 ## Troubleshooting
 
@@ -97,7 +97,7 @@ Use this when you have a shell and the Currents MCP server but not the `currents
 
 ### Zip the trace
 
-From the directory holding the recording, with `screencast/` in the archive — that is where the frames are, and a trace API asked for a filmstrip has nowhere else to read them from. Name the archive after the capture so the two do not overwrite each other.
+From the directory holding the recording, with `screencast/` in the archive — that is where the frames are, and the filmstrip and frame URLs have nowhere else to read them from. Name the archive after the capture so the two do not overwrite each other.
 
 ```bash
 NAME=before
@@ -134,7 +134,7 @@ rm -f "/tmp/$NAME-trace.zip"
 zip -qr "/tmp/$NAME-trace.zip" trace.trace trace.network screencast resources
 ```
 
-Scripts that loaded are not in the link's request count or request list; failed ones are. The trace API reads a network log of up to 64 MB decompressed. A larger one is left out: the digest names it and reports no requests, so failed requests go missing from the evidence.
+Scripts that loaded are not in the trace summary's request count or the request list; failed ones are. The trace API reads a network log of up to 64 MB decompressed. A larger one is left out: the trace summary names it and reports no requests, so failed requests go missing from the evidence.
 
 ### Record the session
 
@@ -158,9 +158,9 @@ Check each one succeeded. `--fail` is what makes curl report a refused upload; w
 curl --fail -X PUT -H "Content-Type: <uploadHeaders.Content-Type>" --data-binary @<file> "<uploadUrl>"
 ```
 
-### Create the evidence links and read the digest
+### Create the trace API link and read the trace summary
 
-Call `currents-create-evidence-links` with the `sessionId` and the trace's `attachmentId` from the session. It returns the link and the URLs onto it — `digest`, `filmstrip`, `animation`. Fetch the `digest` URL and read it: it says what the page did and what failed, and it is how you confirm the recording captured the problem. It needs no Currents credential.
+Call `currents-create-evidence-links` with the `sessionId` and the trace's `attachmentId` from the session. It returns the link and the URLs onto it — `digest`, `filmstrip`, `animation`. Fetch the `digest` URL and read the trace summary: it says what the page did and what failed, and it is how you confirm the recording captured the problem. It needs no Currents credential.
 
 ```bash
 curl -sL "<digest url>"
@@ -177,11 +177,11 @@ Then as in step 6 above. Screenshots go into the comment itself; a storage URL f
 - **`currents-create-session` is not in your tools**: the credential lacks `runs:write`, or is a read API key.
 - **403 from the session tool**: the same cause, on a connection that lists every tool (an API key whose access level the server does not know).
 - **`currents-create-share-link` is not in your tools**: the credential lacks `shares:write`.
-- **503 `Trace links are not configured` from `currents-create-evidence-links`**: this deployment serves no trace links. Attach the trace zip and the screenshots instead, and say the trace opens at https://trace.playwright.dev.
+- **503 `Trace API links are not configured` from `currents-create-evidence-links`**: this deployment serves no trace API links. Attach the trace zip and the screenshots instead, and say the trace opens at https://trace.playwright.dev.
 - **404 from the session tool**: the project id does not belong to this organization.
 - **422 from the session tool**: recording is suspended for the organization, or its subscription has expired.
 - **The upload URL is refused**: more than ten minutes passed since the session was recorded. Record the session again.
-- **The digest says `trace.network` was not read**: the network log is over 64 MB even after the filter. Capture again with fewer steps, then zip and record a new session — the trace API caches what it read from the first upload.
-- **The digest reports no frames**: the archive has no `screencast/`, or tracing ran without screenshots.
+- **The trace summary says `trace.network` was not read**: the network log is over 64 MB even after the filter. Capture again with fewer steps, then zip and record a new session — the trace API caches what it read from the first upload, for every trace API link to that trace.
+- **The trace summary reports no frames**: the archive has no `screencast/`, or tracing ran without screenshots.
 - **`No trace found`**: wrong `sessionId` or `attachmentId`, or an `artifactName` no trace carries. Creating the link never reads the file, so this is not an upload that is still in flight.
-- **The digest fails with a 404 from storage**: the trace bytes are not there. Check that the upload got a 200.
+- **The trace summary fails with a 404 from storage**: the trace bytes are not there. Check that the upload got a 200.
