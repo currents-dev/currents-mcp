@@ -429,7 +429,7 @@ export const TOOL_CATALOG: CatalogTool[] = [
     'currents-get-spec-instance',
     {
       description:
-        "Retrieves the raw result of one spec file execution by instanceId: each test's state and attempts, and the artifact URLs. For why its tests failed, currents-get-context with run_id and instance_id returns the errors, steps and trace links ready to read.",
+        "Retrieves the raw result of one spec file execution by instanceId: each test's state and attempts, and the artifact URLs. For why its tests failed, currents-get-context with run_id and instance_id returns the errors, steps and trace API links ready to read.",
       title: 'Get Spec Execution',
       annotations: readOnly,
     },
@@ -513,8 +513,8 @@ export const TOOL_CATALOG: CatalogTool[] = [
     'currents-create-evidence-links',
     {
       description:
-        "Create a shareable link to a test attempt's evidence, served from its Playwright trace, and the URLs onto it: a markdown digest of what the attempt did and what failed, a filmstrip, an animated screencast, DOM snapshots, network requests and attachments. Use it to read a trace without downloading it, and to put evidence in a pull request comment or an issue — the link reads without a Currents credential and expires. Start from the digest it returns. For a session recorded with currents-create-session, send sessionId and the trace's attachmentId; for a CI test, instanceId and testId. Before posting evidence, read the workflow at skill://currents/browser-evidence/SKILL.md for a session you recorded, or skill://currents/collect-evidence/SKILL.md for a CI run.",
-      title: 'Create Evidence Links',
+        "Create a shareable trace API link to a test attempt's evidence, served from its Playwright trace, and the URLs onto it: a markdown trace summary (the `digest` URL) of what the attempt did and what failed, a filmstrip, an animated screencast, DOM snapshots, network requests and attachments. Use it to read a trace without downloading it, and to put evidence in a pull request comment or an issue — the link reads without a Currents credential and expires. Start from the trace summary it returns. For a session recorded with currents-create-session, send sessionId and the trace's attachmentId; for a CI test, instanceId and testId. Before posting evidence, read the workflow at skill://currents/browser-evidence/SKILL.md for a session you recorded, or skill://currents/collect-evidence/SKILL.md for a CI run.",
+      title: 'Create Trace API Link',
       annotations: { ...additiveWrite, openWorldHint: true },
     },
     createEvidenceLinksTool

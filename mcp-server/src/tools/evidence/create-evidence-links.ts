@@ -181,7 +181,7 @@ const handler = async ({
             ...data,
             ...traceEndpoints(data.url),
             docs: `${origin}/docs`,
-            note: 'Start with the digest. The link needs no Currents credential and stops working at expiresAt.',
+            note: 'Start with the trace summary, the digest URL. The link needs no Currents credential and stops working at expiresAt.',
           },
           null,
           2
