@@ -105,12 +105,12 @@ export const isoDateString = () =>
     .refine(
       (value) =>
         matchesIsoDate(value) || matchesIsoDateTime(value, DATE_TIME, true),
-      { message: 'Expected an ISO 8601 date or date-time' }
+      { error: 'Expected an ISO 8601 date or date-time' }
     );
 
 /**
  * `expiresAfter` is stricter than the query bounds: the actions routes declare
- * it `z.string().datetime()` (`CreateActionSchema` in
+ * it `z.iso.datetime()` (`CreateActionSchema` in
  * packages/api/src/api/actions/actions.validation.ts), which requires a UTC
  * timestamp and refuses a date on its own or a numeric offset.
  */
@@ -118,7 +118,7 @@ export const isoDateTimeString = () =>
   z
     .string()
     .refine((value) => matchesIsoDateTime(value, UTC_DATE_TIME, false), {
-      message: 'Expected a UTC ISO 8601 date-time',
+      error: 'Expected a UTC ISO 8601 date-time',
     });
 
 /**
@@ -147,4 +147,4 @@ const UUID_V4 =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export const uuidV4 = () =>
-  z.string().regex(UUID_V4, { message: 'Expected a UUID' });
+  z.string().regex(UUID_V4, { error: 'Expected a UUID' });

@@ -159,7 +159,7 @@ const zodSchema = z
           return new Set(names).size === names.length;
         },
         {
-          message: 'two traces share a name, so they cannot be told apart',
+          error: 'two traces share a name, so they cannot be told apart',
         }
       )
       .describe(
@@ -169,7 +169,7 @@ const zodSchema = z
   .superRefine((value, ctx) => {
     if (!value.sessionId === !value.runId) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         message: 'send sessionId or runId, not both and not neither',
         path: ['sessionId'],
       });
@@ -179,14 +179,14 @@ const zodSchema = z
     );
     if (value.sessionId && target) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         message: `${target} is for CI runs; a session has no spec, test or machine`,
         path: [target],
       });
     }
     const problem = runTargetProblem(value);
     if (value.runId && problem) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: problem });
+      ctx.addIssue({ code: 'custom', message: problem });
     }
     if (value.runId && !problem) {
       const level = runTargetLevel(value);
@@ -196,7 +196,7 @@ const zodSchema = z
       );
       if (refused) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           message: `A ${refused.type} cannot be attached at the ${level} level. Allowed: ${allowed.join(', ')}`,
           path: ['attachments'],
         });

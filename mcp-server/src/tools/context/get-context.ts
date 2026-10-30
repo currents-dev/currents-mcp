@@ -88,7 +88,7 @@ const zodSchema = z
     if (test_id) {
       if (!instance_id) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           message: 'test_id requires instance_id',
           path: ['instance_id'],
         });
@@ -98,7 +98,7 @@ const zodSchema = z
     if (instance_id) {
       if (!run_id) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           message:
             'instance-level context requires run_id when test_id is omitted',
           path: ['run_id'],
@@ -108,7 +108,7 @@ const zodSchema = z
     }
     if (!run_id) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         // The only message a caller that passed nothing gets, so it names
         // every level rather than the one it fell through to.
         message:
