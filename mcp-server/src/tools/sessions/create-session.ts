@@ -104,7 +104,7 @@ const zodSchema = z.strictObject({
         return new Set(names).size === names.length;
       },
       {
-        message: 'two traces share a name, so they cannot be told apart',
+        error: 'two traces share a name, so they cannot be told apart',
       }
     )
     .describe(

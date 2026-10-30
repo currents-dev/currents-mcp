@@ -30,7 +30,7 @@ const searchText = (
         return length >= 1 && length <= SEARCH_MAX_LENGTH;
       },
       {
-        message: `Expected 1 to ${SEARCH_MAX_LENGTH} characters after trimming`,
+        error: `Expected 1 to ${SEARCH_MAX_LENGTH} characters after trimming`,
       }
     );
 

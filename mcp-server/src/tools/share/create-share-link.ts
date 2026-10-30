@@ -65,7 +65,7 @@ const zodSchema = z
         val.attempt !== undefined
       ) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           message:
             'session_id cannot be sent with run_id, instance_id, test_id or attempt',
           path: ['session_id'],
@@ -73,7 +73,7 @@ const zodSchema = z
       }
       if (val.purpose !== 'report') {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           message: 'a session can be shared with purpose "report" only',
           path: ['purpose'],
         });
@@ -82,21 +82,21 @@ const zodSchema = z
     }
     if (val.test_id && !val.instance_id) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         message: 'test_id requires instance_id',
         path: ['instance_id'],
       });
     }
     if (val.instance_id && !val.run_id && !val.test_id) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         message: 'instance_id requires run_id (spec file) or test_id (test)',
         path: ['run_id'],
       });
     }
     if (!val.run_id && !val.instance_id) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         message:
           'provide session_id (session), run_id (run), run_id + instance_id (spec file), or instance_id + test_id (test)',
         path: ['run_id'],
@@ -104,14 +104,14 @@ const zodSchema = z
     }
     if (val.attempt !== undefined && !(val.instance_id && val.test_id)) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         message: 'attempt requires a single test (instance_id + test_id)',
         path: ['attempt'],
       });
     }
     if (val.attempt !== undefined && val.purpose === 'report') {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         message: 'attempt is only valid with purpose "fix"',
         path: ['attempt'],
       });

@@ -65,28 +65,28 @@ const zodSchema = z
     const forSession = value.sessionId || value.attachmentId;
     if (forSession && (value.instanceId || value.testId)) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         message: 'send sessionId and attachmentId, or instanceId and testId',
         path: ['sessionId'],
       });
     } else if (forSession) {
       if (!value.sessionId || !value.attachmentId) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           message: 'a session needs both sessionId and attachmentId',
           path: [value.sessionId ? 'attachmentId' : 'sessionId'],
         });
       }
       if (value.attemptIndex !== undefined || value.artifactName) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           message: 'attemptIndex and artifactName are for CI tests',
           path: ['attemptIndex'],
         });
       }
     } else if (!value.instanceId || !value.testId) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         message: 'send instanceId and testId, or sessionId and attachmentId',
         path: ['instanceId'],
       });

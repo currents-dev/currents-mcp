@@ -172,7 +172,7 @@ describe('ISO date inputs', () => {
     }
   );
 
-  // The actions routes declare expiresAfter z.string().datetime(), so a date on
+  // The actions routes declare expiresAfter z.iso.datetime(), so a date on
   // its own or a numeric offset is refused where a date bound would take it.
   it.each(['2026-01-01', '2026-01-01T00:00:00+02:00', 'January 1, 2026'])(
     'rejects %s as expiresAfter',

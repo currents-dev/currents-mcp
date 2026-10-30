@@ -43,7 +43,7 @@ const zodSchema = z
   .superRefine((val, ctx) => {
     if (val.includeContextInComment === false && !val.comment?.trim()) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         message: 'comment is required when includeContextInComment is false',
         path: ['comment'],
       });
