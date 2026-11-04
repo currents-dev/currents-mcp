@@ -16,7 +16,7 @@ const zodSchema = z.object({
     .optional()
     .nullable()
     .describe(
-      'Custom headers as a JSON object string (e.g., {"Authorization": "Bearer token"}).'
+      `Custom headers as a JSON object string (e.g., {"Authorization": "Bearer token"}). Masked values from 'currents-get-webhook' are refused.`
     ),
   hookEvents: z
     .array(z.enum(['RUN_FINISH', 'RUN_START', 'RUN_TIMEOUT', 'RUN_CANCELED']))

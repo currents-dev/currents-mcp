@@ -574,7 +574,7 @@ export const TOOL_CATALOG: CatalogTool[] = [
     'currents-get-webhook',
     {
       description:
-        'Get a single webhook by ID. The hookId is a UUID. Returns full webhook details including url, headers, events, label, and timestamps.',
+        "Get a single webhook by ID. The hookId is a UUID. Returns webhook details including url, headers, events, label, and timestamps. Header values are masked; send a masked value back unchanged to 'currents-update-webhook' to keep it.",
       title: 'Get Webhook',
       annotations: readOnly,
     },
