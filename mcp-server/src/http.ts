@@ -2,7 +2,8 @@ import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { RequestContext, requestContext } from './lib/context';
 import { logger } from './lib/logger';
-import { createMcpServer } from './server';
+import { reportRefusedToolCalls } from './lib/toolCallReport';
+import { createMcpServer, toolRefusal } from './server';
 
 /**
  * Answers one MCP request over Streamable HTTP.
@@ -53,9 +54,11 @@ export async function handleMcpRequest(
 
   await requestContext.run(context, async () => {
     await server.connect(transport);
-    const response = await transport.handleRequest(toWebRequest(req), {
-      parsedBody: req.body,
-    });
+    const response = await reportRefusedToolCalls(
+      req.body,
+      (name) => toolRefusal(name, context),
+      () => transport.handleRequest(toWebRequest(req), { parsedBody: req.body })
+    );
     await writeNodeResponse(res, response, context, req.body);
   });
 }

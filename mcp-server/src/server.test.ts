@@ -90,7 +90,7 @@ import {
   TASK_ROUTES,
 } from './lib/instructions';
 import { isToolGranted } from './lib/tool';
-import { createMcpServer, TOOL_CATALOG } from './server';
+import { createMcpServer, TOOL_CATALOG, toolRefusal } from './server';
 import { getSkills, skillFileUri } from './skills';
 
 createMcpServer();
@@ -400,6 +400,28 @@ describe('tools registered by scope', () => {
     );
 
     expect([...toolless].sort()).toEqual([...SCOPES_WITHOUT_TOOLS].sort());
+  });
+});
+
+describe('toolRefusal', () => {
+  it('names no tool for a name outside the catalog', () => {
+    expect(toolRefusal('currents-no-such-tool', {})).toEqual({
+      tool: null,
+      reason: 'unknown_tool',
+    });
+    expect(toolRefusal(42, {})).toEqual({ tool: null, reason: 'unknown_tool' });
+  });
+
+  it('reads a catalog tool the scopes leave out as not granted', () => {
+    expect(toolRefusal('currents-delete-run', { apiKeyScope: 'read' })).toEqual(
+      { tool: 'currents-delete-run', reason: 'not_granted' }
+    );
+  });
+
+  it('reads a granted tool as refused for its arguments', () => {
+    expect(
+      toolRefusal('currents-delete-run', { apiKeyScope: 'write' })
+    ).toEqual({ tool: 'currents-delete-run', reason: 'invalid_arguments' });
   });
 });
 

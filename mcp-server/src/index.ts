@@ -7,6 +7,8 @@ export {
   type RequestContext,
   type ScopedCredential,
   type ToolCallReport,
+  type ToolRefusalReason,
+  type ToolRefusalReport,
 } from './lib/context';
 // Part of the same contract: the host marks a dispatched read its own deadline
 // stopped, and the retry loop here reads the mark.

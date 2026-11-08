@@ -5,7 +5,7 @@ import {
   type ToolAnnotations,
 } from '@modelcontextprotocol/sdk/types.js';
 import { getLogoDataUri, MCP_SERVER_VERSION } from './host/assets';
-import type { RequestContext } from './lib/context';
+import type { RequestContext, ToolRefusalReport } from './lib/context';
 import { buildServerInstructions } from './lib/instructions';
 import { isToolGranted, McpTool } from './lib/tool';
 import { reportToolCall } from './lib/toolCallReport';
@@ -607,6 +607,27 @@ export const TOOL_CATALOG: CatalogTool[] = [
     deleteWebhookTool
   ),
 ];
+
+/**
+ * Why `createMcpServer(context)` refused a `tools/call` naming `name` without
+ * running a handler. A catalog tool the context grants was registered, so the
+ * SDK can only have refused its arguments.
+ */
+export function toolRefusal(
+  name: unknown,
+  context: Pick<RequestContext, 'oauthScopes' | 'apiKeyScope'>
+): ToolRefusalReport {
+  const entry = TOOL_CATALOG.find((candidate) => candidate.name === name);
+  if (!entry) {
+    return { tool: null, reason: 'unknown_tool' };
+  }
+  return {
+    tool: entry.name,
+    reason: isToolGranted(entry.tool, context)
+      ? 'invalid_arguments'
+      : 'not_granted',
+  };
+}
 
 /**
  * Builds an MCP server with the Currents tools the caller can reach.
