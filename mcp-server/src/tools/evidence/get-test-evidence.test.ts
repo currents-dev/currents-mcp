@@ -15,8 +15,20 @@ const runPayload = {
       commit: { branch: 'feature-x', sha: 'abc123' },
     },
     specs: [
-      { instanceId: 'inst-1', spec: 'e2e/checkout.spec.ts' },
-      { instanceId: 'inst-2', spec: 'e2e/login.spec.ts' },
+      {
+        instanceId: 'inst-1',
+        spec: 'e2e/checkout.spec.ts',
+        results: {
+          stats: { tests: 2, passes: 1, failures: 1, pending: 0, skipped: 0 },
+        },
+      },
+      {
+        instanceId: 'inst-2',
+        spec: 'e2e/login.spec.ts',
+        results: {
+          stats: { tests: 1, passes: 1, failures: 0, pending: 0, skipped: 0 },
+        },
+      },
     ],
   },
 };
@@ -212,6 +224,173 @@ describe('getTestEvidenceTool', () => {
     const tests = manifest.specs[0].tests;
     expect(tests).toHaveLength(1);
     expect(tests[0].testId).toBe('t2');
+  });
+
+  it('applies the status filter before the maxInstances cap', async () => {
+    const passingSpecs = Array.from({ length: 12 }, (_, i) => ({
+      instanceId: `inst-pass-${i}`,
+      spec: `e2e/setup-${i}.spec.ts`,
+      results: {
+        stats: { tests: 1, passes: 1, failures: 0, pending: 0, skipped: 0 },
+      },
+    }));
+    vi.mocked(request.fetchApi).mockImplementation(async (path: string) => {
+      if (path === '/runs/run-1')
+        return ok({
+          data: {
+            ...runPayload.data,
+            specs: [...passingSpecs, runPayload.data.specs[0]],
+          },
+        });
+      if (path.startsWith('/instances/')) return ok(instancePayload);
+      return failed(path, 404);
+    });
+
+    const result = await getTestEvidenceTool.handler({
+      runId: 'run-1',
+      testStatus: ['failed'],
+    });
+
+    const manifest = parseManifest(result);
+    expect(manifest.truncated).toBeUndefined();
+    expect(manifest.specs).toHaveLength(1);
+    expect(manifest.specs[0].instanceId).toBe('inst-1');
+    expect(manifest.specs[0].tests.map((t: any) => t.testId)).toEqual(['t2']);
+    expect(request.fetchApi).toHaveBeenCalledTimes(2);
+  });
+
+  it('reads the status from testResults when the test entry has no state', async () => {
+    // The shape of a schemaVersion 2 instance as /v1/instances returns it.
+    const v2Instance = {
+      data: {
+        instanceId: 'inst-1',
+        schemaVersion: 2,
+        results: {
+          tests: [
+            { testId: 't1', title: ['Checkout', 'shows order summary'] },
+            { testId: 't2', title: ['Checkout', 'applies coupon'] },
+          ],
+        },
+        testResults: {
+          t1: { state: 'passed' },
+          t2: { state: 'failed' },
+        },
+      },
+    };
+    vi.mocked(request.fetchApi).mockImplementation(async (path: string) => {
+      if (path === '/runs/run-1') return ok(runPayload);
+      if (path === '/instances/inst-1') return ok(v2Instance);
+      return failed(path, 404);
+    });
+
+    const result = await getTestEvidenceTool.handler({
+      runId: 'run-1',
+      testStatus: ['failed'],
+    });
+
+    const manifest = parseManifest(result);
+    expect(manifest.specs).toHaveLength(1);
+    expect(manifest.specs[0].tests).toEqual([
+      expect.objectContaining({ testId: 't2', status: 'failed' }),
+    ]);
+  });
+
+  it('keeps a spec file that has not completed when pending is asked for', async () => {
+    const inProgressInstance = {
+      data: {
+        instanceId: 'inst-2',
+        schemaVersion: 2,
+        results: {
+          tests: [
+            { testId: 't3', title: ['Login', 'signs in'] },
+            { testId: 't4', title: ['Login', 'signs out'] },
+          ],
+        },
+        // t4 has not reported yet
+        testResults: { t3: { state: 'passed' } },
+      },
+    };
+    vi.mocked(request.fetchApi).mockImplementation(async (path: string) => {
+      if (path === '/runs/run-1')
+        return ok({
+          data: {
+            ...runPayload.data,
+            specs: [
+              {
+                ...runPayload.data.specs[0],
+                completedAt: '2026-08-01T00:01:00Z',
+              },
+              {
+                instanceId: 'inst-2',
+                spec: 'e2e/login.spec.ts',
+                completedAt: null,
+                results: {
+                  stats: {
+                    tests: 1,
+                    passes: 1,
+                    failures: 0,
+                    pending: 0,
+                    skipped: 0,
+                  },
+                },
+              },
+            ],
+          },
+        });
+      if (path === '/instances/inst-2') return ok(inProgressInstance);
+      return failed(path, 404);
+    });
+
+    const result = await getTestEvidenceTool.handler({
+      runId: 'run-1',
+      testStatus: ['pending'],
+    });
+
+    const manifest = parseManifest(result);
+    expect(manifest.specs).toHaveLength(1);
+    expect(manifest.specs[0].tests).toEqual([
+      expect.objectContaining({ testId: 't4', status: 'pending' }),
+    ]);
+  });
+
+  it('leaves out spec files with no tests matching the test filter', async () => {
+    vi.mocked(request.fetchApi).mockImplementation(async (path: string) => {
+      if (path === '/runs/run-1') return ok(runPayload);
+      if (path === '/instances/inst-1') return ok(instancePayload);
+      if (path === '/instances/inst-2')
+        return ok({
+          data: {
+            instanceId: 'inst-2',
+            results: {
+              tests: [{ testId: 't3', title: ['Login'], state: 'passed' }],
+            },
+          },
+        });
+      return failed(path, 404);
+    });
+
+    const result = await getTestEvidenceTool.handler({
+      runId: 'run-1',
+      testTitle: 'coupon',
+    });
+
+    const manifest = parseManifest(result);
+    expect(manifest.specs.map((s: any) => s.instanceId)).toEqual(['inst-1']);
+  });
+
+  it('reports when no spec file has tests in the requested status', async () => {
+    vi.mocked(request.fetchApi).mockImplementation(async (path: string) => {
+      if (path === '/runs/run-1') return ok(runPayload);
+      return failed(path, 404);
+    });
+
+    const result = await getTestEvidenceTool.handler({
+      runId: 'run-1',
+      testStatus: ['skipped'],
+    });
+
+    expect(result.content[0].text).toContain('have tests with status skipped');
+    expect(request.fetchApi).toHaveBeenCalledTimes(1);
   });
 
   it('lists available spec files when the spec filter matches nothing', async () => {

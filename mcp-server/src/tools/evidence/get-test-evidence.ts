@@ -59,7 +59,9 @@ const zodSchema = z.object({
   testStatus: z
     .array(z.enum(['passed', 'failed', 'pending', 'skipped']))
     .optional()
-    .describe('Filter tests by status. When omitted, all tests are included.'),
+    .describe(
+      'Filter tests by status. Spec files with no tests in these statuses are left out before maxInstances applies. When omitted, all tests are included.'
+    ),
   maxInstances: z
     .number()
     .int()
@@ -102,6 +104,45 @@ const emptyEvidence = (): TestEvidence => ({
   traces: [],
   attachments: [],
 });
+
+type TestStatus = NonNullable<z.infer<typeof zodSchema>['testStatus']>[number];
+
+/** The counter in a run spec's `results.stats` for each test status. */
+const statsCounterByStatus: Record<TestStatus, string> = {
+  passed: 'passes',
+  failed: 'failures',
+  pending: 'pending',
+  skipped: 'skipped',
+};
+
+/**
+ * Whether the spec can hold a test in one of `statuses`, read from the run
+ * details. A spec that has not completed is kept when `pending` is asked for:
+ * its unreported tests are pending in the instance payload, while
+ * `results.stats.pending` counts only reported ones.
+ */
+const specHasTestsIn = (specEntry: any, statuses: TestStatus[]): boolean => {
+  if (statuses.includes('pending') && !specEntry.completedAt) return true;
+  const stats = specEntry.results?.stats;
+  if (!stats) return false;
+  return statuses.some(
+    (status) => (stats[statsCounterByStatus[status]] ?? 0) > 0
+  );
+};
+
+/**
+ * A test's status in the instance payload. On schemaVersion 2 instances the
+ * entries in results.tests can come without `state`, and the outcome is in
+ * testResults, keyed by testId; without reading it the testStatus filter
+ * matches no test. A test with no testResults entry has not reported, which
+ * the API shows as pending (`computeTests` in @currents/mongo).
+ */
+const testStatusOf = (test: any, instance: any): string | null => {
+  if (test.state) return test.state;
+  const testResults = instance?.testResults;
+  if (!testResults) return null;
+  return testResults[test.testId]?.state ?? 'pending';
+};
 
 const hasEvidence = (e: TestEvidence): boolean =>
   e.screenshots.length > 0 ||
@@ -237,16 +278,31 @@ const handler = async ({
     );
   }
 
-  const selectedSpecs = matchingSpecs.slice(0, maxInstances);
-
-  logger.info(
-    `Collecting evidence from run ${resolvedRunId}: ${selectedSpecs.length}/${matchingSpecs.length} spec instances`
-  );
-
   const titleFilter = testTitle?.toLowerCase();
   const statusFilter = testStatus && testStatus.length > 0 ? testStatus : null;
 
-  const specs = await mapWithConcurrency(
+  // Filter by status before the maxInstances cap: otherwise, on a run with more
+  // spec files than the cap, a failed test in a spec further down the list is
+  // never fetched and every returned spec has empty tests.
+  const candidateSpecs = statusFilter
+    ? matchingSpecs.filter((s) => specHasTestsIn(s, statusFilter))
+    : matchingSpecs;
+
+  if (candidateSpecs.length === 0) {
+    return fail(
+      `No ${spec ? `spec files matching "${spec}"` : 'spec files'} in run ${resolvedRunId} have tests with status ${statusFilter?.join(
+        ', '
+      )}.`
+    );
+  }
+
+  const selectedSpecs = candidateSpecs.slice(0, maxInstances);
+
+  logger.info(
+    `Collecting evidence from run ${resolvedRunId}: ${selectedSpecs.length}/${candidateSpecs.length} spec instances`
+  );
+
+  const fetchedSpecs = await mapWithConcurrency(
     selectedSpecs,
     MAX_CONCURRENT_INSTANCE_READS,
     async (specEntry) => {
@@ -264,7 +320,8 @@ const handler = async ({
           )}`,
         };
       }
-      const results = instanceResponse.data.data?.results;
+      const instance = instanceResponse.data.data;
+      const results = instance?.results;
       if (!results) {
         return {
           spec: specEntry.spec,
@@ -283,8 +340,7 @@ const handler = async ({
           return {
             testId: t.testId,
             title,
-            // InstanceTest V2 entries carry no state
-            status: t.state ?? null,
+            status: testStatusOf(t, instance),
             evidence: artifactsByTest.get(t.testId) ?? emptyEvidence(),
           };
         })
@@ -316,6 +372,13 @@ const handler = async ({
     }
   );
 
+  // With a test filter, a spec with no matching tests only adds noise; error
+  // entries stay so the caller knows a spec could not be read.
+  const specs =
+    titleFilter || statusFilter
+      ? fetchedSpecs.filter((s) => !('tests' in s) || s.tests.length > 0)
+      : fetchedSpecs;
+
   const manifest = {
     run: {
       runId: resolvedRunId,
@@ -328,9 +391,9 @@ const handler = async ({
       dashboardUrl: `https://app.currents.dev/run/${resolvedRunId}`,
     },
     specs,
-    ...(matchingSpecs.length > selectedSpecs.length
+    ...(candidateSpecs.length > selectedSpecs.length
       ? {
-          truncated: `Only the first ${selectedSpecs.length} of ${matchingSpecs.length} matching spec instances were fetched. Use the spec filter to narrow down, or raise maxInstances.`,
+          truncated: `Only the first ${selectedSpecs.length} of ${candidateSpecs.length} matching spec instances were fetched. Use the spec filter to narrow down, or raise maxInstances.`,
         }
       : {}),
     note: 'Artifact URLs are signed and time-limited. Download the files promptly (e.g. with curl) rather than storing the URLs.',

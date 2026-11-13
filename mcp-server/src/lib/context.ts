@@ -35,6 +35,30 @@ export interface ToolCallReport {
    * result this is the status that failed it.
    */
   apiStatus: number | null;
+  /** From the handler's start until it settled. */
+  durationMs: number;
+  /**
+   * The argument names the handler received, sorted: after the input schema
+   * parsed them, so only names the schema declares, and a name with a default
+   * is always there. Never the values.
+   */
+  argumentKeys: string[];
+}
+
+/**
+ * Why the SDK answered a `tools/call` without running its handler: no tool of
+ * that name, one the caller's scopes left unregistered, or arguments the input
+ * schema rejected.
+ */
+export type ToolRefusalReason =
+  | 'unknown_tool'
+  | 'not_granted'
+  | 'invalid_arguments';
+
+export interface ToolRefusalReport {
+  /** The catalog name; null for `unknown_tool`, whose name the caller chose. */
+  tool: string | null;
+  reason: ToolRefusalReason;
 }
 
 /** The two credentials that carry a scope set. An API key carries none. */
@@ -82,12 +106,15 @@ export interface RequestContext {
   responseTooLarge?: (body: Buffer) => string | undefined;
   /**
    * Told about each tool call served under this context. A call the SDK
-   * refuses before reaching the handler — an unknown tool name, arguments the
-   * input schema rejects, a tool the caller's scopes left unregistered — is
-   * not reported: the SDK answers those itself.
+   * refuses before reaching the handler goes to `onToolRefused` instead.
    * Not awaited: a returned promise is only watched for a rejection to log.
    */
   onToolCall?: (report: ToolCallReport) => void | Promise<void>;
+  /**
+   * Told about each `tools/call` of the request whose handler did not run,
+   * once the transport has answered. Not awaited, like `onToolCall`.
+   */
+  onToolRefused?: (report: ToolRefusalReport) => void | Promise<void>;
 }
 
 /**
