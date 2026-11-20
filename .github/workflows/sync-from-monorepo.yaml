@@ -214,9 +214,76 @@ jobs:
           printf '%s' "$REGISTRY_TOKEN" \
             | oras login ghcr.io -u "$REGISTRY_USER" --password-stdin
           oras pull "${ARTIFACT}:${TAG}" -o /tmp/payload
+          cat /tmp/payload/manifest.json
+
+          # A manifest's `changes` cover only the commits since the publish
+          # before it, so when two releases publish between daily runs, the
+          # subjects of the first are in its own artifact and nowhere else.
+          # This follows `previous` back through the release-tagged artifacts
+          # until it reaches the commit the last sync took, fetching only each
+          # one's manifest.json. Tags come newest first, and each manifest
+          # names the commit of the publish before it, so one pass suffices.
+          #
+          # Manifests are read with jq and nothing from them reaches a shell
+          # as shell: tags and digests are checked against their shape before
+          # use, and commits are compared as strings.
+          #
+          # A walk that cannot reach the last sync (no marker, a chain broken
+          # by a publish whose predecessor failed its ancestry check, or more
+          # than 60 releases back) keeps what it found and says so, here and
+          # in the commit: the subjects only word the commit, but a list that
+          # looks complete and is not leaves fixes out of the changelog and can
+          # type a sync carrying a fix as a `chore`.
+          mkdir -p /tmp/earlier
+          : > /tmp/earlier/files
+          SYNCED="$(cat "$MARKER" 2>/dev/null || true)"
+          WANT="$(jq -r '.previous // empty' /tmp/payload/manifest.json)"
+          is_commit() { [[ "$1" =~ ^[0-9a-f]{40}$ ]]; }
+          COMPLETE=false
+          if ! is_commit "$SYNCED"; then
+            echo "No previous sync recorded; listing this publish only."
+          elif [ "$WANT" = "$SYNCED" ] || [ "$(jq -r '.sha // empty' \
+              /tmp/payload/manifest.json)" = "$SYNCED" ]; then
+            COMPLETE=true
+          elif is_commit "$WANT"; then
+            N=0
+            RELEASES="$(oras repo tags "$ARTIFACT" \
+              | grep -E '^release-[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]+$' \
+              | sort -rV | head -n 60)"
+            for RELEASE in $RELEASES; do
+              DIGEST="$(oras manifest fetch "${ARTIFACT}:${RELEASE}" | jq -r '
+                [.layers[]?
+                 | select(.annotations["org.opencontainers.image.title"]
+                          == "manifest.json" and .size < 65536)
+                 | .digest][0] // empty')"
+              [[ "$DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]] || continue
+              oras blob fetch --output /tmp/earlier/candidate.json \
+                "${ARTIFACT}@${DIGEST}"
+              GOT="$(jq -r '.sha // empty' /tmp/earlier/candidate.json \
+                2>/dev/null || true)"
+              [ "$GOT" = "$WANT" ] || continue
+              N=$((N + 1))
+              mv /tmp/earlier/candidate.json "/tmp/earlier/${N}.json"
+              echo "/tmp/earlier/${N}.json" >> /tmp/earlier/files
+              echo "Also carrying ${RELEASE} (${GOT:0:7})."
+              WANT="$(jq -r '.previous // empty' "/tmp/earlier/${N}.json")"
+              if [ "$WANT" = "$SYNCED" ]; then
+                COMPLETE=true
+                break
+              fi
+              is_commit "$WANT" || break
+            done
+          fi
+          if [ "$COMPLETE" != true ] && is_commit "$SYNCED"; then
+            echo "::warning::could not follow the published artifacts back to ${SYNCED:0:7}; the commit lists only what was found"
+            printf '%s\n' \
+              'Not every release since the previous sync could be read, so' \
+              'this list may leave out commits it carries.' \
+              > /tmp/changes-note.txt
+          fi
+
           # Drops ~/.docker/config.json before anything from the artifact runs.
           oras logout ghcr.io
-          cat /tmp/payload/manifest.json
 
       - name: Read the manifest
         id: manifest
@@ -292,8 +359,17 @@ jobs:
           # this empty and warns. It decides only how the commit is worded, so
           # failing a whole sync over it would be the wrong trade — but a
           # silent empty list looks exactly like a sync that carries nothing.
+          #
+          # This publish's subjects come first, then those of each earlier
+          # publish the step above found, newest first, as `git log` lists
+          # them.
           : > /tmp/changes.txt
-          if jq -r '[(.changes? // []) | if type == "array" then .[0:500][]
+          mapfile -t EARLIER < /tmp/earlier/files
+          if jq -s '{changes: [.[] | (.changes? // [])
+                     | if type == "array" then .[0:500][] else empty end]}' \
+              /tmp/payload/manifest.json "${EARLIER[@]}" \
+              > /tmp/all-changes.json 2>/dev/null &&
+            jq -r '[(.changes? // []) | if type == "array" then .[0:500][]
                      else empty end
                      | select(type == "string")
                      | gsub("[^[:print:]]"; "")
@@ -303,7 +379,7 @@ jobs:
                      | .[0:120]
                      | sub("^ +"; "") | sub(" +$"; "")
                      | select(length > 0)][0:50][]' \
-              /tmp/payload/manifest.json > /tmp/changes.new 2>/dev/null; then
+              /tmp/all-changes.json > /tmp/changes.new 2>/dev/null; then
             mv /tmp/changes.new /tmp/changes.txt
           else
             rm -f /tmp/changes.new
@@ -421,6 +497,9 @@ jobs:
           # copies it into the repository — `open-pr` names the paths it
           # applies, and this is not one of them.
           cp /tmp/changes.txt /tmp/vetted/changes.txt
+          if [ -s /tmp/changes-note.txt ]; then
+            cp /tmp/changes-note.txt /tmp/vetted/changes-note.txt
+          fi
 
       # Uploaded before the tests run, not after. Taking the snapshot early was
       # half the fix: `/tmp/vetted` stayed writable while artifact-derived tests
@@ -571,6 +650,10 @@ jobs:
               printf '\nCarries:\n\n'
               sed 's/^/  /' "$CHANGES"
             fi
+            if [ -s /tmp/synced/changes-note.txt ]; then
+              printf '\n'
+              cat /tmp/synced/changes-note.txt
+            fi
             if [ -s /tmp/breaking ]; then
               printf '\nBREAKING CHANGE: this sync carries breaking changes.'
               printf '\n\n'
@@ -591,6 +674,10 @@ jobs:
               # it replaces left all three live in a public repository's PR
               # body.
               sed 's/^/    /' "$CHANGES"
+            fi
+            if [ -s /tmp/synced/changes-note.txt ]; then
+              printf '\n'
+              cat /tmp/synced/changes-note.txt
             fi
             if [ -n "$REMOVED" ]; then
               printf '\n**This withdraws:** `%s`\n\n' "$REMOVED"
