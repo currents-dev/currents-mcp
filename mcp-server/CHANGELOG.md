@@ -2,14 +2,30 @@
 
 # [2.8.0](https://github.com/currents-dev/currents-mcp/compare/v2.7.0...v2.8.0) (2026-11-20)
 
-### Bug Fixes
-
-* **deps:** raise the release-it undici override to 7.30.1 ([c0bfb78](https://github.com/currents-dev/currents-mcp/commit/c0bfb7883a0b93444d5723aec42b2103a452dc29))
+The tools are written in the Currents monorepo and copied here by sync ([#241](https://github.com/currents-dev/currents-mcp/pull/241), [#250](https://github.com/currents-dev/currents-mcp/pull/250), [#251](https://github.com/currents-dev/currents-mcp/pull/251), [#252](https://github.com/currents-dev/currents-mcp/pull/252), [#255](https://github.com/currents-dev/currents-mcp/pull/255)). The entries below are what changed for anything calling these tools. No tool is renamed or removed.
 
 ### Features
 
-* sync MCP source from the monorepo at d3c1a0c ([00e4ac7](https://github.com/currents-dev/currents-mcp/commit/00e4ac7829340c03c223db04f2cb3347f15e259a))
-* sync MCP source from the monorepo at d8a34a3 ([ffa52ff](https://github.com/currents-dev/currents-mcp/commit/ffa52ffc67406c2d462c6945d4393e16ac371f5e))
+* `currents-list-test-issues` lists the Jira and Linear tickets linked to tests, so an agent can tell a failure that already has a ticket from one that needs one before it files another. Name the tests by `runId` with `testIds` (from `currents-get-run-details` or `currents-get-context`), or by `signatures`. Tickets are linked to the test signature, so a ticket linked from an earlier run shows up for the same test in later runs. Each ticket carries its type, key, link and when it was linked, and by default its current title, status and assignee read from Jira or Linear; a ticket whose details cannot be read is still listed, with `details: null` and the reason in `detailsError`. `includeDetails: false` skips the Jira and Linear calls. Paged at up to 50 tests per call. It needs `results:read`
+* the hosted server at `mcp.currents.dev` reports each `initialize` (client name and version, protocol version), each tool call's duration and the names of the arguments it was given (never their values), and each tool call it refused, with the reason: unknown tool, scope not granted, or invalid arguments. The stdio and HTTP servers in this package register no listener, so a server you run yourself sends none of it
+
+### Bug Fixes
+
+* `currents-get-test-evidence` returns the tests matching `testStatus` on a run with more spec files than `maxInstances`. It took the first spec files and then filtered, so a failed test in a spec file further down came back as spec files with empty tests. Spec files are now chosen by their status counts before `maxInstances` applies, and spec files with no matching tests are left out. On spec files recorded with results schema version 2 every test read as status `null`, so `testStatus` matched nothing; the status is now read from `testResults`, and a test with no result yet counts as `pending`
+* `currents-get-webhook` returns header values masked. `currents-update-webhook` keeps the stored value of a header sent back with its masked value unchanged, and `currents-create-webhook` refuses a masked value. The tool descriptions say so
+* tool descriptions, titles and the skills call the links `currents-create-evidence-links` returns trace API links, and its markdown digest the trace summary (the `digest` URL), the names Currents uses for these features. Its title is now "Create Trace API Link"; the tool name is unchanged
+
+### Security
+
+Runtime dependencies that ship in the package move to patched versions.
+
+* `zod` 4.3.5 → 4.6.7 ([#242](https://github.com/currents-dev/currents-mcp/pull/242)), which validates every tool's arguments, over stdio and HTTP. Fixes GHSA-mrhx-c7xc-m3w5 (CVE-2023-54404): a large array sent against an array schema with no length limit exhausts memory
+* `fast-uri` 3.1.8 → 3.1.9 ([#245](https://github.com/currents-dev/currents-mcp/pull/245)), reached through `ajv` in `@modelcontextprotocol/sdk`. Fixes GHSA-w74x-v6f9-j3xg and GHSA-xhq7-xmqj-769h (scheme spoofing and incorrect normalization of relative references) and GHSA-wjr9-j795-jxcr and GHSA-333x-w4r6-6crp (host confusion and scheme injection)
+* `hono` 4.13.7 → 4.13.18 ([#239](https://github.com/currents-dev/currents-mcp/pull/239), [#254](https://github.com/currents-dev/currents-mcp/pull/254)) and `@hono/node-server` 1.19.17 → 2.1.8 ([#249](https://github.com/currents-dev/currents-mcp/pull/249), [#253](https://github.com/currents-dev/currents-mcp/pull/253)), reached through `@modelcontextprotocol/sdk` on the HTTP server path (`start:http`), not over stdio. Fixes GHSA-5r4p-p66f-jhc7, GHSA-74fm-fwc7-3fwp, GHSA-rmxm-3fg6-px4f and GHSA-fj57-4f93-cfw6 (`serveStatic` decoding a path twice and skipping middleware), GHSA-92p4-j3wq-jmqx (`validator` skipped on an oddly formatted Content-Type), GHSA-39q9-qp46-w8xg (`bodyLimit` memory exhaustion), GHSA-h25j-2p75-qj33 (`mount()` forwarding the wrong path), GHSA-jpvv-r467-5p4w (a backslash parsed as `/`), and GHSA-7v5p-43qr-wch5 and GHSA-qv5m-9pm6-hqp3 (WebSocket upgrade host replacement and crash). The server's own code calls none of `serveStatic`, `validator`, `bodyLimit`, `mount` or WebSocket upgrade
+* `body-parser` 2.3.0 → 2.4.0 ([#246](https://github.com/currents-dev/currents-mcp/pull/246)), reached through `express` in `@modelcontextprotocol/sdk`. Fixes GHSA-27r3-jxmh-p828 (CVE-2026-111181), a process crash on trailing bytes after a compressed body
+* `undici` override under `release-it` 7.29.1 → 7.30.1 ([#248](https://github.com/currents-dev/currents-mcp/pull/248)), for GHSA-xjj6-f33q-929c, a crash on more than five content codings. Dev tooling only; it does not ship in the package
+
+Also updated, with no advisory named: `@modelcontextprotocol/sdk` 1.31.0 → 1.32.0 ([#240](https://github.com/currents-dev/currents-mcp/pull/240)) and `ip-address` 10.7.2 → 10.7.5 ([#244](https://github.com/currents-dev/currents-mcp/pull/244)).
 
 # [2.7.0](https://github.com/currents-dev/currents-mcp/compare/v2.6.1...v2.7.0) (2026-10-14)
 
