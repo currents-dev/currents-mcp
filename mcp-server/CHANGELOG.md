@@ -1,5 +1,16 @@
 # Changelog
 
+# [2.8.0](https://github.com/currents-dev/currents-mcp/compare/v2.7.0...v2.8.0) (2026-11-20)
+
+### Bug Fixes
+
+* **deps:** raise the release-it undici override to 7.30.1 ([c0bfb78](https://github.com/currents-dev/currents-mcp/commit/c0bfb7883a0b93444d5723aec42b2103a452dc29))
+
+### Features
+
+* sync MCP source from the monorepo at d3c1a0c ([00e4ac7](https://github.com/currents-dev/currents-mcp/commit/00e4ac7829340c03c223db04f2cb3347f15e259a))
+* sync MCP source from the monorepo at d8a34a3 ([ffa52ff](https://github.com/currents-dev/currents-mcp/commit/ffa52ffc67406c2d462c6945d4393e16ac371f5e))
+
 # [2.7.0](https://github.com/currents-dev/currents-mcp/compare/v2.6.1...v2.7.0) (2026-10-14)
 
 The tools are written in the Currents monorepo and copied here by sync. This release carries six of them ([#207](https://github.com/currents-dev/currents-mcp/pull/207), [#212](https://github.com/currents-dev/currents-mcp/pull/212), [#219](https://github.com/currents-dev/currents-mcp/pull/219), [#230](https://github.com/currents-dev/currents-mcp/pull/230), [#231](https://github.com/currents-dev/currents-mcp/pull/231), [#233](https://github.com/currents-dev/currents-mcp/pull/233)). The entries below are what changed for anything calling these tools.
