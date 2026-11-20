@@ -157,6 +157,7 @@ const EXPECTED_ANNOTATIONS: Record<string, Record<string, boolean>> = {
   'currents-get-tests-performance': { r: true, d: false, i: true, o: false },
   'currents-get-tests-signatures': { r: true, d: false, i: true, o: false },
   'currents-get-test-results': { r: true, d: false, i: true, o: false },
+  'currents-list-test-issues': { r: true, d: false, i: true, o: true },
   'currents-get-context': { r: true, d: false, i: true, o: false },
   'currents-get-errors-explorer': { r: true, d: false, i: true, o: false },
   'currents-get-test-evidence': { r: true, d: false, i: true, o: false },

@@ -51,6 +51,7 @@ import { getSpecInstancesTool } from './tools/specs/get-spec-instances';
 import { getTestResultsTool } from './tools/tests/get-test-results';
 import { getTestsPerformanceTool } from './tools/tests/get-tests-performance';
 import { getTestSignatureTool } from './tools/tests/get-tests-signature';
+import { listTestIssuesTool } from './tools/tests/list-test-issues';
 // Errors tools
 import { getErrorsExplorerTool } from './tools/errors/get-errors-explorer';
 // Evidence tools
@@ -77,8 +78,9 @@ import { updateWebhookTool } from './tools/webhooks/update-webhook';
  *
  * `openWorldHint` is false in all of them: a tool reaches the runs, tests and
  * settings of the organization the credential belongs to and nothing outside
- * it. Eight tools override it — the four Jira tools, because the issue they
- * read or write lives in the customer's Jira instance, the two webhook tools
+ * it. Nine tools override it — the four Jira tools and
+ * `currents-list-test-issues`, because the issues they read or write live in
+ * the customer's Jira or Linear workspace, the two webhook tools
  * that take a `url`, because the destination they store is one the notification
  * worker will later POST run data to, and `currents-create-share-link` and
  * `currents-create-evidence-links`, because the links they return serve test
@@ -475,6 +477,16 @@ export const TOOL_CATALOG: CatalogTool[] = [
       annotations: readOnly,
     },
     getTestResultsTool
+  ),
+  catalogTool(
+    'currents-list-test-issues',
+    {
+      description:
+        "List the Jira and Linear tickets linked to tests, with each ticket's current status read from Jira or Linear. Use before filing a ticket for a failing test, to tell failures that already have a ticket from those that need one. Name tests by runId with testIds (from currents-get-run-details or currents-get-context), or by signatures. A ticket linked from an earlier run shows up for the same test in later runs. Paged: up to 50 tests per call.",
+      title: 'List Linked Tickets',
+      annotations: { ...readOnly, openWorldHint: true },
+    },
+    listTestIssuesTool
   ),
   // Context API tools
   catalogTool(
